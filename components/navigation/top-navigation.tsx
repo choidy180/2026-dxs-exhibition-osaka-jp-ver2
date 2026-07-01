@@ -6,6 +6,7 @@ import styled from "styled-components";
 import {
   Activity,
   Bell,
+  BarChart3,
   Bot,
   Boxes,
   CheckCircle2,
@@ -19,6 +20,7 @@ import {
   Layers,
   Package,
   PackageCheck,
+  PanelLeftClose,
   Route,
   ScanSearch,
   Search,
@@ -86,6 +88,7 @@ const NAV_ITEMS: NavEntry[] = [
     icon: Package,
     children: [
       { label: "입고검사", href: "/material/inbound-inspection", detail: "자재 입고 품질 확인", icon: ClipboardCheck },
+      { label: "입고검사현황", href: "/material/inbound-inspection/status", detail: "일·주·월·연간 검수 현황", icon: BarChart3 },
       { label: "자재창고", href: "/material/warehouse", detail: "창고 재고와 위치 관리", icon: Warehouse },
       { label: "공정재고", href: "/production/smart-factory-dashboard", detail: "라인 투입 전 재고 현황", icon: Boxes },
     ],
@@ -185,6 +188,17 @@ const isActivePath = (pathname: string | null, href: string) => {
   return pathname === href || pathname.startsWith(`${href}/`);
 };
 
+const isActiveNavChild = (pathname: string | null, child: NavChild, siblings: NavChild[]) => {
+  if (!isActivePath(pathname, child.href)) return false;
+
+  return !siblings.some(
+    (sibling) =>
+      sibling.href !== child.href &&
+      sibling.href.length > child.href.length &&
+      isActivePath(pathname, sibling.href),
+  );
+};
+
 const getActiveKey = (pathname: string | null): NavKey => {
   const exact = NAV_ITEMS.find((item) => item.href && isActivePath(pathname, item.href));
   if (exact) return exact.key;
@@ -210,6 +224,7 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
   const [openPanel, setOpenPanel] = useState<PanelKey | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const selectedEntry = useMemo(
     () => NAV_ITEMS.find((item) => item.key === openPanel && item.children),
@@ -240,14 +255,14 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
   }, [openPanel, selectedEntry, trimmedSearch]);
 
   useEffect(() => {
-    document.documentElement.style.setProperty("--app-sidebar-offset", `${RAIL_WIDTH}px`);
-    document.documentElement.dataset.sidebarMode = openPanel ? "expanded" : "rail";
+    document.documentElement.style.setProperty("--app-sidebar-offset", isSidebarCollapsed ? "0px" : `${RAIL_WIDTH}px`);
+    document.documentElement.dataset.sidebarMode = isSidebarCollapsed ? "collapsed" : openPanel ? "expanded" : "rail";
 
     return () => {
       document.documentElement.style.removeProperty("--app-sidebar-offset");
       delete document.documentElement.dataset.sidebarMode;
     };
-  }, [openPanel]);
+  }, [isSidebarCollapsed, openPanel]);
 
   useEffect(() => {
     if (openPanel) window.setTimeout(() => searchInputRef.current?.focus(), 120);
@@ -267,6 +282,7 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
   const handleEntryClick = (entry: NavEntry) => {
     if (isLoading) return;
 
+    setIsSidebarCollapsed(false);
     setIsNotificationOpen(false);
 
     if (entry.href) {
@@ -281,6 +297,7 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
 
   const handleSearchOpen = () => {
     if (isLoading) return;
+    setIsSidebarCollapsed(false);
     setSearchValue("");
     setOpenPanel("search");
     setIsNotificationOpen(false);
@@ -298,9 +315,23 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
     setSearchValue("");
   };
 
+  const collapseSidebar = () => {
+    setOpenPanel(null);
+    setSearchValue("");
+    setIsNotificationOpen(false);
+    setIsSidebarCollapsed(true);
+  };
+
+  const expandSidebar = () => {
+    if (isLoading) return;
+    setIsSidebarCollapsed(false);
+  };
+
   return (
     <>
-      <RailShell $disabled={isLoading} aria-label="메인 네비게이션">
+      {isSidebarCollapsed && <SidebarHoverZone onMouseEnter={expandSidebar} aria-hidden="true" />}
+
+      <RailShell $disabled={isLoading} $collapsed={isSidebarCollapsed} aria-label="메인 네비게이션">
         <RailSection>
           <RailButton
             type="button"
@@ -310,7 +341,6 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
             aria-label="대시보드"
           >
             <DashboardLogoIcon aria-hidden="true" />
-            <span>{NAV_ITEMS[0].label}</span>
           </RailButton>
 
           <RailDivider />
@@ -348,12 +378,22 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
             <Search size={21} />
             <span>검색</span>
           </RailButton>
+          <RailButton
+            type="button"
+            $state="idle"
+            onClick={collapseSidebar}
+            title="사이드바 닫기"
+            aria-label="사이드바 닫기"
+          >
+            <PanelLeftClose size={21} />
+            <span>닫기</span>
+          </RailButton>
         </RailSection>
       </RailShell>
 
       <AIAgentSystem />
 
-      <SubSidebar $open={!!openPanel} aria-hidden={!openPanel}>
+      <SubSidebar $open={!!openPanel && !isSidebarCollapsed} aria-hidden={!openPanel || isSidebarCollapsed}>
         {openPanel && (
           <>
             <SubHeader>
@@ -404,7 +444,7 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
 
                       {group.children?.map((child) => {
                         const ChildIcon = child.icon;
-                        const active = isActivePath(pathname, child.href);
+                        const active = isActiveNavChild(pathname, child, group.children ?? []);
 
                         return (
                           <ResultButton
@@ -487,7 +527,36 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
   );
 }
 
-const RailShell = styled.nav<{ $disabled: boolean }>`
+const SidebarHoverZone = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 10050;
+  width: 14px;
+  height: 100vh;
+  height: 100dvh;
+  cursor: pointer;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 16px;
+    bottom: 16px;
+    left: 0;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: rgba(211, 17, 69, 0.34);
+    opacity: 0;
+    transition: opacity 140ms ease;
+  }
+
+  &:hover::after {
+    opacity: 1;
+  }
+`;
+
+const RailShell = styled.nav<{ $disabled: boolean; $collapsed: boolean }>`
   position: fixed;
   top: 0;
   left: 0;
@@ -504,8 +573,12 @@ const RailShell = styled.nav<{ $disabled: boolean }>`
   background: #ffffff;
   border-right: 1px solid #eceff3;
   box-shadow: 8px 0 24px rgba(15, 23, 42, 0.06);
-  opacity: ${({ $disabled }) => ($disabled ? 0.55 : 1)};
-  pointer-events: ${({ $disabled }) => ($disabled ? "none" : "auto")};
+  opacity: ${({ $disabled, $collapsed }) => ($collapsed ? 0 : $disabled ? 0.55 : 1)};
+  pointer-events: ${({ $disabled, $collapsed }) => ($disabled || $collapsed ? "none" : "auto")};
+  transform: translateX(${({ $collapsed }) => ($collapsed ? "-100%" : "0")});
+  transition:
+    transform 220ms ease,
+    opacity 180ms ease;
 `;
 
 const RailSection = styled.div`
