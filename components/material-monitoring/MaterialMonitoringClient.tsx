@@ -78,8 +78,8 @@ export default function MaterialMonitoringClient() {
 
   return (
     <LayoutGroup>
-      <DashboardContainer $show style={{ padding: 24, background: '#f8fafc', gap: 24 }}>
-        <Column style={{ flex: '0 0 380px' }}>
+      <DashboardContainer $show style={{ padding: 12, background: '#f8fafc', gap: 12, gridTemplateColumns: '320px 1fr', fontFamily: "'Pretendard', system-ui, -apple-system, sans-serif" }}>
+        <Column style={{ flex: '0 0 340px', gap: 12 }}>
           <VehicleInfoCard
             vehicleInfo={vehicleInfo}
             isLoaded={isVehicleDataLoaded}
@@ -92,12 +92,12 @@ export default function MaterialMonitoringClient() {
             isLoading={isMaterialLoading}
             error={materialError}
             onRetry={fetchMaterialData}
-            onOpenList={() => setShowListModal(true)}
+            onOpenList={() => window.open('/material/inbound-inspection/status', '_blank', 'noopener,noreferrer')}
           />
         </Column>
 
         <Column style={{ flex: 1 }}>
-          <VideoCard $isFullScreen={false} style={{ overflow: 'hidden', background: '#fff', border: '1px solid #edf2f7', borderRadius: 26, boxShadow: '0 18px 52px rgba(15, 23, 42, .07)' }}>
+          <VideoCard $isFullScreen={false} style={{ overflow: 'hidden', background: '#fff', border: '1px solid #edf2f7', borderRadius: 12, boxShadow: '0 8px 24px rgba(15, 23, 42, .06)' }}>
             <MonitoringSection
               hosts={hosts}
               isScanning={isScanning}

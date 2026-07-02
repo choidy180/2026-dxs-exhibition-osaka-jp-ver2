@@ -38,7 +38,7 @@ export default function MonitoringSection({
           <button className="soft-btn" onClick={onRetryScan} disabled={isScanning}>
             <RefreshCw size={15} /> 재연결
           </button>
-          <PinkButton onClick={onOpenMap} style={{ background: '#0f172a', borderRadius: 999, padding: '8px 18px' }}>
+          <PinkButton onClick={onOpenMap} style={{ background: '#0f172a', borderRadius: 10, padding: '8px 16px', fontWeight: 600 }}>
             D동 현황 &gt;
           </PinkButton>
         </div>

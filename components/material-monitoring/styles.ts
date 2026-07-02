@@ -1,37 +1,40 @@
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 
+const FONT = `'Pretendard', system-ui, -apple-system, sans-serif`;
+
 export const VideoHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  padding: 22px 24px 18px;
+  gap: 12px;
+  padding: 12px 16px;
   background: #fff;
   border-bottom: 1px solid #eef2f7;
-  border-radius: 24px 24px 0 0;
+  border-radius: 12px 12px 0 0;
+  font-family: ${FONT};
 
   .title-area { min-width: 0; }
   .eyebrow {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     color: #64748b;
-    font-size: .78rem;
-    font-weight: 700;
+    font-size: .76rem;
+    font-weight: 600;
   }
   h3 {
     margin: 0;
     color: #0f172a;
-    font-size: 1.45rem;
-    font-weight: 800;
-    letter-spacing: -.04em;
+    font-size: 1.15rem;
+    font-weight: 600;
+    letter-spacing: -.02em;
   }
   p {
-    margin: 8px 0 0;
+    margin: 4px 0 0;
     color: #64748b;
-    font-size: .9rem;
+    font-size: .85rem;
     font-weight: 500;
   }
   .header-actions {
@@ -41,14 +44,14 @@ export const VideoHeader = styled.div`
     flex-shrink: 0;
   }
   .soft-btn {
-    height: 36px;
-    padding: 0 14px;
+    height: 32px;
+    padding: 0 12px;
     border: 1px solid #e2e8f0;
-    border-radius: 999px;
+    border-radius: 10px;
     background: #fff;
     color: #475569;
-    font-size: .84rem;
-    font-weight: 700;
+    font-size: .82rem;
+    font-weight: 600;
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -58,13 +61,13 @@ export const VideoHeader = styled.div`
 
 export const MonitorShell = styled.div`
   display: grid;
-  /* grid-template-columns: minmax(0, 1fr) clamp(380px, 24vw, 440px); */
-  gap: 18px;
+  gap: 12px;
   flex: 1;
   min-height: 0;
-  padding: 18px 22px 24px;
+  padding: 12px;
   background: #fff;
-  border-radius: 0 0 24px 24px;
+  border-radius: 0 0 12px 12px;
+  font-family: ${FONT};
 
   @media (max-width: 1500px) {
     grid-template-columns: 1fr;
@@ -74,16 +77,16 @@ export const MonitorShell = styled.div`
 export const CameraStage = styled.div`
   min-width: 0;
   min-height: 0;
-  padding: 12px;
+  padding: 10px;
   background: #f8fafc;
   border: 1px solid #e8edf4;
-  border-radius: 24px;
+  border-radius: 12px;
 `;
 
 export const VideoGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 
   @media (max-width: 900px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -103,8 +106,8 @@ export const CamBox = styled.div`
   aspect-ratio: 16 / 10;
   background: #fff;
   border: 1px solid #e5eaf1;
-  border-radius: 20px;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, .055);
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, .05);
   contain: layout paint style;
 
   iframe {
@@ -115,19 +118,19 @@ export const CamBox = styled.div`
   }
   .cam-title {
     position: absolute;
-    top: 12px;
-    left: 12px;
+    top: 10px;
+    left: 10px;
     z-index: 1;
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    padding: 7px 10px;
+    padding: 6px 9px;
     color: #0f172a;
     background: rgba(255, 255, 255, .92);
     border: 1px solid rgba(226, 232, 240, .9);
-    border-radius: 999px;
-    font-size: .78rem;
-    font-weight: 800;
+    border-radius: 10px;
+    font-size: .76rem;
+    font-weight: 600;
   }
   .live-dot,
   .wait-dot {
@@ -141,20 +144,20 @@ export const CamBox = styled.div`
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 9px;
+    gap: 8px;
     color: #94a3b8;
-    font-size: .88rem;
-    font-weight: 700;
+    font-size: .86rem;
+    font-weight: 600;
   }
   .fullscreen-btn {
     position: absolute;
-    right: 12px;
-    bottom: 12px;
+    right: 10px;
+    bottom: 10px;
     z-index: 1;
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     border: 1px solid #e2e8f0;
-    border-radius: 12px;
+    border-radius: 10px;
     background: rgba(255, 255, 255, .94);
     color: #0f172a;
     display: flex;
@@ -184,6 +187,7 @@ export const CameraFullscreenOverlay = styled(motion.div)`
   color: #0f172a;
   background: #fff;
   contain: layout paint style;
+  font-family: ${FONT};
 
   .fullscreen-stage {
     width: 100%;
@@ -211,9 +215,9 @@ export const CameraFullscreenOverlay = styled(motion.div)`
 
   .camera-overlay {
     position: absolute;
-    top: 16px;
-    left: 16px;
-    right: 16px;
+    top: 14px;
+    left: 14px;
+    right: 14px;
     z-index: 2;
     display: flex;
     justify-content: space-between;
@@ -232,8 +236,8 @@ export const CameraFullscreenOverlay = styled(motion.div)`
     color: #0f172a;
     background: rgba(255, 255, 255, .9);
     border: 1px solid rgba(255, 255, 255, .78);
-    border-radius: 999px;
-    box-shadow: 0 12px 30px rgba(15, 23, 42, .14);
+    border-radius: 12px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, .12);
     backdrop-filter: blur(18px);
     pointer-events: auto;
   }
@@ -247,8 +251,8 @@ export const CameraFullscreenOverlay = styled(motion.div)`
 
   .camera-meta strong {
     font-size: .9rem;
-    font-weight: 900;
-    letter-spacing: -.03em;
+    font-weight: 600;
+    letter-spacing: -.02em;
   }
 
   .camera-badge,
@@ -258,9 +262,9 @@ export const CameraFullscreenOverlay = styled(motion.div)`
     align-items: center;
     justify-content: center;
     height: 26px;
-    border-radius: 999px;
+    border-radius: 10px;
     font-size: .72rem;
-    font-weight: 900;
+    font-weight: 600;
   }
 
   .camera-badge {
@@ -300,7 +304,7 @@ export const CameraFullscreenOverlay = styled(motion.div)`
     max-width: 170px;
     color: #64748b;
     font-size: .78rem;
-    font-weight: 800;
+    font-weight: 600;
   }
 
   .close-fullscreen {
@@ -308,14 +312,14 @@ export const CameraFullscreenOverlay = styled(motion.div)`
     width: 42px;
     height: 42px;
     border: 1px solid rgba(255, 215, 212, .9);
-    border-radius: 50%;
+    border-radius: 12px;
     background: rgba(255, 255, 255, .92);
     color: #c81e1e;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 12px 30px rgba(15, 23, 42, .14);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, .12);
     backdrop-filter: blur(18px);
     transition: transform .16s ease, background .16s ease, border-color .16s ease;
     pointer-events: auto;
@@ -344,28 +348,28 @@ export const CameraFullscreenOverlay = styled(motion.div)`
   }
 
   .empty-icon {
-    width: 76px;
-    height: 76px;
+    width: 72px;
+    height: 72px;
     display: grid;
     place-items: center;
     color: var(--accent);
     background: #fff1f0;
     border: 1px solid #ffd7d4;
-    border-radius: 24px;
+    border-radius: 12px;
   }
 
   .empty-state strong {
     margin-top: 6px;
     color: #0f172a;
     font-size: 1.05rem;
-    font-weight: 900;
-    letter-spacing: -.03em;
+    font-weight: 600;
+    letter-spacing: -.02em;
   }
 
   .empty-state span {
     color: #64748b;
     font-size: .9rem;
-    font-weight: 700;
+    font-weight: 600;
   }
 
   @media (max-width: 760px) {
@@ -377,7 +381,7 @@ export const CameraFullscreenOverlay = styled(motion.div)`
 
     .camera-meta {
       max-width: calc(100% - 52px);
-      border-radius: 20px;
+      border-radius: 12px;
       flex-wrap: wrap;
     }
 
@@ -399,39 +403,40 @@ export const InspectionLogPanelShell = styled.aside`
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  padding: 18px;
+  padding: 14px;
   background: #fff;
   border: 1px solid #e8edf4;
-  border-radius: 24px;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, .045);
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, .04);
+  font-family: ${FONT};
 
   .log-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     gap: 12px;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
   }
   h4 {
     margin: 0;
     color: #0f172a;
-    font-size: 1.05rem;
-    font-weight: 800;
-  }
-  p {
-    margin: 5px 0 0;
-    color: #64748b;
-    font-size: .82rem;
+    font-size: 1rem;
     font-weight: 600;
   }
+  p {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: .8rem;
+    font-weight: 500;
+  }
   .count-pill {
-    padding: 6px 10px;
+    padding: 5px 9px;
     color: #475569;
     background: #f1f5f9;
     border: 1px solid #e2e8f0;
-    border-radius: 999px;
-    font-size: .78rem;
-    font-weight: 800;
+    border-radius: 10px;
+    font-size: .76rem;
+    font-weight: 600;
     white-space: nowrap;
   }
   @media (max-width: 1500px) {
@@ -443,7 +448,7 @@ export const InspectionLogList = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
@@ -451,15 +456,15 @@ export const InspectionLogList = styled.div`
   &::-webkit-scrollbar { width: 6px; }
   &::-webkit-scrollbar-thumb {
     background: #cbd5e1;
-    border-radius: 999px;
+    border-radius: 8px;
   }
 `;
 
 export const InspectionLogItem = styled.div<{ $done: boolean }>`
-  padding: 14px;
+  padding: 12px;
   background: #fff;
   border: 1px solid #edf2f7;
-  border-radius: 18px;
+  border-radius: 12px;
 
   .row-head {
     display: flex;
@@ -472,8 +477,8 @@ export const InspectionLogItem = styled.div<{ $done: boolean }>`
     text-overflow: ellipsis;
     white-space: nowrap;
     color: #2563eb;
-    font-size: .88rem;
-    font-weight: 900;
+    font-size: .86rem;
+    font-weight: 600;
   }
   .badge {
     flex-shrink: 0;
@@ -481,21 +486,21 @@ export const InspectionLogItem = styled.div<{ $done: boolean }>`
     color: ${props => (props.$done ? '#047857' : '#b45309')};
     background: ${props => (props.$done ? '#ecfdf5' : '#fffbeb')};
     border: 1px solid ${props => (props.$done ? '#a7f3d0' : '#fde68a')};
-    border-radius: 999px;
+    border-radius: 10px;
     font-size: .72rem;
-    font-weight: 900;
+    font-weight: 600;
   }
   .material {
-    margin: 0 0 10px;
+    margin: 0 0 8px;
     color: #0f172a;
-    font-size: .9rem;
-    font-weight: 800;
+    font-size: .88rem;
+    font-weight: 600;
   }
   .vendor {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     color: #64748b;
     font-size: .78rem;
-    font-weight: 800;
+    font-weight: 600;
   }
   .meta-grid {
     display: grid;
@@ -511,7 +516,7 @@ export const InspectionLogItem = styled.div<{ $done: boolean }>`
   .meta span {
     color: #94a3b8;
     font-size: .68rem;
-    font-weight: 900;
+    font-weight: 600;
   }
   .meta strong,
   .meta code {
@@ -520,7 +525,7 @@ export const InspectionLogItem = styled.div<{ $done: boolean }>`
     white-space: nowrap;
     color: #334155;
     font-size: .75rem;
-    font-weight: 800;
+    font-weight: 600;
   }
 `;
 
@@ -540,26 +545,27 @@ export const ModalContainer = styled(motion.div)`
   width: 95%;
   max-width: 1400px;
   height: 80vh;
-  padding: 32px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   background: #fff;
   color: #334155;
   border: 1px solid #f1f5f9;
-  border-radius: 20px;
+  border-radius: 12px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, .25);
+  font-family: ${FONT};
 `;
 
 export const ModalHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 
   h2 {
     color: #0f172a;
-    font-size: 1.5rem;
-    font-weight: 800;
+    font-size: 1.3rem;
+    font-weight: 600;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -569,8 +575,8 @@ export const ModalHeader = styled.div`
 
 export const ControlBar = styled.div`
   display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 14px;
   align-items: center;
 `;
 
@@ -582,10 +588,11 @@ export const SearchInput = styled.div`
     width: 100%;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    padding: 12px 12px 12px 44px;
-    border-radius: 12px;
+    padding: 10px 12px 10px 42px;
+    border-radius: 10px;
     color: #334155;
-    font-size: .95rem;
+    font-size: .92rem;
+    font-family: ${FONT};
   }
   svg {
     position: absolute;
@@ -601,16 +608,16 @@ export const FilterGroup = styled.div`
   gap: 4px;
   padding: 4px;
   background: #f1f5f9;
-  border-radius: 12px;
+  border-radius: 10px;
 `;
 
 export const FilterButton = styled.button<{ $active: boolean }>`
-  padding: 8px 16px;
+  padding: 7px 14px;
   border: 0;
   border-radius: 8px;
   background: ${props => (props.$active ? '#fff' : 'transparent')};
   color: ${props => (props.$active ? '#2563eb' : '#64748b')};
-  font-size: .9rem;
+  font-size: .88rem;
   font-weight: 600;
   cursor: pointer;
   box-shadow: ${props => (props.$active ? '0 1px 3px rgba(0,0,0,.1)' : 'none')};
@@ -628,6 +635,7 @@ export const StyledTable = styled.table`
   width: 100%;
   min-width: 1000px;
   border-collapse: collapse;
+  font-family: ${FONT};
 
   thead {
     position: sticky;
@@ -637,41 +645,41 @@ export const StyledTable = styled.table`
   }
   th,
   td {
-    padding: 16px 20px;
+    padding: 12px 18px;
     text-align: left;
     white-space: nowrap;
     border-bottom: 1px solid #f1f5f9;
   }
   th {
     color: #475569;
-    font-size: .9rem;
-    font-weight: 700;
+    font-size: .88rem;
+    font-weight: 600;
   }
   td {
     color: #334155;
-    font-size: .95rem;
+    font-size: .92rem;
   }
 `;
 
 export const StatusBadge = styled.span<{ $status: string }>`
   min-width: 80px;
-  padding: 6px 12px;
+  padding: 5px 12px;
   display: inline-flex;
   justify-content: center;
   gap: 6px;
-  border-radius: 20px;
+  border-radius: 10px;
   font-size: .8rem;
-  font-weight: 700;
+  font-weight: 600;
   background: ${props => (props.$status === 'Y' ? '#dcfce7' : '#fee2e2')};
   color: ${props => (props.$status === 'Y' ? '#15803d' : '#b91c1c')};
   border: 1px solid ${props => (props.$status === 'Y' ? '#bbf7d0' : '#fecaca')};
 `;
 
 export const CloseButton = styled.button`
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border: 0;
-  border-radius: 50%;
+  border-radius: 10px;
   background: #f1f5f9;
   color: #64748b;
   display: flex;
@@ -683,8 +691,8 @@ export const CloseButton = styled.button`
 export const ViewAllButton = styled.button`
   border: 0;
   background: transparent;
-  color: #94a3b8;
-  font-size: .85rem;
+  color: #64748b;
+  font-size: .84rem;
   font-weight: 600;
   cursor: pointer;
 `;

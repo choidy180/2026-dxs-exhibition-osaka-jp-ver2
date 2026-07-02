@@ -6,6 +6,7 @@ import {
   AlertCircle,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
@@ -16,7 +17,7 @@ import {
   Truck,
   XCircle,
 } from 'lucide-react';
-import { useMaterialData } from '@/hooks/use-material-data';
+import { API_ENDPOINTS } from '@/constants/material-monitoring';
 import type { MaterialListItem } from '@/types/material-monitoring';
 import { formatQty, makeMaterialKey } from '@/utils/material-monitoring';
 
@@ -26,6 +27,7 @@ type StatTone = 'red' | 'green' | 'blue' | 'orange';
 
 const DEFAULT_BASE_DATE = '2026-07-01';
 const DAY_MS = 24 * 60 * 60 * 1000;
+const INBOUND_API_BASE = 'https://api.dxsplatform.com/api';
 
 const PERIODS: Array<{ id: Period; label: string }> = [
   { id: 'day', label: '일' },
@@ -78,15 +80,6 @@ const getWeekStart = (date: Date) => {
   return target;
 };
 
-const shiftDate = (dateKey: string, amount: number, period: Period) => {
-  const date = parseDateKey(dateKey);
-  if (period === 'day') date.setDate(date.getDate() + amount);
-  if (period === 'week') date.setDate(date.getDate() + amount * 7);
-  if (period === 'month') date.setMonth(date.getMonth() + amount);
-  if (period === 'year') date.setFullYear(date.getFullYear() + amount);
-  return toDateKey(date);
-};
-
 const isDone = (item: MaterialListItem) => item.InspConf === 'Y' || item.QmConf === 'Y';
 
 const isTabletChecked = (item: MaterialListItem) => {
@@ -100,10 +93,6 @@ const isTabletChecked = (item: MaterialListItem) => {
   ];
   return values.some((value) => String(value ?? '').toUpperCase() === 'Y');
 };
-
-const isDefaultDummyList = (items: MaterialListItem[]) =>
-  items.length === 0 ||
-  items.every((item) => item.PrjCode === 'PRJ-SF-2026' && String(item.InvoiceNo ?? '').startsWith('INV-'));
 
 const createDashboardFixture = (): MaterialListItem[] => {
   const base = parseDateKey(DEFAULT_BASE_DATE);
@@ -155,34 +144,52 @@ const createDashboardFixture = (): MaterialListItem[] => {
 
 const fixtureRows = createDashboardFixture();
 
-const matchesPeriod = (item: MaterialListItem, selectedDateKey: string, period: Period) => {
+const isWithinRange = (item: MaterialListItem, startKey: string, endKey: string) => {
   const itemDate = parseItemDate(item.PurInDate);
   if (!itemDate) return false;
-
-  const selectedDate = parseDateKey(selectedDateKey);
-  if (period === 'day') return toDateKey(itemDate) === selectedDateKey;
-  if (period === 'week') {
-    const weekStart = getWeekStart(selectedDate).getTime();
-    const itemTime = itemDate.getTime();
-    return itemTime >= weekStart && itemTime < weekStart + DAY_MS * 7;
-  }
-  if (period === 'month') {
-    return itemDate.getFullYear() === selectedDate.getFullYear() && itemDate.getMonth() === selectedDate.getMonth();
-  }
-  return itemDate.getFullYear() === selectedDate.getFullYear();
+  const time = itemDate.getTime();
+  return time >= parseDateKey(startKey).getTime() && time <= parseDateKey(endKey).getTime();
 };
 
-const getPeriodLabel = (selectedDateKey: string, period: Period) => {
-  const selectedDate = parseDateKey(selectedDateKey);
+const getRangeLabel = (startKey: string, endKey: string) =>
+  startKey === endKey
+    ? `${formatDateLabel(startKey)} 기준`
+    : `${formatDateLabel(startKey)} ~ ${formatDateLabel(endKey)}`;
 
-  if (period === 'day') return `${formatDateLabel(selectedDateKey)} 기준`;
+const getDateRange = (dateKey: string, period: Period) => {
+  const date = parseDateKey(dateKey);
+
   if (period === 'week') {
-    const start = getWeekStart(selectedDate);
+    const start = getWeekStart(date);
     const end = new Date(start.getTime() + DAY_MS * 6);
-    return `${formatDateLabel(toDateKey(start))} - ${formatDateLabel(toDateKey(end))}`;
+    return { startDate: toDateKey(start), endDate: toDateKey(end) };
   }
-  if (period === 'month') return `${selectedDate.getFullYear()}년 ${selectedDate.getMonth() + 1}월`;
-  return `${selectedDate.getFullYear()}년`;
+  if (period === 'month') {
+    const start = new Date(date.getFullYear(), date.getMonth(), 1);
+    const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    return { startDate: toDateKey(start), endDate: toDateKey(end) };
+  }
+  if (period === 'year') {
+    return {
+      startDate: toDateKey(new Date(date.getFullYear(), 0, 1)),
+      endDate: toDateKey(new Date(date.getFullYear(), 11, 31)),
+    };
+  }
+  return { startDate: dateKey, endDate: dateKey };
+};
+
+const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
+
+const buildCalendarDays = (viewDate: Date) => {
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const startOffset = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const cells: Array<Date | null> = [];
+  for (let i = 0; i < startOffset; i += 1) cells.push(null);
+  for (let day = 1; day <= daysInMonth; day += 1) cells.push(new Date(year, month, day));
+  return cells;
 };
 
 const percent = (value: number, total: number) => (total > 0 ? Math.round((value / total) * 1000) / 10 : 0);
@@ -193,23 +200,69 @@ const compactText = (value?: string | null, fallback = '-', max = 28) => {
 };
 
 export default function InboundInspectionStatusClient() {
-  const { materialList, isMaterialLoading, materialError, fetchMaterialData } = useMaterialData();
-  const [period, setPeriod] = useState<Period>('day');
-  const [selectedDate, setSelectedDate] = useState(DEFAULT_BASE_DATE);
+  const [startDate, setStartDate] = useState(DEFAULT_BASE_DATE);
+  const [endDate, setEndDate] = useState(DEFAULT_BASE_DATE);
+  const [activePreset, setActivePreset] = useState<Period | null>('day');
+  const [today, setToday] = useState(DEFAULT_BASE_DATE);
+  const [ready, setReady] = useState(false);
   const [query, setQuery] = useState('');
 
-  useEffect(() => {
-    fetchMaterialData();
-  }, [fetchMaterialData]);
+  const [apiRows, setApiRows] = useState<MaterialListItem[] | null>(null);
+  const [isMaterialLoading, setIsMaterialLoading] = useState(false);
+  const [materialError, setMaterialError] = useState<string | null>(null);
 
-  const sourceRows = useMemo(
-    () => (isDefaultDummyList(materialList) ? fixtureRows : materialList),
-    [materialList],
-  );
+  const [openPicker, setOpenPicker] = useState<'start' | 'end' | null>(null);
+  const [pickerView, setPickerView] = useState(() => parseDateKey(DEFAULT_BASE_DATE));
+
+  // 실제 날짜 범위로 입고 데이터 조회 (V_PurchaseIn?startDate1=...&endDate1=...)
+  const fetchInbound = useCallback(async (start: string, end: string) => {
+    setIsMaterialLoading(true);
+    setMaterialError(null);
+
+    try {
+      const url = new URL(`${INBOUND_API_BASE}${API_ENDPOINTS.INVOICE}`);
+      url.searchParams.set('startDate1', start);
+      url.searchParams.set('endDate1', end);
+      const res = await fetch(url.toString());
+      if (!res.ok) throw new Error(`API Error: ${res.status}`);
+
+      const json = await res.json();
+      const data = (Array.isArray(json) ? json : []).filter(
+        (item: MaterialListItem) => !item.NmCustm?.includes('대일화학'),
+      );
+      setApiRows(data);
+    } catch (error) {
+      console.error(error);
+      setMaterialError('실시간 데이터 조회에 실패해 예시 데이터로 표시 중입니다.');
+      setApiRows(null);
+    } finally {
+      setIsMaterialLoading(false);
+    }
+  }, []);
+
+  // 최초 진입 시 오늘 날짜(당일)로 초기화
+  useEffect(() => {
+    const todayKey = toDateKey(new Date());
+    setToday(todayKey);
+    setStartDate(todayKey);
+    setEndDate(todayKey);
+    setActivePreset('day');
+    setPickerView(parseDateKey(todayKey));
+    setReady(true);
+  }, []);
+
+  // 시작일/종료일 변경 시 실제 API 재조회
+  useEffect(() => {
+    if (!ready) return;
+    fetchInbound(startDate, endDate);
+  }, [ready, startDate, endDate, fetchInbound]);
+
+  // 조회 성공 시(빈 결과 포함) 실제 데이터를 사용하고, 조회 실패 시에만 예시 데이터로 대체
+  const sourceRows = apiRows ?? fixtureRows;
 
   const periodRows = useMemo(
-    () => sourceRows.filter((item) => matchesPeriod(item, selectedDate, period)),
-    [period, selectedDate, sourceRows],
+    () => sourceRows.filter((item) => isWithinRange(item, startDate, endDate)),
+    [startDate, endDate, sourceRows],
   );
 
   const visibleRows = useMemo(() => {
@@ -261,26 +314,112 @@ export default function InboundInspectionStatusClient() {
       map.set(vendor, (map.get(vendor) ?? 0) + 1);
     });
 
-    return [...map.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
+    return [...map.entries()].sort((a, b) => b[1] - a[1]);
   }, [periodRows]);
 
-  const progressSegments = useMemo(() => {
-    const pendingRate = percent(stats.pending, stats.total);
-    return [
-      { label: '검수완료', value: stats.done, rate: stats.doneRate, tone: 'green' as const },
-      { label: '대기', value: stats.pending, rate: pendingRate, tone: 'orange' as const },
-      { label: '태블릿', value: stats.tablet, rate: stats.tabletRate, tone: 'blue' as const },
-    ];
-  }, [stats]);
-
   const handleRefresh = useCallback(() => {
-    fetchMaterialData();
-  }, [fetchMaterialData]);
+    fetchInbound(startDate, endDate);
+  }, [fetchInbound, startDate, endDate]);
 
-  const handleShiftDate = (amount: number) => {
-    setSelectedDate((current) => shiftDate(current, amount, period));
+  // 프리셋(일/주/월/연간) → 오늘 기준 시작일~종료일 자동 설정
+  const handlePreset = (preset: Period) => {
+    const range = getDateRange(today, preset);
+    setStartDate(range.startDate);
+    setEndDate(range.endDate);
+    setActivePreset(preset);
+    setOpenPicker(null);
+  };
+
+  const openPickerFor = (which: 'start' | 'end') => {
+    setOpenPicker((current) => {
+      const next = current === which ? null : which;
+      if (next) setPickerView(parseDateKey(which === 'start' ? startDate : endDate));
+      return next;
+    });
+  };
+
+  const shiftPickerMonth = (amount: number) => {
+    setPickerView((current) => new Date(current.getFullYear(), current.getMonth() + amount, 1));
+  };
+
+  // 시작일 선택 시 종료일보다 늦으면 종료일을, 종료일 선택 시 시작일보다 이르면 시작일을 맞춤
+  const commitDate = (which: 'start' | 'end', dateKey: string) => {
+    if (which === 'start') {
+      setStartDate(dateKey);
+      setEndDate((prevEnd) => (dateKey > prevEnd ? dateKey : prevEnd));
+    } else {
+      setEndDate(dateKey);
+      setStartDate((prevStart) => (dateKey < prevStart ? dateKey : prevStart));
+    }
+    setActivePreset(null);
+    setOpenPicker(null);
+  };
+
+  const handleSelectDate = (date: Date) => {
+    if (!openPicker) return;
+    commitDate(openPicker, toDateKey(date));
+  };
+
+  const handleSelectToday = () => {
+    if (!openPicker) return;
+    commitDate(openPicker, today);
+  };
+
+  const calendarDays = useMemo(() => buildCalendarDays(pickerView), [pickerView]);
+
+  const renderCalendar = (which: 'start' | 'end') => {
+    const selectedKey = which === 'start' ? startDate : endDate;
+    return (
+      <>
+        <CalendarBackdrop onClick={() => setOpenPicker(null)} />
+        <CalendarPopover $align={which} role="dialog" aria-label={which === 'start' ? '시작일 선택' : '종료일 선택'}>
+          <CalendarHead>
+            <button type="button" onClick={() => shiftPickerMonth(-1)} aria-label="이전 달">
+              <ChevronLeft size={16} />
+            </button>
+            <strong>
+              {pickerView.getFullYear()}년 {pickerView.getMonth() + 1}월
+            </strong>
+            <button type="button" onClick={() => shiftPickerMonth(1)} aria-label="다음 달">
+              <ChevronRight size={16} />
+            </button>
+          </CalendarHead>
+
+          <CalendarWeekdays>
+            {WEEKDAY_LABELS.map((label) => (
+              <span key={label} data-weekend={label === '일' || label === '토' ? '' : undefined}>
+                {label}
+              </span>
+            ))}
+          </CalendarWeekdays>
+
+          <CalendarGrid>
+            {calendarDays.map((day, index) => {
+              if (!day) return <span key={`empty-${index}`} />;
+              const dayKey = toDateKey(day);
+              return (
+                <CalendarDay
+                  key={dayKey}
+                  type="button"
+                  $selected={dayKey === selectedKey}
+                  $today={dayKey === today}
+                  $inRange={dayKey >= startDate && dayKey <= endDate}
+                  onClick={() => handleSelectDate(day)}
+                >
+                  {day.getDate()}
+                </CalendarDay>
+              );
+            })}
+          </CalendarGrid>
+
+          <CalendarFooter>
+            <button type="button" onClick={handleSelectToday}>
+              오늘로 이동
+            </button>
+          </CalendarFooter>
+        </CalendarPopover>
+      </>
+    );
   };
 
   return (
@@ -293,36 +432,57 @@ export default function InboundInspectionStatusClient() {
           <div>
             <span>Material Inspection</span>
             <h1>입고 검수 현황 대시보드</h1>
-            <p>{getPeriodLabel(selectedDate, period)}</p>
+            <p>{getRangeLabel(startDate, endDate)}</p>
           </div>
         </TitleGroup>
 
         <HeaderActions>
-          <SegmentedControl aria-label="기간 필터">
+          <SegmentedControl aria-label="기간 프리셋">
             {PERIODS.map((item) => (
               <SegmentButton
                 key={item.id}
                 type="button"
-                $active={period === item.id}
-                onClick={() => setPeriod(item.id)}
+                $active={activePreset === item.id}
+                onClick={() => handlePreset(item.id)}
               >
                 {item.label}
               </SegmentButton>
             ))}
           </SegmentedControl>
 
-          <DateControl>
-            <IconButton type="button" onClick={() => handleShiftDate(-1)} aria-label="이전 기간">
-              <ChevronLeft size={18} />
-            </IconButton>
-            <DateDisplay>
-              <CalendarDays size={17} />
-              <strong>{formatDateLabel(selectedDate)}</strong>
-            </DateDisplay>
-            <IconButton type="button" onClick={() => handleShiftDate(1)} aria-label="다음 기간">
-              <ChevronRight size={18} />
-            </IconButton>
-          </DateControl>
+          <DateRangeControl>
+            <DatePicker>
+              <RangeCaption>시작일</RangeCaption>
+              <DateTrigger
+                type="button"
+                onClick={() => openPickerFor('start')}
+                aria-haspopup="dialog"
+                aria-expanded={openPicker === 'start'}
+              >
+                <CalendarDays size={17} />
+                <strong>{formatDateLabel(startDate)}</strong>
+                <ChevronDown size={14} className={openPicker === 'start' ? 'is-open' : undefined} />
+              </DateTrigger>
+              {openPicker === 'start' && renderCalendar('start')}
+            </DatePicker>
+
+            <RangeTilde>~</RangeTilde>
+
+            <DatePicker>
+              <RangeCaption>종료일</RangeCaption>
+              <DateTrigger
+                type="button"
+                onClick={() => openPickerFor('end')}
+                aria-haspopup="dialog"
+                aria-expanded={openPicker === 'end'}
+              >
+                <CalendarDays size={17} />
+                <strong>{formatDateLabel(endDate)}</strong>
+                <ChevronDown size={14} className={openPicker === 'end' ? 'is-open' : undefined} />
+              </DateTrigger>
+              {openPicker === 'end' && renderCalendar('end')}
+            </DatePicker>
+          </DateRangeControl>
 
           <RefreshButton type="button" onClick={handleRefresh} disabled={isMaterialLoading}>
             <RefreshCw size={17} />
@@ -383,23 +543,14 @@ export default function InboundInspectionStatusClient() {
             <ProgressFill $tone="green" style={{ width: `${Math.min(stats.doneRate, 100)}%` }} />
           </ProgressStack>
 
-          <SegmentList>
-            {progressSegments.map((segment) => (
-              <SegmentRow key={segment.label} $tone={segment.tone}>
-                <span>{segment.label}</span>
-                <strong>{segment.value.toLocaleString('ko-KR')}</strong>
-                <em>{segment.rate}%</em>
-              </SegmentRow>
-            ))}
-          </SegmentList>
-
           <Divider />
 
           <PanelHeader>
             <div>
-              <span>Vendor TOP 5</span>
+              <span>Vendor All</span>
               <h2>거래처별 입고</h2>
             </div>
+            <CompletionBadge>{vendorSummary.length.toLocaleString('ko-KR')}곳</CompletionBadge>
           </PanelHeader>
 
           <VendorList>
@@ -439,7 +590,7 @@ export default function InboundInspectionStatusClient() {
           {materialError && (
             <ErrorNotice>
               <AlertCircle size={17} />
-              <span>실시간 데이터 조회에 실패해 예시 데이터로 표시 중입니다.</span>
+              <span>{materialError}</span>
             </ErrorNotice>
           )}
 
@@ -509,9 +660,16 @@ const StatusShell = styled.main`
   overflow: hidden;
   background: #f6f7f9;
   color: #111827;
+  font-family: 'Pretendard', sans-serif;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   gap: 14px;
+
+  *,
+  *::before,
+  *::after {
+    font-family: inherit;
+  }
 `;
 
 const Header = styled.header`
@@ -610,49 +768,197 @@ const SegmentButton = styled.button<{ $active: boolean }>`
   }
 `;
 
-const DateControl = styled.div`
+const DateRangeControl = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const DatePicker = styled.div`
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+`;
+
+const RangeCaption = styled.span`
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+`;
+
+const RangeTilde = styled.span`
+  color: #9ca3af;
+  font-size: 15px;
+  font-weight: 700;
+`;
+
+const DateTrigger = styled.button`
   height: 44px;
-  padding: 4px;
+  min-width: 150px;
+  padding: 0 12px;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
   background: #ffffff;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-`;
-
-const IconButton = styled.button`
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  color: #6b7280;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-
-  &:hover {
-    background: #fff1f5;
-    color: #d31145;
-  }
-`;
-
-const DateDisplay = styled.div`
-  height: 34px;
-  min-width: 134px;
-  padding: 0 10px;
-  border-radius: 10px;
-  background: #f9fafb;
   color: #374151;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
 
   strong {
     font-size: 13px;
     font-weight: 700;
     line-height: 1;
+  }
+
+  svg {
+    color: #6b7280;
+    transition: transform 180ms ease, color 150ms ease;
+  }
+
+  svg.is-open {
+    transform: rotate(180deg);
+  }
+
+  &[aria-expanded='true'] {
+    border-color: #f6b3c4;
+    background: #fff1f5;
+    color: #d31145;
+  }
+
+  &[aria-expanded='true'] svg {
+    color: #d31145;
+  }
+
+  &:hover {
+    border-color: #f6b3c4;
+    background: #fff1f5;
+    color: #d31145;
+  }
+
+  &:hover svg {
+    color: #d31145;
+  }
+`;
+
+const CalendarBackdrop = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+`;
+
+const CalendarPopover = styled.div<{ $align: 'start' | 'end' }>`
+  position: absolute;
+  top: calc(100% + 8px);
+  ${({ $align }) => ($align === 'end' ? 'right: 0;' : 'left: 0;')}
+  z-index: 50;
+  width: 296px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #e2e6ee;
+  background: #ffffff;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.16);
+`;
+
+const CalendarHead = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+
+  strong {
+    color: #111827;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  button {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    color: #6b7280;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &:hover {
+      background: #fff1f5;
+      color: #d31145;
+    }
+  }
+`;
+
+const CalendarWeekdays = styled.div`
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 6px;
+
+  span {
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  span[data-weekend] {
+    color: #d31145;
+  }
+`;
+
+const CalendarGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+`;
+
+const CalendarDay = styled.button<{ $selected: boolean; $today: boolean; $inRange: boolean }>`
+  height: 34px;
+  border-radius: 9px;
+  background: ${({ $selected, $inRange }) =>
+    $selected ? '#d31145' : $inRange ? '#ffe4eb' : 'transparent'};
+  color: ${({ $selected, $today }) => ($selected ? '#ffffff' : $today ? '#d31145' : '#374151')};
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid ${({ $today, $selected }) => ($today && !$selected ? '#f6b3c4' : 'transparent')};
+  transition: background 140ms ease, color 140ms ease;
+
+  &:hover {
+    background: ${({ $selected }) => ($selected ? '#d31145' : '#fff1f5')};
+    color: ${({ $selected }) => ($selected ? '#ffffff' : '#d31145')};
+  }
+`;
+
+const CalendarFooter = styled.div`
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eef0f3;
+  display: flex;
+  justify-content: flex-end;
+
+  button {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 9px;
+    background: #111827;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 150ms ease;
+
+    &:hover {
+      background: #d31145;
+    }
   }
 `;
 
@@ -803,44 +1109,6 @@ const ProgressFill = styled.div<{ $tone: StatTone }>`
   transition: width 220ms ease;
 `;
 
-const SegmentList = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-`;
-
-const SegmentRow = styled.div<{ $tone: StatTone }>`
-  min-height: 52px;
-  padding: 11px 13px;
-  border-radius: 12px;
-  background: ${({ $tone }) => tonePalette[$tone].bg};
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  align-items: center;
-  gap: 10px;
-
-  span {
-    color: #111827;
-    font-size: 14px;
-    font-weight: 700;
-  }
-
-  strong {
-    color: ${({ $tone }) => tonePalette[$tone].fg};
-    font-size: 18px;
-    font-weight: 700;
-  }
-
-  em {
-    min-width: 48px;
-    color: ${({ $tone }) => tonePalette[$tone].fg};
-    font-size: 12px;
-    font-style: normal;
-    font-weight: 700;
-    text-align: right;
-  }
-`;
-
 const Divider = styled.div`
   height: 1px;
   margin: 20px 0;
@@ -848,15 +1116,31 @@ const Divider = styled.div`
 `;
 
 const VendorList = styled.div`
+  flex: 1;
   min-height: 0;
   margin-top: 14px;
+  padding-right: 4px;
   display: flex;
   flex-direction: column;
   gap: 9px;
-  overflow: hidden;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 3px;
+    background: #d8dde6;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
 `;
 
 const VendorRow = styled.div`
+  flex: 0 0 auto;
   min-height: 46px;
   padding: 10px 12px;
   border-radius: 12px;

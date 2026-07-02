@@ -102,8 +102,9 @@ export default function CameraRpaStepList({ intervalMs = 5000 }: Props) {
 const RpaStepGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-family: 'Pretendard', system-ui, -apple-system, sans-serif;
 
   @media (max-width: 900px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -115,12 +116,12 @@ const RpaStepGrid = styled.div`
 `;
 
 const RpaStepCard = styled.article<{ $stepColor: StepColor }>`
-  min-height: 94px;
-  padding: 13px 14px;
+  min-height: 88px;
+  padding: 11px 12px;
   background: #fff;
   border: 1px solid ${props => props.$stepColor.border};
-  border-radius: 18px;
-  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.045);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
 
   .card-head {
     display: flex;
@@ -133,17 +134,17 @@ const RpaStepCard = styled.article<{ $stepColor: StepColor }>`
   .card-head strong {
     color: #0f172a;
     font-size: 0.86rem;
-    font-weight: 800;
+    font-weight: 600;
   }
 
   .card-head span {
     color: ${props => props.$stepColor.text};
     background: ${props => props.$stepColor.bg};
     border: 1px solid ${props => props.$stepColor.border};
-    border-radius: 999px;
+    border-radius: 10px;
     padding: 4px 8px;
     font-size: 0.7rem;
-    font-weight: 800;
+    font-weight: 600;
   }
 
   .step-title {
@@ -151,17 +152,17 @@ const RpaStepCard = styled.article<{ $stepColor: StepColor }>`
     margin-bottom: 9px;
     color: #334155;
     font-size: 0.8rem;
-    font-weight: 700;
+    font-weight: 600;
     white-space: nowrap;
     text-overflow: ellipsis;
-    letter-spacing: -0.04em;
+    letter-spacing: -0.02em;
   }
 
   .progress {
     overflow: hidden;
     height: 5px;
     background: #f1f5f9;
-    border-radius: 999px;
+    border-radius: 8px;
   }
 
   .progress b {
