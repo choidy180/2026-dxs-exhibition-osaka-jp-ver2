@@ -5,7 +5,6 @@ import styled, { css } from 'styled-components';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Boxes, ScanSearch, Cpu, ClipboardList, Bot, Truck } from 'lucide-react';
-import AIAgentSystem from '../chatbot-widget';
 
 // --- 메뉴 데이터 ---
 type SubItem = { label: string; href: string };
@@ -15,6 +14,8 @@ const GROUPS: Group[] = [
   {
     key: '자재관리', Icon: Boxes, items: [
       { label: '입고검수', href: '/material/inbound-inspection' },
+      { label: '입고검사현황', href: '/material/inbound-inspection/status' },
+      { label: '자재검수', href: '/material/inbound-inspection/material-check' },
       { label: '자재창고', href: '/material/warehouse' },
       { label: '공정재고', href: '/production/smart-factory-dashboard' },
     ],
@@ -152,13 +153,6 @@ const RailButton = styled.button<{ $active: boolean }>`
   }
 `;
 
-const PanelFooter = styled.div`
-  flex-shrink: 0;
-  padding-top: 12px;
-  margin-top: 8px;
-  border-top: 1px solid #f1f5f9;
-`;
-
 // 2단: 하위메뉴 패널
 const Panel = styled.div`
   width: 212px;
@@ -244,12 +238,9 @@ interface SideNavigationProps {
 export default function SideNavigation({ isLoading = false }: SideNavigationProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const railRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [glider, setGlider] = useState({ y: 0, h: 0, show: false });
-
-  useEffect(() => { setMounted(true); }, []);
 
   const activeGroupKey = useMemo(() => {
     if (!pathname) return null;
@@ -277,7 +268,7 @@ export default function SideNavigation({ isLoading = false }: SideNavigationProp
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
-  }, [activeGroupKey, mounted]);
+  }, [activeGroupKey]);
 
   // master-dashboard 에서는 사이드바 숨김
   if (pathname && pathname.startsWith('/master-dashboard')) return null;
@@ -297,11 +288,11 @@ export default function SideNavigation({ isLoading = false }: SideNavigationProp
 
         <RailIcons>
           <RailGlider
-            $show={mounted && glider.show}
+            $show={glider.show}
             style={{ transform: `translateY(${glider.y}px)`, height: `${glider.h}px` }}
           />
           {GROUPS.map(group => {
-            const isActive = mounted && activeGroupKey === group.key;
+            const isActive = activeGroupKey === group.key;
             const GroupIcon = group.Icon;
             return (
               <RailButton
@@ -328,7 +319,7 @@ export default function SideNavigation({ isLoading = false }: SideNavigationProp
             <ItemLink
               key={item.href}
               type="button"
-              $active={mounted ? pathname === item.href || pathname.startsWith(item.href) : false}
+              $active={pathname ? pathname === item.href || pathname.startsWith(item.href) : false}
               onClick={() => go(item.href)}
             >
               {item.label}

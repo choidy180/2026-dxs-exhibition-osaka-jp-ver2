@@ -94,6 +94,19 @@ const PageContainer = styled.div`
     z-index: 0;
     pointer-events: none;
   }
+
+  @media (max-width: 768px) {
+    height: auto;
+    min-height: 100svh;
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    &::before {
+      background:
+        linear-gradient(to bottom, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.58) 48%, rgba(0,0,0,0.76) 100%),
+        url('/images/gmt_back.png') no-repeat center center / cover;
+    }
+  }
 `;
 
 const MainContent = styled(motion.div)`
@@ -108,6 +121,15 @@ const MainContent = styled(motion.div)`
   align-items: center;
   justify-content: center;
   will-change: width; 
+
+  @media (max-width: 768px) {
+    height: auto;
+    min-height: 100svh;
+    padding: 18px 16px 96px;
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow: visible;
+  }
 `;
 
 const ContentOverlay = styled(motion.div)`
@@ -117,6 +139,10 @@ const ContentOverlay = styled(motion.div)`
   z-index: 10;
   cursor: pointer;
   backdrop-filter: blur(2px);
+
+  @media (max-width: 768px) {
+    position: fixed;
+  }
 `;
 
 const SidebarWrapper = styled(motion.div)`
@@ -130,6 +156,16 @@ const SidebarWrapper = styled(motion.div)`
   display: flex;
   flex-direction: column;
   will-change: width;
+
+  @media (max-width: 768px) {
+    position: fixed;
+    inset: 0;
+    width: 100vw !important;
+    height: 100svh;
+    border-left: 0;
+    border-radius: 0;
+    z-index: 1000;
+  }
 `;
 
 const SidebarInner = styled.div`
@@ -138,6 +174,11 @@ const SidebarInner = styled.div`
   height: 100%;
   display: flex;
   flex-direction: column;
+
+  @media (max-width: 768px) {
+    width: 100vw;
+    min-width: 0;
+  }
 `;
 
 const FloatingButtonWrapper = styled.div`
@@ -145,6 +186,13 @@ const FloatingButtonWrapper = styled.div`
   bottom: 30px;
   right: 30px;
   z-index: 100;
+
+  @media (max-width: 768px) {
+    position: fixed;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    left: 16px;
+  }
 `;
 
 const NavbarTrigger = styled(motion.button)`
@@ -162,6 +210,14 @@ const NavbarTrigger = styled(motion.button)`
     transform: translateY(-2px);
   }
   svg { color: #D31145; }
+
+  @media (max-width: 768px) {
+    width: 100%;
+    height: 54px;
+    justify-content: center;
+    border-radius: 14px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.32);
+  }
 `;
 
 // ==========================================
@@ -185,6 +241,11 @@ const GridWrapper = styled.div`
   @media (max-width: 1600px) { grid-template-columns: repeat(3, 1fr); }
   @media (max-width: 1200px) { grid-template-columns: repeat(2, 1fr); }
   @media (max-width: 800px) { grid-template-columns: 1fr; }
+
+  @media (max-width: 768px) {
+    gap: 12px;
+    max-width: 520px;
+  }
 `;
 
 const CardLink = styled(Link)` text-decoration: none; color: inherit; display: block; height: 100%; `;
@@ -209,6 +270,20 @@ const Card = styled.div<{ $color: string; $index: number }>`
     border-color: ${props => props.$color}80; 
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
   }
+
+  @media (max-width: 768px) {
+    min-height: 116px;
+    height: auto;
+    padding: 16px;
+    border-radius: 16px;
+    background: rgba(17, 24, 39, 0.68);
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+
+    &:hover {
+      transform: none;
+    }
+  }
 `;
 
 const IconBox = styled.div<{ $color: string }>`
@@ -217,22 +292,253 @@ const IconBox = styled.div<{ $color: string }>`
   display: flex; align-items: center; justify-content: center;
   font-size: 24px; color: ${props => props.$color}; transition: all 0.3s ease;
   ${Card}:hover & { background: ${props => props.$color}15; border-color: ${props => props.$color}40; transform: scale(1.05); }
+
+  @media (max-width: 768px) {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    font-size: 21px;
+  }
 `;
 
-const CardHeader = styled.div` display: flex; align-items: flex-start; gap: 18px; `;
+const CardHeader = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+
+  @media (max-width: 768px) {
+    align-items: center;
+    gap: 13px;
+  }
+`;
 const TextContent = styled.div` display: flex; flex-direction: column; gap: 0px; padding-top: 2px; `;
-const Title = styled.h2` font-size: 28px; font-weight: 700; color: #ffffff; margin: 0; `;
+const Title = styled.h2`
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+
+  @media (max-width: 768px) {
+    font-size: 21px;
+    line-height: 1.18;
+  }
+`;
 const Description = styled.p` 
   font-size: 20px; color: rgba(255, 255, 255, 0.6); margin: 0; word-break: keep-all; transition: color 0.3s;
   ${Card}:hover & { color: rgba(255, 255, 255, 0.85); }
+
+  @media (max-width: 768px) {
+    margin-top: 4px;
+    font-size: 13px;
+    line-height: 1.35;
+    color: rgba(255, 255, 255, 0.72);
+  }
 `;
-const CardFooter = styled.div` display: flex; justify-content: flex-end; `;
+const CardFooter = styled.div`
+  display: flex;
+  justify-content: flex-end;
+
+  @media (max-width: 768px) {
+    margin-top: 14px;
+  }
+`;
 const ActionButton = styled.div<{ $color: string }>`
   display: flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 20px;
   font-size: 14px; font-weight: 600; background: rgba(255, 255, 255, 0.05); color: rgba(255, 255, 255, 0.7);
   transition: all 0.3s ease; .arrow-icon { font-size: 10px; transition: transform 0.3s ease; }
   ${Card}:hover & { background: ${props => props.$color}; color: #fff; box-shadow: 0 4px 12px ${props => props.$color}40; }
   ${Card}:hover & .arrow-icon { transform: translateX(4px); }
+
+  @media (max-width: 768px) {
+    min-width: 72px;
+    justify-content: center;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: ${props => props.$color};
+    color: #fff;
+    font-size: 12px;
+    box-shadow: 0 6px 14px ${props => props.$color}30;
+  }
+`;
+
+const MobileIntro = styled.section`
+  display: none;
+
+  @media (max-width: 768px) {
+    display: block;
+    width: 100%;
+    max-width: 520px;
+    margin: 8px auto 18px;
+    color: #ffffff;
+
+    p {
+      margin: 0 0 7px;
+      color: #ffb3c4;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.1;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      color: #ffffff;
+      font-size: 30px;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: 0;
+      word-break: keep-all;
+      text-shadow: 0 3px 14px rgba(0, 0, 0, 0.72);
+    }
+  }
+`;
+
+const MobileStatusRow = styled.div`
+  display: none;
+
+  @media (max-width: 768px) {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+
+    span,
+    button {
+      min-width: 0;
+      min-height: 54px;
+      padding: 10px 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.72);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 3px;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.1;
+      text-align: left;
+    }
+
+    button {
+      cursor: pointer;
+      transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button:hover {
+      border-color: rgba(255, 179, 196, 0.5);
+      background: rgba(211, 17, 69, 0.18);
+    }
+
+    strong {
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1;
+    }
+  }
+`;
+
+const MobileModalBackdrop = styled(motion.div)`
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.62);
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+
+  @media (max-width: 768px) {
+    display: flex;
+  }
+`;
+
+const MobileMetricModal = styled(motion.div)`
+  width: min(100%, 420px);
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #ffffff;
+  color: #111827;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+
+  span {
+    display: block;
+    color: #d31145;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.1;
+    text-transform: uppercase;
+  }
+
+  h2 {
+    margin: 5px 0 0;
+    color: #111827;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.15;
+  }
+
+  button {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: #f3f4f6;
+    color: #6b7280;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex: 0 0 auto;
+
+    &:hover {
+      background: #fff1f5;
+      color: #d31145;
+    }
+  }
+`;
+
+const MetricValue = styled.strong`
+  display: block;
+  margin-top: 18px;
+  color: #d31145;
+  font-size: 46px;
+  font-weight: 800;
+  line-height: 1;
+`;
+
+const MetricDescription = styled.p`
+  margin: 14px 0 0;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.55;
+  word-break: keep-all;
+`;
+
+const MetricFormula = styled.div`
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f9fafb;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
 `;
 
 const ChatHeader = styled.div`
@@ -256,12 +562,55 @@ const ChatHeader = styled.div`
     transition: all 0.2s;
     &:hover { background: #e5e7eb; color: #374151; transform: scale(1.1); }
   }
+
+  @media (max-width: 768px) {
+    padding: calc(16px + env(safe-area-inset-top)) 16px 16px;
+    align-items: center;
+
+    .header-content {
+      min-width: 0;
+      gap: 12px;
+
+      .avatar-box {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+      }
+
+      .text-box {
+        min-width: 0;
+
+        h2 {
+          font-size: 16px;
+        }
+
+        p {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          max-width: 220px;
+        }
+      }
+    }
+
+    .close-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      flex: 0 0 auto;
+    }
+  }
 `;
 
 const MessageList = styled.div`
   flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; background: transparent;
   &::-webkit-scrollbar { width: 6px; }
   &::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 3px; }
+
+  @media (max-width: 768px) {
+    padding: 16px;
+    gap: 14px;
+  }
 `;
 
 const Bubble = styled(motion.div)<{ $isUser: boolean }>`
@@ -274,6 +623,13 @@ const Bubble = styled(motion.div)<{ $isUser: boolean }>`
   ` : css`
     align-self: flex-start; background: #ffffff; color: #1f2937; border-top-left-radius: 4px; border: 1px solid #f3f4f6;
   `}
+
+  @media (max-width: 768px) {
+    max-width: 92%;
+    padding: 11px 14px;
+    font-size: 14px;
+    border-radius: 16px;
+  }
 `;
 
 const SuggestionArea = styled.div` display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; `;
@@ -282,6 +638,11 @@ const Chip = styled.button`
   font-size: 12px; color: #4b5563; cursor: pointer; display: flex; align-items: center; gap: 4px;
   transition: all 0.2s;
   &:hover { border-color: #D31145; color: #D31145; background: #FFF0F3; transform: translateY(-1px); }
+
+  @media (max-width: 768px) {
+    min-height: 34px;
+    border-radius: 10px;
+  }
 `;
 
 const InputArea = styled.form`
@@ -297,6 +658,26 @@ const InputArea = styled.form`
     display: flex; align-items: center; justify-content: center; transition: all 0.2s;
     &:hover:not(:disabled) { background: #D31145; transform: scale(1.1); }
     &:disabled { background: #9ca3af; cursor: not-allowed; }
+  }
+
+  @media (max-width: 768px) {
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+    gap: 8px;
+
+    input {
+      min-width: 0;
+      height: 46px;
+      padding: 0 15px;
+      border-radius: 14px;
+      font-size: 14px;
+    }
+
+    button {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      flex: 0 0 auto;
+    }
   }
 `;
 
@@ -485,6 +866,17 @@ DashboardGrid.displayName = "DashboardGrid";
 
 export default function IntegratedDashboard() {
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isOperationModalOpen, setIsOperationModalOpen] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 768px)");
+    const syncMobile = () => setIsMobile(media.matches);
+
+    syncMobile();
+    media.addEventListener("change", syncMobile);
+    return () => media.removeEventListener("change", syncMobile);
+  }, []);
 
   return (
     <PageContainer>
@@ -493,6 +885,18 @@ export default function IntegratedDashboard() {
         layout
         transition={SMOOTH_TRANSITION}
       >
+        <MobileIntro>
+          <p>GMT Smart Factory</p>
+          <h1>통합 관제 대시보드</h1>
+          <MobileStatusRow aria-label="공장 현황 요약">
+            <button type="button" onClick={() => setIsOperationModalOpen(true)}>
+              가동률 <strong>98%</strong>
+            </button>
+            <span>업무영역 <strong>6</strong></span>
+            <span>AI 브리핑 <strong>ON</strong></span>
+          </MobileStatusRow>
+        </MobileIntro>
+
         <DashboardGrid />
 
         {/* 바깥 영역 클릭시 닫히는 오버레이 (조건부 렌더링) */}
@@ -508,12 +912,53 @@ export default function IntegratedDashboard() {
         </AnimatePresence>
       </MainContent>
 
+      <AnimatePresence>
+        {isOperationModalOpen && (
+          <MobileModalBackdrop
+            role="presentation"
+            onClick={() => setIsOperationModalOpen(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <MobileMetricModal
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="operation-rate-title"
+              onClick={(event) => event.stopPropagation()}
+              initial={{ opacity: 0, y: 18, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 18, scale: 0.98 }}
+              transition={{ duration: 0.18 }}
+            >
+              <ModalHeader>
+                <div>
+                  <span>Operation Rate</span>
+                  <h2 id="operation-rate-title">가동률 기준</h2>
+                </div>
+                <button type="button" onClick={() => setIsOperationModalOpen(false)} aria-label="닫기">
+                  <X size={18} />
+                </button>
+              </ModalHeader>
+              <MetricValue>98%</MetricValue>
+              <MetricDescription>
+                현재 값은 실시간 설비 API가 연결되기 전, 마스터 대시보드의 임시 운영 요약값입니다.
+                향후 설비별 정상 가동 시간과 계획 가동 시간을 연결해 자동 계산하도록 확장할 수 있습니다.
+              </MetricDescription>
+              <MetricFormula>
+                가동률 = 정상 가동 시간 / 계획 가동 시간 x 100
+              </MetricFormula>
+            </MobileMetricModal>
+          </MobileModalBackdrop>
+        )}
+      </AnimatePresence>
+
       {/* 2. 사이드바 (Push Effect) */}
       <AnimatePresence mode="wait">
         {isChatOpen && (
           <SidebarWrapper
             initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 450, opacity: 1 }}
+            animate={{ width: isMobile ? "100%" : 450, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={SMOOTH_TRANSITION}
           >

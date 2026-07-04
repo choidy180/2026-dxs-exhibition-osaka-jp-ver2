@@ -10,7 +10,6 @@ import {
   Bot,
   Boxes,
   CheckCircle2,
-  ChevronRight,
   CircleDotDashed,
   ClipboardCheck,
   Cog,
@@ -21,6 +20,7 @@ import {
   Package,
   PackageCheck,
   PanelLeftClose,
+  QrCode,
   Route,
   ScanSearch,
   Search,
@@ -89,6 +89,7 @@ const NAV_ITEMS: NavEntry[] = [
     children: [
       { label: "입고검사", href: "/material/inbound-inspection", detail: "자재 입고 품질 확인", icon: ClipboardCheck },
       { label: "입고검사현황", href: "/material/inbound-inspection/status", detail: "일·주·월·연간 검수 현황", icon: BarChart3 },
+      { label: "자재검수", href: "/material/inbound-inspection/material-check", detail: "모바일 QR 카메라 검수", icon: QrCode },
       { label: "자재창고", href: "/material/warehouse", detail: "창고 재고와 위치 관리", icon: Warehouse },
       { label: "공정재고", href: "/production/smart-factory-dashboard", detail: "라인 투입 전 재고 현황", icon: Boxes },
     ],
@@ -393,6 +394,8 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
 
       <AIAgentSystem />
 
+      {openPanel && !isSidebarCollapsed && <SubSidebarScrim onClick={closePanel} aria-hidden="true" />}
+
       <SubSidebar $open={!!openPanel && !isSidebarCollapsed} aria-hidden={!openPanel || isSidebarCollapsed}>
         {openPanel && (
           <>
@@ -430,45 +433,32 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
 
             <SubContent className="custom-scrollbar">
               {filteredGroups.length > 0 ? (
-                filteredGroups.map((group) => {
-                  const GroupIcon = group.icon;
+                filteredGroups.map((group) => (
+                  <ResultGroup key={group.key}>
+                    {group.children?.map((child) => {
+                      const ChildIcon = child.icon;
+                      const active = isActiveNavChild(pathname, child, group.children ?? []);
 
-                  return (
-                    <ResultGroup key={group.key}>
-                      <GroupTitle>
-                        <GroupTitleIcon>
-                          <GroupIcon size={16} />
-                        </GroupTitleIcon>
-                        <span>{group.label}</span>
-                      </GroupTitle>
-
-                      {group.children?.map((child) => {
-                        const ChildIcon = child.icon;
-                        const active = isActiveNavChild(pathname, child, group.children ?? []);
-
-                        return (
-                          <ResultButton
-                            key={child.href}
-                            type="button"
-                            $active={active}
-                            onClick={() => handleChildClick(child)}
-                            aria-current={active ? "page" : undefined}
-                          >
-                            <ResultIcon $active={active}>
-                              <ChildIcon size={18} />
-                            </ResultIcon>
-                            <ResultText>
-                              <strong>{child.label}</strong>
-                              <span>{child.detail}</span>
-                              <small>{child.href}</small>
-                            </ResultText>
-                            <ChevronRight size={17} />
-                          </ResultButton>
-                        );
-                      })}
-                    </ResultGroup>
-                  );
-                })
+                      return (
+                        <ResultButton
+                          key={child.href}
+                          type="button"
+                          $active={active}
+                          onClick={() => handleChildClick(child)}
+                          aria-current={active ? "page" : undefined}
+                        >
+                          <ResultIcon $active={active}>
+                            <ChildIcon size={18} />
+                          </ResultIcon>
+                          <ResultText>
+                            <strong>{child.label}</strong>
+                            <span>{child.detail}</span>
+                          </ResultText>
+                        </ResultButton>
+                      );
+                    })}
+                  </ResultGroup>
+                ))
               ) : (
                 <EmptySearch>
                   <Search size={30} />
@@ -689,6 +679,15 @@ const SubSidebar = styled.aside<{ $open: boolean }>`
     opacity 190ms ease;
 `;
 
+const SubSidebarScrim = styled.button`
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  border: 0;
+  background: transparent;
+  cursor: default;
+`;
+
 const SubHeader = styled.div`
   flex: 0 0 auto;
   padding: 22px 18px 16px;
@@ -798,13 +797,14 @@ const ResultSummary = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: #667085;
-  font-size: 12px;
-  font-weight: 800;
+  color: #344054;
+  font-size: 13px;
+  font-weight: 850;
 
   em {
-    color: #98a2b3;
+    color: #667085;
     font-style: normal;
+    font-weight: 800;
   }
 `;
 
@@ -812,52 +812,30 @@ const SubContent = styled.div`
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 0 14px 18px;
+  padding: 3px 14px 18px;
 `;
 
 const ResultGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 18px;
-`;
-
-const GroupTitle = styled.div`
-  height: 30px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 4px;
-  color: #344054;
-  font-size: 12px;
-  font-weight: 900;
-`;
-
-const GroupTitleIcon = styled.span`
-  width: 28px;
-  height: 28px;
-  border-radius: 10px;
-  background: #fff1f5;
-  color: #d31145;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  gap: 10px;
+  margin-bottom: 12px;
 `;
 
 const ResultButton = styled.button<{ $active: boolean }>`
   width: 100%;
-  min-height: 74px;
+  min-height: 70px;
   border-radius: 12px;
-  border: 1px solid ${({ $active }) => ($active ? "rgba(211, 17, 69, 0.34)" : "rgba(15, 23, 42, 0.08)")};
+  border: 1px solid ${({ $active }) => ($active ? "rgba(211, 17, 69, 0.40)" : "rgba(15, 23, 42, 0.11)")};
   background: ${({ $active }) => ($active ? "#fff1f5" : "#ffffff")};
-  color: ${({ $active }) => ($active ? "#d31145" : "#344054")};
+  color: ${({ $active }) => ($active ? "#d31145" : "#182230")};
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
+  padding: 13px 12px;
   text-align: left;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.045);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
   transition: transform 150ms ease, border-color 150ms ease, color 150ms ease, background 150ms ease;
 
   &:hover {
@@ -878,7 +856,7 @@ const ResultIcon = styled.span<{ $active: boolean }>`
   flex: 0 0 42px;
   border-radius: 12px;
   background: ${({ $active }) => ($active ? "#ffffff" : "#f2f4f7")};
-  color: ${({ $active }) => ($active ? "#d31145" : "#667085")};
+  color: ${({ $active }) => ($active ? "#d31145" : "#475467")};
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -893,23 +871,18 @@ const ResultText = styled.span`
 
   strong {
     color: inherit;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 850;
-    letter-spacing: -0.04em;
+    letter-spacing: -0.02em;
   }
 
   span {
-    color: #667085;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: -0.03em;
-  }
-
-  small {
-    color: #98a2b3;
-    font-size: 10px;
+    color: #475467;
+    font-size: 13px;
     font-weight: 750;
-    letter-spacing: -0.02em;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    word-break: keep-all;
   }
 `;
 

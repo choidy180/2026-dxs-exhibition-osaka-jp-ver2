@@ -26,10 +26,10 @@ const pulseGlow = keyframes`
   100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
 `;
 
-const MobileGuardContainer = styled.div`
+const MobileGuardContainer = styled.div<{ $isEnabled: boolean }>`
   display: none;
   @media (max-width: 1024px) {
-    display: flex;
+    display: ${(props) => (props.$isEnabled ? "flex" : "none")};
     flex-direction: column;
     justify-content: center;
     align-items: center;
@@ -104,14 +104,14 @@ const PcBadge = styled.div`
 // 2. Desktop Wrapper Styles (PC 화면 스타일)
 // --------------------------------------------------------------------------
 
-const DesktopOnlyWrapper = styled.div`
+const DesktopOnlyWrapper = styled.div<{ $allowMobile: boolean }>`
   display: block;
   width: 100%;
   height: 100%;
   position: relative;
   
   @media (max-width: 1024px) {
-    display: none !important;
+    display: ${(props) => (props.$allowMobile ? "block" : "none")} !important;
   }
 `;
 
@@ -153,6 +153,9 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
   // 로딩 애니메이션을 건너뛸 경로인지 확인
   const isSkipLoading = pathname?.includes("master-dashboard");
   const isMasterDashboard = pathname?.includes("master-dashboard") ?? false;
+  const isMaterialCheckPage = pathname?.startsWith("/material/inbound-inspection/material-check") ?? false;
+  const isMobileAllowedPage = isMasterDashboard || isMaterialCheckPage;
+  const isFullWidthPage = isMasterDashboard || isMaterialCheckPage;
 
   useLayoutEffect(() => {
     // 💡 1. 서비스에 최초로 접속했을 때만 로딩을 띄웁니다.
@@ -176,7 +179,7 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
   return (
     <>
       {/* 1. 모바일 접속 시 차단 화면 */}
-      <MobileGuardContainer>
+      <MobileGuardContainer $isEnabled={!isMobileAllowedPage}>
         <IconCircle>
           <Monitor size={48} strokeWidth={1.5} />
         </IconCircle>
@@ -195,7 +198,7 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
       </MobileGuardContainer>
 
       {/* 2. PC 접속 시 메인 화면 */}
-      <DesktopOnlyWrapper>
+      <DesktopOnlyWrapper $allowMobile={isMobileAllowedPage}>
         
         {/* ✅ 시네마틱 로딩 스크린 오버레이 */}
         <AnimatePresence mode="wait">
@@ -204,14 +207,14 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
           )}
         </AnimatePresence>
 
-        {!isMasterDashboard && (
+        {!isFullWidthPage && (
           <NavContainer>
             <TopNavigation isLoading={isLoading && !isSkipLoading} />
           </NavContainer>
         )}
         
         {/* 로딩 중일 때 내용 숨김 ($isHidden) */}
-        <MainContent $isHidden={isLoading && !isSkipLoading} $isFullWidth={isMasterDashboard}>
+        <MainContent $isHidden={isLoading && !isSkipLoading} $isFullWidth={isFullWidthPage}>
             {children}
         </MainContent>
         
