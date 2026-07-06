@@ -13,6 +13,8 @@ import {
     InfoHeaderText,
     InfoSubValue,
     InfoValue,
+    ModelInfoDivider,
+    ModelInfoLine,
     ResultCard,
     ResultIconBox,
     ResultLabel,
@@ -86,10 +88,11 @@ export function DashboardHeader({
                         <InfoValue>{formatCount(totalStats?.normal_count, totalStats?.total_count)}</InfoValue>
                     </InfoCell>
                     <InfoCell>
-                        <ResultTextStack>
+                        <ModelInfoLine>
                             <InfoValue>{data?.CDGITEM || '-'}</InfoValue>
+                            <ModelInfoDivider>/</ModelInfoDivider>
                             <InfoSubValue>{data?.STATUS002 || '-'}</InfoSubValue>
-                        </ResultTextStack>
+                        </ModelInfoLine>
                     </InfoCell>
                     <InfoCell $last>
                         <InfoValue $color={filmTheme.textPrimary}>RUNNING</InfoValue>

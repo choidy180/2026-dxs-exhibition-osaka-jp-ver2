@@ -223,7 +223,7 @@ export const InfoHeader = styled.div`
     height: 36%;
     min-height: 34px;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: minmax(104px, 0.55fr) minmax(96px, 0.5fr) minmax(360px, 2fr) minmax(100px, 0.5fr);
     border-bottom: 1px solid ${filmTheme.border};
     background: #F8FAFC;
 `;
@@ -232,7 +232,7 @@ export const InfoBody = styled.div`
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: minmax(104px, 0.55fr) minmax(96px, 0.5fr) minmax(360px, 2fr) minmax(100px, 0.5fr);
 `;
 
 export const InfoCell = styled.div<{ $last?: boolean }>`
@@ -271,6 +271,31 @@ export const InfoSubValue = styled.span`
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+`;
+
+export const ModelInfoLine = styled.div`
+    min-width: 0;
+    width: 100%;
+    padding: 0 14px;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 10px;
+    white-space: nowrap;
+
+    ${InfoValue},
+    ${InfoSubValue} {
+        min-width: 0;
+        flex: 0 1 auto;
+        margin-top: 0;
+    }
+`;
+
+export const ModelInfoDivider = styled.span`
+    flex: 0 0 auto;
+    color: ${filmTheme.textMuted};
+    font-size: 12px;
+    font-weight: 700;
 `;
 
 export const ContentGrid = styled.main<{
@@ -742,7 +767,7 @@ export const EmptyIconBox = styled.div`
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 14px;
+    border-radius: 12px;
     border: 1px solid rgba(225, 29, 46, 0.14);
     background: ${filmTheme.accentSoft};
     color: ${filmTheme.accent};
@@ -834,7 +859,7 @@ export const PermissionIcon = styled.div`
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 14px;
+    border-radius: 12px;
     background: ${filmTheme.accentSoft};
     color: ${filmTheme.accent};
 `;

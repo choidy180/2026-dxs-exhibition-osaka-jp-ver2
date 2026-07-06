@@ -338,11 +338,12 @@ const GlobalStyle = createGlobalStyle`
 `;
 
 const Container = styled(motion.div)`
-  width: 100vw;
+  width: 100%;
   height: 100vh;
   display: flex;
   flex-direction: column;
   background-color: #F3F4F6;
+  overflow: hidden;
 `;
 
 const Header = styled.header`
@@ -436,8 +437,9 @@ const Sidebar = styled.aside`
 
 const CardBase = styled.div`
   background: #fff;
-  border-radius: 24px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+  border-radius: 12px;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.05);
   display: flex;
   flex-direction: column;
 `;
@@ -489,7 +491,7 @@ const SummaryCard = styled(CardBase)`
 
       .label {
         font-size: 16px;
-        color: #888;
+        color: #334155;
         margin-top: 4px;
         font-weight: 600;
       }
@@ -518,8 +520,8 @@ const SummaryCard = styled(CardBase)`
         display: flex;
         align-items: center;
         gap: 8px;
-        color: #4A5565;
-        font-weight: 500;
+        color: #334155;
+        font-weight: 600;
 
         .dot {
           width: 6px;
@@ -583,10 +585,11 @@ const InventorySection = styled(CardBase)`
         width: 100%;
         outline: none;
         font-size: 0.8rem;
-        color: #333;
-        
+        color: #1f2937;
+        font-weight: 500;
+
         &::placeholder {
-          color: #9CA3AF;
+          color: #6B7280;
         }
       }
     }
@@ -649,11 +652,11 @@ const InvItem = styled.div`
     
     .loc {
       font-size: 14px;
-      color: #888;
+      color: #475569;
       display: flex;
       align-items: center;
       gap: 4px;
-      font-weight: 500;
+      font-weight: 600;
     }
   }
 
@@ -666,8 +669,9 @@ const InvItem = styled.div`
 
 const EmptyState = styled.div`
   text-align: center;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 0.85rem;
+  font-weight: 500;
   margin-top: 30px;
 `;
 
@@ -808,12 +812,12 @@ const ZoneColumnWrapper = styled(motion.div)`
 
     .usage-text {
       font-size: 16px;
-      color: #878C94;
+      color: #334155;
       margin-bottom: 8px;
       display: flex;
       justify-content: space-between;
-      font-weight: 500;
-      
+      font-weight: 600;
+
       b {
         color: #C10B2E;
       }
@@ -875,7 +879,7 @@ const Slot = styled.div<{ $active: boolean }>`
   position: relative;
   font-size: 15px;
   font-weight: 700;
-  color: ${props => (props.$active ? '#C10B2E' : '#cbd5e1')};
+  color: ${props => (props.$active ? '#C10B2E' : '#64748b')};
   transition: all 0.3s;
   box-shadow: ${props => (props.$active ? '0 2px 4px rgba(193, 11, 46, 0.08)' : '0 1px 2px rgba(0,0,0,0.03)')};
   

@@ -25,17 +25,17 @@ export const LAYOUT_CONFIGS: Record<ScreenMode, {
     logColumn: string;
 }> = {
     FHD: {
-        padding: '20px',
-        gap: '16px',
-        headerHeight: '104px',
-        imageColumn: 'minmax(0, 2.8fr)',
-        logColumn: 'minmax(360px, 0.95fr)',
+        padding: '16px',
+        gap: '12px',
+        headerHeight: '92px',
+        imageColumn: 'minmax(0, 3fr)',
+        logColumn: 'minmax(340px, 0.9fr)',
     },
     QHD: {
-        padding: '28px',
-        gap: '20px',
-        headerHeight: '118px',
-        imageColumn: 'minmax(0, 2.9fr)',
-        logColumn: 'minmax(440px, 0.9fr)',
+        padding: '22px',
+        gap: '16px',
+        headerHeight: '108px',
+        imageColumn: 'minmax(0, 3fr)',
+        logColumn: 'minmax(420px, 0.88fr)',
     },
 };

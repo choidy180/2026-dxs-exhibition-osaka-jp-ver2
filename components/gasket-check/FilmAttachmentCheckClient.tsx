@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardHeader } from '@/components/gasket-check/DashboardHeader';
 import { EmptyStateModal } from '@/components/gasket-check/EmptyStateModal';
@@ -28,15 +28,8 @@ export default function FilmAttachmentCheckClient() {
     const [isFullLogOpen, setIsFullLogOpen] = useState(false);
     const [isEmptyStateClosed, setIsEmptyStateClosed] = useState(false);
     const [audioAllowed, setAudioAllowed] = useState(false);
-    const [showPermissionModal, setShowPermissionModal] = useState(false);
 
     useDefectAlarm(isDefectMode, audioAllowed);
-
-    useEffect(() => {
-        if (isDefectMode && !audioAllowed) {
-            setShowPermissionModal(true);
-        }
-    }, [audioAllowed, isDefectMode]);
 
     const handleImageOpen = (title: string, imgUrl: string) => {
         if (!imgUrl) {
@@ -92,10 +85,9 @@ export default function FilmAttachmentCheckClient() {
             />
 
             <SoundPermissionModal
-                isOpen={showPermissionModal}
+                isOpen={isDefectMode && !audioAllowed}
                 onConfirm={() => {
                     setAudioAllowed(true);
-                    setShowPermissionModal(false);
                 }}
             />
 

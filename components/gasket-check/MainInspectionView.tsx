@@ -107,17 +107,11 @@ export function MainInspectionView({
         return normalizeDxsImageUrl(displayImageUrl);
     }, [displayImageUrl]);
 
-    useEffect(() => {
-        setDisplayImageUrl((prev) => {
-            const cleanedPrev = normalizeDxsImageUrl(prev);
-            return cleanedPrev === prev ? prev : cleanedPrev;
-        });
-    }, []);
+    const visibleImageUrl = imageUrl ? cleanDisplayImageUrl : '';
+    const hasFailedCurrentImage = !!imageUrl && failedImageUrl === imageUrl;
 
     useEffect(() => {
         if (!imageUrl) {
-            setDisplayImageUrl('');
-            setFailedImageUrl('');
             return;
         }
 
@@ -151,7 +145,7 @@ export function MainInspectionView({
         };
     }, [imageUrl]);
 
-    const hasDisplayImage = !!cleanDisplayImageUrl;
+    const hasDisplayImage = !!visibleImageUrl;
 
     return (
         <ImagePanel $tone={tone}>
@@ -171,17 +165,17 @@ export function MainInspectionView({
                 {hasDisplayImage ? (
                     <>
                         <ImageContent
-                            key={cleanDisplayImageUrl}
-                            src={cleanDisplayImageUrl}
+                            key={visibleImageUrl}
+                            src={visibleImageUrl}
                             alt="Film Attachment Inspection"
                             draggable={false}
                             onError={() => {
                                 console.error(
                                     'Gasket inspection display image failed:',
-                                    cleanDisplayImageUrl,
+                                    visibleImageUrl,
                                 );
 
-                                setFailedImageUrl(cleanDisplayImageUrl);
+                                setFailedImageUrl(visibleImageUrl);
                                 setDisplayImageUrl('');
                             }}
                         />
@@ -199,7 +193,7 @@ export function MainInspectionView({
                             onClick={() =>
                                 onImageOpen(
                                     '가스켓 이상 탐지 이미지',
-                                    cleanDisplayImageUrl,
+                                    visibleImageUrl,
                                 )
                             }
                         >
@@ -210,7 +204,7 @@ export function MainInspectionView({
                 ) : (
                     <WaitingBox>
                         <RefreshCw className="film-spin" size={30} />
-                        {failedImageUrl
+                        {hasFailedCurrentImage
                             ? '이미지 재수신 대기 중'
                             : '이미지 수신 대기 중'}
                     </WaitingBox>
