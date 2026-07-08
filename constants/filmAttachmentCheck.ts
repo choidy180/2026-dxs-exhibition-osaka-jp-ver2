@@ -1,7 +1,7 @@
 import type { ScreenMode } from '@/types/gasketCheck';
 
-const FILM_ATTACHMENT_DEV_API_URL = 'https://gapi.dxsplatform.com/api/DX_API000027';
-const FILM_ATTACHMENT_INTERNAL_API_URL = 'http://192.168.2.147:24828/api/DX_API000027';
+const FILM_ATTACHMENT_DEV_API_URL = 'https://gapi.dxsplatform.com/api/DX_API000026';
+const FILM_ATTACHMENT_INTERNAL_API_URL = 'http://192.168.2.147:24828/api/DX_API000026';
 
 export const FILM_ATTACHMENT_API_URL =
   typeof window !== 'undefined' &&
