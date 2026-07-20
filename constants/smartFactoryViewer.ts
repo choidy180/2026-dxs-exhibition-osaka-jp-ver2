@@ -1,4 +1,9 @@
-import type { ProcessStepConfig, ViewOption, ViewerLayoutType, ViewerUiMode } from '@/types/smartFactoryViewer';
+import type {
+  ProcessStepConfig,
+  ViewOption,
+  ViewerLayoutType,
+  ViewerUiMode,
+} from '@/types/smartFactoryViewer';
 
 export const JIG_MODEL_PATH = '/models/final_final_final.glb';
 export const FLOOR_MODEL_PATH = '/models/final_final_final_final.glb';

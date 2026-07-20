@@ -1,8 +1,21 @@
 'use client';
 
-import { LayoutDashboard, MonitorDot, PanelsTopLeft, RectangleHorizontal, Rows3 } from 'lucide-react';
-import { PROCESS_TABS, UI_MODE_OPTIONS, VIEW_LAYOUT_OPTIONS } from '@/constants/smartFactoryViewer';
-import type { ViewerLayoutType, ViewerUiMode } from '@/types/smartFactoryViewer';
+import {
+  LayoutDashboard,
+  MonitorDot,
+  PanelsTopLeft,
+  RectangleHorizontal,
+  Rows3,
+} from 'lucide-react';
+import {
+  PROCESS_TABS,
+  UI_MODE_OPTIONS,
+  VIEW_LAYOUT_OPTIONS,
+} from '@/constants/smartFactoryViewer';
+import type {
+  ViewerLayoutType,
+  ViewerUiMode,
+} from '@/types/smartFactoryViewer';
 import {
   Toolbar,
   ToolbarButton,

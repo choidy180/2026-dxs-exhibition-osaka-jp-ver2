@@ -7,7 +7,12 @@ import { InfoPanels } from '@/components/smart-factory-viewer/InfoPanels';
 import { EmergencyAlert, PreparingModal, TransitionLoader } from '@/components/smart-factory-viewer/Modals';
 import { ViewerToolbar } from '@/components/smart-factory-viewer/ViewerToolbar';
 import { useSmartFactoryData } from '@/hooks/useSmartFactoryData';
-import type { ApiDataItem, UnitData, ViewerLayoutType, ViewerUiMode } from '@/types/smartFactoryViewer';
+import type {
+  ApiDataItem,
+  UnitData,
+  ViewerLayoutType,
+  ViewerUiMode,
+} from '@/types/smartFactoryViewer';
 import { createErrorUnits } from '@/utils/smartFactoryViewer';
 import {
   HighlightText,

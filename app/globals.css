@@ -29,6 +29,11 @@ svg {
   height: auto;
 }
 
+.process-station-label {
+  z-index: 38 !important;
+  pointer-events: none;
+}
+
 input,
 button,
 textarea,

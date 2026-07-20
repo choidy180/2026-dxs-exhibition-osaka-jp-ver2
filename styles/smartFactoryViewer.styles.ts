@@ -1081,6 +1081,7 @@ export const ModelErrorPointer = styled.div`
 `;
 
 export const ProcessLabelContainer = styled.div<{ $color: string }>`
+  position: relative;
   display: flex;
   flex-direction: row;
   gap: 8px;
@@ -1091,8 +1092,35 @@ export const ProcessLabelContainer = styled.div<{ $color: string }>`
   border: 1px solid ${({ $color }) => $color};
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.10);
-  transform: translate(25px, -25px);
+  pointer-events: none;
+  transform: translateY(-24px);
   backdrop-filter: blur(8px);
+
+  &::after {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    width: 2px;
+    height: 10px;
+    content: '';
+    background: ${({ $color }) => $color};
+    border-radius: 999px;
+    transform: translateX(-50%);
+  }
+
+  &::before {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    content: '';
+    background: ${({ $color }) => $color};
+    border: 2px solid rgba(255, 255, 255, 0.95);
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.2);
+    transform: translateX(-50%);
+  }
 `;
 
 export const ProcessDot = styled.div<{ $color: string }>`

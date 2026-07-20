@@ -2,11 +2,22 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, ThreeEvent, useFrame, useThree } from '@react-three/fiber';
-import { Center, Environment, Html, OrbitControls, Stage, useGLTF } from '@react-three/drei';
+import {
+  Center,
+  Environment,
+  Html,
+  OrbitControls,
+  Stage,
+  useGLTF,
+} from '@react-three/drei';
 import { AlertOctagon, Wrench } from 'lucide-react';
 import * as THREE from 'three';
 import { FLOOR_MODEL_PATH, JIG_MODEL_PATH, PROCESS_CONFIG } from '@/constants/smartFactoryViewer';
-import type { ApiDataItem, UnitData, ViewerLayoutType } from '@/types/smartFactoryViewer';
+import type {
+  ApiDataItem,
+  UnitData,
+  ViewerLayoutType,
+} from '@/types/smartFactoryViewer';
 import {
   BubbleAction,
   BubbleText,
@@ -29,6 +40,7 @@ interface FactorySceneProps {
 
 interface JigModelProps {
   url: string;
+  highContrast: boolean;
   apiData: ApiDataItem[];
   onHoverChange: (data: UnitData | null) => void;
   onInjectUnitChange: (unit: ApiDataItem | null) => void;
@@ -37,11 +49,19 @@ interface JigModelProps {
 interface MeshLocation {
   id: string;
   position: THREE.Vector3;
+  localPosition: THREE.Vector3;
+  inwardFacingYaw: number;
+  facingOffset: number;
+  stationGeometry: THREE.BufferGeometry;
+  stationEdgeGeometry: THREE.BufferGeometry | null;
+  neutralColor: THREE.Color;
+  edgeOpacity: number;
   mesh: THREE.Mesh;
 }
 
 interface ProcessLabelLocation {
   position: THREE.Vector3;
+  stationNumber: number;
   name: string;
   color: string;
 }
@@ -103,6 +123,17 @@ const CART_LABEL_OFFSETS: Partial<Record<string, Vector3Tuple>> = {
   // 'M-02': [-0.1, 1.05, 0],
 };
 
+const JIG_FACING_OFFSETS: Readonly<Record<string, number>> = {
+  jig2: -Math.PI / 2 + THREE.MathUtils.degToRad(12),
+  jig3: -Math.PI / 2 + THREE.MathUtils.degToRad(12),
+  jig4: -Math.PI / 2 + THREE.MathUtils.degToRad(12),
+  jig5: -Math.PI / 2 + THREE.MathUtils.degToRad(12),
+  jig6: -Math.PI / 6,
+  jig21: Math.PI / 6,
+};
+
+const PROCESS_COLORS = PROCESS_CONFIG.map((process) => new THREE.Color(process.color));
+
 const isAiLabelError = (aiLabel?: string | null) => {
   const normalizedAiLabel = aiLabel?.trim();
 
@@ -160,14 +191,20 @@ function SceneCameraController({ config }: { config: SceneViewConfig }) {
   );
 }
 
-const addSoftObjectEdge = (mesh: THREE.Mesh, isStaticPart: boolean) => {
+const addSoftObjectEdge = (
+  mesh: THREE.Mesh,
+  isStaticPart: boolean,
+  highContrast = false,
+) => {
   if (!mesh.geometry || mesh.children.some((child) => child.name === SOFT_EDGE_NAME)) return;
 
   const edgeGeometry = new THREE.EdgesGeometry(mesh.geometry, isStaticPart ? 52 : 36);
   const edgeMaterial = new THREE.LineBasicMaterial({
-    color: isStaticPart ? '#94a3b8' : '#475569',
+    color: highContrast
+      ? (isStaticPart ? '#273531' : '#31423d')
+      : (isStaticPart ? '#94a3b8' : '#475569'),
     transparent: true,
-    opacity: isStaticPart ? 0.08 : 0.18,
+    opacity: highContrast ? (isStaticPart ? 0.24 : 0.42) : (isStaticPart ? 0.08 : 0.18),
     depthTest: true,
     depthWrite: false,
   });
@@ -201,10 +238,11 @@ class ModelErrorBoundary extends React.Component<
   }
 }
 
-function FloorModel() {
+function FloorModel({ highContrast }: { highContrast: boolean }) {
   const { scene } = useGLTF(FLOOR_MODEL_PATH);
   const clonedScene = useMemo(() => {
     const cloned = scene.clone(true);
+    const contrastTarget = new THREE.Color('#34433f');
 
     cloned.traverse((child) => {
       const mesh = child as THREE.Mesh;
@@ -212,11 +250,28 @@ function FloorModel() {
 
       mesh.castShadow = false;
       mesh.receiveShadow = true;
-      addSoftObjectEdge(mesh, true);
+
+      if (highContrast && mesh.material) {
+        const updateMaterial = (source: THREE.Material) => {
+          const material = source.clone() as THREE.MeshStandardMaterial;
+
+          if (material.color) material.color.lerp(contrastTarget, 0.84);
+          material.roughness = 0.68;
+          material.metalness = 0.18;
+
+          return material;
+        };
+
+        mesh.material = Array.isArray(mesh.material)
+          ? mesh.material.map(updateMaterial)
+          : updateMaterial(mesh.material);
+      }
+
+      addSoftObjectEdge(mesh, true, highContrast);
     });
 
     return cloned;
-  }, [scene]);
+  }, [highContrast, scene]);
 
   return <primitive object={clonedScene} raycast={() => null} />;
 }
@@ -335,12 +390,23 @@ const MovingLabel = React.memo(({
 
 MovingLabel.displayName = 'MovingLabel';
 
-const ProcessLabel = React.memo(({ position, name, color }: ProcessLabelLocation) => {
+const ProcessLabel = React.memo(({
+  position,
+  stationNumber,
+  name,
+  color,
+}: ProcessLabelLocation) => {
   return (
-    <Html position={position} center zIndexRange={[50, 0]}>
+    <Html
+      position={position}
+      center
+      distanceFactor={15}
+      zIndexRange={[42, 31]}
+      wrapperClass="process-station-label"
+    >
       <ProcessLabelContainer $color={color}>
         <ProcessDot $color={color} />
-        <ProcessText>{name}</ProcessText>
+        <ProcessText>{stationNumber} · {name}</ProcessText>
       </ProcessLabelContainer>
     </Html>
   );
@@ -348,19 +414,29 @@ const ProcessLabel = React.memo(({ position, name, color }: ProcessLabelLocation
 
 ProcessLabel.displayName = 'ProcessLabel';
 
-function InteractiveJigModel({ url, apiData, onHoverChange, onInjectUnitChange }: JigModelProps) {
+function InteractiveJigModel({
+  url,
+  highContrast,
+  apiData,
+  onHoverChange,
+  onInjectUnitChange,
+}: JigModelProps) {
   const { scene } = useGLTF(url);
   const modelScene = useMemo(() => scene.clone(true), [scene]);
   const activeIdRef = useRef<string | null>(null);
   const lastInjectKeyRef = useRef<string | null>(null);
+  const lineCenterRef = useRef(new THREE.Vector3());
+  const facingStartRef = useRef(new THREE.Quaternion());
+  const facingEndRef = useRef(new THREE.Quaternion());
   const highlightColor = useMemo(() => new THREE.Color('#ef4444'), []);
   const errorColor = useMemo(() => new THREE.Color('#ff0000'), []);
+  const contrastColor = useMemo(() => new THREE.Color('#70827e'), []);
   const [meshLocations, setMeshLocations] = useState<MeshLocation[]>([]);
   const [processLabelLocations, setProcessLabelLocations] = useState<ProcessLabelLocation[]>([]);
-  const [currentCycleIndex, setCurrentCycleIndex] = useState(0);
-  const lastCycleRef = useRef(-1);
   const offsetStartIndex = 6;
   const cycleDuration = 15;
+  const waitDuration = 10;
+  const moveDuration = 5;
 
   const activeErrorIndices = useMemo(() => {
     return apiData
@@ -396,21 +472,23 @@ function InteractiveJigModel({ url, apiData, onHoverChange, onInjectUnitChange }
 
       mesh.castShadow = !isStaticPart;
       mesh.receiveShadow = true;
-      addSoftObjectEdge(mesh, isStaticPart);
+      addSoftObjectEdge(mesh, isStaticPart, highContrast);
 
       if (isStaticPart) return;
 
       if (mesh.material) {
         const baseMaterial = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
         const standardMaterial = baseMaterial as THREE.MeshStandardMaterial;
-        const originalColor = standardMaterial.color ?? new THREE.Color(0xffffff);
+        const originalColor = standardMaterial.color?.clone() ?? new THREE.Color(0xffffff);
+
+        if (highContrast) originalColor.lerp(contrastColor, 0.62);
 
         mesh.material = new THREE.MeshPhysicalMaterial({
           color: originalColor,
-          metalness: 0.1,
-          roughness: 0.2,
-          clearcoat: 1,
-          clearcoatRoughness: 0.1,
+          metalness: highContrast ? 0.18 : 0.1,
+          roughness: highContrast ? 0.42 : 0.2,
+          clearcoat: highContrast ? 0.48 : 1,
+          clearcoatRoughness: highContrast ? 0.28 : 0.1,
           side: THREE.DoubleSide,
         });
       }
@@ -449,48 +527,154 @@ function InteractiveJigModel({ url, apiData, onHoverChange, onInjectUnitChange }
       sortedMeshes.splice(12, 1);
     }
 
+    lineCenterRef.current.set(0, 0, 0);
+    sortedMeshes.forEach((item) => {
+      lineCenterRef.current.add(item.mesh.position);
+    });
+    lineCenterRef.current.divideScalar(sortedMeshes.length);
+    const inwardFacingYaws = sortedMeshes.map((item, index) => {
+      const previous = sortedMeshes[(index - 1 + sortedMeshes.length) % sortedMeshes.length].mesh.position;
+      const next = sortedMeshes[(index + 1) % sortedMeshes.length].mesh.position;
+      const tangentX = next.x - previous.x;
+      const tangentZ = next.z - previous.z;
+      let normalX = -tangentZ;
+      let normalZ = tangentX;
+      const centerX = lineCenterRef.current.x - item.mesh.position.x;
+      const centerZ = lineCenterRef.current.z - item.mesh.position.z;
+
+      if (normalX * centerX + normalZ * centerZ < 0) {
+        normalX *= -1;
+        normalZ *= -1;
+      }
+
+      return Math.atan2(normalX, normalZ);
+    });
+
     const processLabels: ProcessLabelLocation[] = [];
 
     sortedMeshes.forEach((item, index) => {
       if (index >= PROCESS_CONFIG.length) return;
 
       const config = PROCESS_CONFIG[index];
-      const material = item.mesh.material as THREE.MeshPhysicalMaterial;
-      material.color.set(config.color);
+      const geometry = item.mesh.geometry;
+
+      if (!geometry.boundingBox) geometry.computeBoundingBox();
+
+      const labelPosition = item.mesh.position.clone();
+      const objectTop = (geometry.boundingBox?.max.y ?? 0.8) * Math.abs(item.mesh.scale.y);
+
+      labelPosition.y += objectTop + 0.08;
 
       processLabels.push({
-        position: item.position.clone().add(new THREE.Vector3(0, 1.2, 0)),
+        position: labelPosition,
+        stationNumber: index + 1,
         name: config.name,
         color: config.color,
       });
     });
 
     setProcessLabelLocations(processLabels);
-    setMeshLocations(
-      sortedMeshes.map((item) => ({
+    const nextMeshLocations = sortedMeshes.map((item, index) => {
+      const material = item.mesh.material as THREE.MeshPhysicalMaterial;
+      const edge = item.mesh.children.find(
+        (child) => child.name === SOFT_EDGE_NAME,
+      ) as THREE.LineSegments | undefined;
+      const edgeMaterial = edge?.material as THREE.LineBasicMaterial | undefined;
+
+      material.transparent = false;
+
+      return {
         id: item.mesh.uuid,
-        position: item.position.clone().add(
+        position: item.mesh.position.clone().add(
           new THREE.Vector3(
             CART_BASE_POSITION_OFFSET[0],
             CART_BASE_POSITION_OFFSET[1],
             CART_BASE_POSITION_OFFSET[2],
           ),
         ),
+        localPosition: item.mesh.position.clone(),
+        // 1~4번은 같은 직선 구간이므로 곡선 접선값을 섞지 않고
+        // 완전히 동일한 정면 방향을 사용한다.
+        inwardFacingYaw: index < 4 ? 0 : inwardFacingYaws[index],
+        facingOffset: JIG_FACING_OFFSETS[item.mesh.name.toLowerCase()] ?? 0,
+        stationGeometry: item.mesh.geometry,
+        stationEdgeGeometry: edge?.geometry ?? null,
+        neutralColor: material.color.clone(),
+        edgeOpacity: edgeMaterial?.opacity ?? 0,
         mesh: item.mesh,
-      })),
-    );
-  }, [modelScene]);
+      };
+    });
+
+    setMeshLocations(nextMeshLocations);
+  }, [contrastColor, highContrast, modelScene]);
 
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
     const cycleIndex = Math.floor(time / cycleDuration);
 
-    if (cycleIndex !== lastCycleRef.current) {
-      lastCycleRef.current = cycleIndex;
-      setCurrentCycleIndex(cycleIndex);
-    }
-
     if (meshLocations.length === 0) return;
+
+    const total = meshLocations.length;
+    const timeInCycle = time % cycleDuration;
+    const moveProgress = timeInCycle < waitDuration
+      ? 0
+      : Math.min((timeInCycle - waitDuration) / moveDuration, 1);
+    const rotationProgress = moveProgress * moveProgress * (3 - 2 * moveProgress);
+
+    meshLocations.forEach((movingLocation, labelIndex) => {
+      const currentStationIndex = (labelIndex + cycleIndex) % total;
+      const nextStationIndex = (currentStationIndex + 1) % total;
+      const currentLocation = meshLocations[currentStationIndex];
+      const nextLocation = meshLocations[nextStationIndex];
+      const movingMesh = movingLocation.mesh;
+
+      movingMesh.position.lerpVectors(
+        currentLocation.localPosition,
+        nextLocation.localPosition,
+        moveProgress,
+      );
+
+      facingStartRef.current.setFromAxisAngle(
+        THREE.Object3D.DEFAULT_UP,
+        currentLocation.inwardFacingYaw,
+      );
+      facingEndRef.current.setFromAxisAngle(
+        THREE.Object3D.DEFAULT_UP,
+        nextLocation.inwardFacingYaw,
+      );
+      movingMesh.quaternion.slerpQuaternions(
+        facingStartRef.current,
+        facingEndRef.current,
+        rotationProgress,
+      );
+      movingMesh.rotateY(currentLocation.facingOffset);
+
+      if (movingMesh.geometry !== currentLocation.stationGeometry) {
+        movingMesh.geometry = currentLocation.stationGeometry;
+      }
+
+      const edge = movingMesh.children.find(
+        (child) => child.name === SOFT_EDGE_NAME,
+      ) as THREE.LineSegments | undefined;
+
+      if (
+        edge &&
+        currentLocation.stationEdgeGeometry &&
+        edge.geometry !== currentLocation.stationEdgeGeometry
+      ) {
+        edge.geometry = currentLocation.stationEdgeGeometry;
+      }
+
+      const material = movingMesh.material as THREE.MeshPhysicalMaterial;
+      const currentColor = PROCESS_COLORS[currentStationIndex] ?? movingLocation.neutralColor;
+      const nextColor = PROCESS_COLORS[nextStationIndex] ?? movingLocation.neutralColor;
+      const edgeMaterial = edge?.material as THREE.LineBasicMaterial | undefined;
+
+      material.color.lerpColors(currentColor, nextColor, rotationProgress);
+      material.opacity = 1;
+      material.depthWrite = true;
+      if (edgeMaterial) edgeMaterial.opacity = movingLocation.edgeOpacity;
+    });
 
     const flashIntensity = 1.5 + Math.sin(time * 12) * 1.0;
 
@@ -502,9 +686,7 @@ function InteractiveJigModel({ url, apiData, onHoverChange, onInjectUnitChange }
     });
 
     activeErrorIndices.forEach((labelIndex) => {
-      const total = meshLocations.length;
-      const currentPositionIndex = (labelIndex + cycleIndex) % total;
-      const mesh = meshLocations[currentPositionIndex]?.mesh;
+      const mesh = meshLocations[labelIndex]?.mesh;
 
       if (!mesh || mesh.uuid === activeIdRef.current) return;
 
@@ -513,7 +695,6 @@ function InteractiveJigModel({ url, apiData, onHoverChange, onInjectUnitChange }
       material.emissiveIntensity = flashIntensity;
     });
 
-    const total = meshLocations.length;
     const injectStationIndex = 4;
     let targetCartIndex = (injectStationIndex - cycleIndex) % total;
     if (targetCartIndex < 0) targetCartIndex += total;
@@ -545,18 +726,7 @@ function InteractiveJigModel({ url, apiData, onHoverChange, onInjectUnitChange }
     const meshIndex = meshLocations.findIndex((location) => location.mesh.uuid === mesh.uuid);
     if (meshIndex === -1) return;
 
-    const total = meshLocations.length;
-    let foundLabelIndex = -1;
-
-    for (let labelIndex = 0; labelIndex < total; labelIndex += 1) {
-      if ((labelIndex + currentCycleIndex) % total === meshIndex) {
-        foundLabelIndex = labelIndex;
-        break;
-      }
-    }
-
-    if (foundLabelIndex === -1) return;
-
+    const foundLabelIndex = meshIndex;
     const name = `M-${String(foundLabelIndex + 1).padStart(2, '0')}`;
     const matchedData = apiData.find((item) => Number.parseInt(item.대차번호, 10) === foundLabelIndex + 1);
 
@@ -574,7 +744,7 @@ function InteractiveJigModel({ url, apiData, onHoverChange, onInjectUnitChange }
       problem: matchedData?.AI_LABEL,
       uuid: mesh.uuid,
     });
-  }, [apiData, currentCycleIndex, highlightColor, meshLocations, onHoverChange]);
+  }, [apiData, highlightColor, meshLocations, onHoverChange]);
 
   const handlePointerOut = useCallback((event: ThreeEvent<PointerEvent>) => {
     const mesh = event.object as THREE.Mesh;
@@ -606,6 +776,7 @@ function InteractiveJigModel({ url, apiData, onHoverChange, onInjectUnitChange }
         <ProcessLabel
           key={`proc-${location.name}`}
           position={location.position}
+          stationNumber={location.stationNumber}
           name={location.name}
           color={location.color}
         />
@@ -614,14 +785,48 @@ function InteractiveJigModel({ url, apiData, onHoverChange, onInjectUnitChange }
   );
 }
 
-export function FactoryScene({ layout, apiData, onHoverChange, onInjectUnitChange }: FactorySceneProps) {
+function FactoryModelLayer({
+  config,
+  apiData,
+  onHoverChange,
+  onInjectUnitChange,
+}: {
+  config: SceneViewConfig;
+  apiData: ApiDataItem[];
+  onHoverChange: (data: UnitData | null) => void;
+  onInjectUnitChange: (unit: ApiDataItem | null) => void;
+}) {
+  const models = (
+    <group scale={config.modelScale}>
+      <ModelErrorBoundary fallback={null}>
+        <FloorModel highContrast={false} />
+      </ModelErrorBoundary>
+      <ModelErrorBoundary fallback={null}>
+        <InteractiveJigModel
+          url={JIG_MODEL_PATH}
+          highContrast={false}
+          apiData={apiData}
+          onHoverChange={onHoverChange}
+          onInjectUnitChange={onInjectUnitChange}
+        />
+      </ModelErrorBoundary>
+    </group>
+  );
+
+  return <Center position={config.modelPosition}>{models}</Center>;
+}
+
+export function FactoryScene({
+  layout,
+  apiData,
+  onHoverChange,
+  onInjectUnitChange,
+}: FactorySceneProps) {
   const sceneConfig = SCENE_VIEW_CONFIG[layout];
 
   const {
     cameraPosition,
-    modelPosition,
     cameraFov,
-    modelScale,
   } = sceneConfig;
 
   return (
@@ -650,21 +855,12 @@ export function FactoryScene({ layout, apiData, onHoverChange, onInjectUnitChang
 
       <Suspense fallback={null}>
         <Stage environment="city" intensity={2} adjustCamera={false} shadows={false}>
-          <Center position={modelPosition}>
-            <group scale={modelScale}>
-              <ModelErrorBoundary fallback={null}>
-                <FloorModel />
-              </ModelErrorBoundary>
-              <ModelErrorBoundary fallback={null}>
-                <InteractiveJigModel
-                  url={JIG_MODEL_PATH}
-                  apiData={apiData}
-                  onHoverChange={onHoverChange}
-                  onInjectUnitChange={onInjectUnitChange}
-                />
-              </ModelErrorBoundary>
-            </group>
-          </Center>
+          <FactoryModelLayer
+            config={sceneConfig}
+            apiData={apiData}
+            onHoverChange={onHoverChange}
+            onInjectUnitChange={onInjectUnitChange}
+          />
         </Stage>
         <Environment preset="city" blur={1} background={false} />
       </Suspense>

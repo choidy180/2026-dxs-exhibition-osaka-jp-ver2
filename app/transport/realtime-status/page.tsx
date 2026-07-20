@@ -7,7 +7,8 @@ import {
   Sun, Cloud, CloudRain, CloudSnow, CloudLightning, Truck,
   RefreshCw, CheckCircle2, Navigation, Clock, AlertTriangle, PieChart,
   Eye, EyeOff, Layers3, X, Route, UserRound,
-  PackageCheck, Gauge, TimerReset, Radio, MapPin, GripHorizontal
+  PackageCheck, Gauge, TimerReset, Radio, MapPin, GripHorizontal,
+  Box, Map as MapIcon
 } from "lucide-react";
 import { format } from "date-fns";
 import dynamic from "next/dynamic";
@@ -18,6 +19,14 @@ const VWorldMap = dynamic(
   {
     ssr: false,
     loading: () => <div style={{ width: "100%", height: "100%", background: "#eef3f8" }} />
+  }
+);
+
+const Transport3DMap = dynamic(
+  () => import("@/components/transport-3d-map"),
+  {
+    ssr: false,
+    loading: () => <div style={{ width: "100%", height: "100%", background: "#d8e6e3" }} />
   }
 );
 
@@ -42,6 +51,7 @@ const getCurrentUrl = (path: string) => {
 
 type VehicleStatus = "Arrived" | "Moving";
 type MarkerInfoMode = "hidden" | "all" | "selected";
+type MapViewMode = "2d" | "3d";
 type InfoPanelKey = "top" | "left" | "right" | "detail";
 
 const INFO_PANEL_LABELS: Record<InfoPanelKey, string> = {
@@ -105,6 +115,10 @@ const TARGET_TRIPS_PER_DAY = 4;
 const EDGE = 24;
 const PANEL_GAP = 16;
 const HEADER_OFFSET = 64;
+const MAP_MODE_TOP = 18;
+const MAP_MODE_WIDTH = 390;
+const MAP_MODE_HEIGHT = 56;
+const MAP_MODE_SAFE_BOTTOM = MAP_MODE_TOP + MAP_MODE_HEIGHT + PANEL_GAP;
 
 const parseCoordinate = (coordStr: string | null, locName: string) => {
   if (coordStr && coordStr !== "0.000000, 0.000000") {
@@ -197,6 +211,14 @@ const toPanelStyle = (rect: PanelRect): React.CSSProperties => ({
   height: rect.height,
 });
 
+const toRightAnchoredPanelStyle = (rect: PanelRect, viewportWidth: number): React.CSSProperties => ({
+  left: "auto",
+  right: Math.max(EDGE, Math.round(viewportWidth - rect.x - rect.width)),
+  top: rect.y,
+  width: rect.width,
+  height: rect.height,
+});
+
 const avoidDockByResizing = (rect: PanelRect, dock: PanelRect, bounds: PanelRect): PanelRect => {
   const current = clampRect(rect, bounds);
   if (!rectsOverlap(current, dock)) return current;
@@ -258,15 +280,29 @@ const generateSampleData = (): SimulationVehicle[] => {
   ];
 };
 
-const useViewportSize = () => {
+const useViewportSize = (
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  enabled: boolean
+) => {
   const [size, setSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
-    const update = () => setSize({ width: window.innerWidth, height: Math.max(480, window.innerHeight - HEADER_OFFSET) });
+    if (!enabled) return;
+    const update = () => {
+      const container = containerRef.current;
+      const width = container?.clientWidth || window.innerWidth;
+      const height = container?.clientHeight || Math.max(480, window.innerHeight - HEADER_OFFSET);
+      setSize({ width: Math.round(width), height: Math.max(480, Math.round(height)) });
+    };
+    const observer = new ResizeObserver(update);
+    if (containerRef.current) observer.observe(containerRef.current);
     update();
     window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [containerRef, enabled]);
 
   return size;
 };
@@ -290,20 +326,22 @@ const useDraggableDock = (viewport: Size2D) => {
 
   const clampDockPosition = useCallback((point: Point2D, size = dockSize): Point2D => ({
     x: clamp(point.x, EDGE, safeViewport.width - size.width - EDGE),
-    y: clamp(point.y, EDGE, safeViewport.height - size.height - EDGE),
+    y: Math.max(MAP_MODE_SAFE_BOTTOM, safeViewport.height - size.height - EDGE),
   }), [dockSize, safeViewport.height, safeViewport.width]);
 
   useEffect(() => {
     if (!dockRef.current) return;
-    const observer = new ResizeObserver(([entry]) => {
+    const dockElement = dockRef.current;
+    const observer = new ResizeObserver(() => {
+      const rect = dockElement.getBoundingClientRect();
       const nextSize = {
-        width: Math.round(entry.contentRect.width),
-        height: Math.round(entry.contentRect.height),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
       };
       setDockSize(nextSize);
       setDockPosition(prev => prev ? clampDockPosition(prev, nextSize) : null);
     });
-    observer.observe(dockRef.current);
+    observer.observe(dockElement);
     return () => observer.disconnect();
   }, [clampDockPosition]);
 
@@ -521,6 +559,7 @@ const NoDataModal = React.memo(({ onShowSample }: { onShowSample: () => void }) 
 NoDataModal.displayName = "NoDataModal";
 
 export default function LocalMapPage() {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [weather, setWeather] = useState<{ temp: number; desc: string; icon: React.ReactNode }>({
@@ -529,13 +568,14 @@ export default function LocalMapPage() {
     icon: <Sun size={20} color="#64748b" />
   });
   const [infoMode, setInfoMode] = useState<MarkerInfoMode>("selected");
+  const [mapViewMode, setMapViewMode] = useState<MapViewMode>("2d");
   const [selectedMarkerIds, setSelectedMarkerIds] = useState<string[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [selectedMarkerSnapshot, setSelectedMarkerSnapshot] = useState<VWorldMarker | null>(null);
   const [visiblePanels, setVisiblePanels] = useState<Record<InfoPanelKey, boolean>>(DEFAULT_INFO_PANELS);
   const selectionInitializedRef = useRef(false);
 
-  const viewport = useViewportSize();
+  const viewport = useViewportSize(containerRef, isMounted);
   const { dockRef, dockSize, dockPosition, isDragging, dragHandlers } = useDraggableDock(viewport);
   const { vehicles, markers, targetIds, fetchData, isLoading, isSampleMode, setIsSampleMode } = useVehicleSimulation();
 
@@ -633,33 +673,60 @@ export default function LocalMapPage() {
   const panelRects = useMemo(() => {
     const width = viewport.width || 1920;
     const height = viewport.height || 960;
-    const leftW = width >= 2200 ? 380 : 360;
-    const rightW = width >= 2200 ? 380 : 360;
-    const detailW = width >= 2200 ? 440 : 420;
+    const availableWidth = Math.max(0, width - EDGE * 2);
+    const wideLeftW = width >= 2200 ? 380 : 360;
+    const wideRightW = width >= 2200 ? 380 : 360;
+    const wideDetailW = width >= 2200 ? 440 : 420;
+    const widePanelsWidth = wideLeftW + wideRightW + wideDetailW + PANEL_GAP * 2;
+    const compactSideW = clamp(
+      Math.floor((availableWidth - PANEL_GAP * 2) * 0.29),
+      250,
+      wideLeftW
+    );
+    const leftW = availableWidth >= widePanelsWidth ? wideLeftW : compactSideW;
+    const rightW = availableWidth >= widePanelsWidth ? wideRightW : compactSideW;
+    const detailW = availableWidth >= widePanelsWidth
+      ? wideDetailW
+      : Math.max(340, availableWidth - leftW - rightW - PANEL_GAP * 2);
     const topW = Math.min(610, width - EDGE * 2);
     const topH = 54;
     const bounds = { x: EDGE, y: EDGE, width: Math.max(320, width - EDGE * 2), height: Math.max(420, height - EDGE * 2) };
     const dockRect = { x: dockPosition.x, y: dockPosition.y, width: dockSize.width, height: dockSize.height };
+    const modeWidth = Math.min(MAP_MODE_WIDTH, availableWidth);
+    const modeRect = {
+      x: Math.round((width - modeWidth) / 2),
+      y: MAP_MODE_TOP,
+      width: modeWidth,
+      height: MAP_MODE_HEIGHT,
+    };
 
-    const topBase = { x: width - EDGE - topW, y: 18, width: topW, height: topH };
+    const topBase = { x: width - EDGE - topW, y: MAP_MODE_TOP, width: topW, height: topH };
     const rightBase = { x: width - EDGE - rightW, y: 92, width: rightW, height: height - 116 };
     const leftBase = { x: EDGE, y: EDGE, width: leftW, height: height - EDGE * 2 };
     const detailBase = passivePanelsVisible
       ? { x: width - EDGE - rightW - PANEL_GAP - detailW, y: 92, width: detailW, height: height - 116 }
       : { x: width - EDGE - detailW, y: 92, width: detailW, height: height - 116 };
 
-    const top = resolvePanelRect(topBase, [dockRect], bounds);
-    const leftSafe = avoidDockByResizing(avoidDockByResizing(leftBase, dockRect, bounds), top, bounds);
-    const left = resolvePanelRect(leftSafe, [dockRect, top], bounds);
-    const rightSafe = avoidDockByResizing(avoidDockByResizing(rightBase, dockRect, bounds), top, bounds);
-    const right = resolvePanelRect(rightSafe, [dockRect, top, left], bounds);
-    const detailSafe = passivePanelsVisible
-      ? avoidDockByResizing(avoidDockByResizing(detailBase, dockRect, bounds), top, bounds)
-      : avoidDockByResizing(detailBase, dockRect, bounds);
-    const detailObstacles = passivePanelsVisible ? [dockRect, top, left, right] : [dockRect];
-    const detail = resolvePanelRect(detailSafe, detailObstacles, bounds);
+    const avoidObstacles = (rect: PanelRect, obstacles: PanelRect[]) =>
+      obstacles.reduce((current, obstacle) => avoidDockByResizing(current, obstacle, bounds), rect);
 
-    return { top, left, right, detail };
+    const keepAboveDock = (rect: PanelRect): PanelRect => ({
+      ...rect,
+      height: Math.max(0, Math.min(rect.height, dockRect.y - PANEL_GAP - rect.y)),
+    });
+
+    const top = resolvePanelRect(topBase, [modeRect, dockRect], bounds);
+    const leftObstacles = [modeRect, top, dockRect];
+    const left = keepAboveDock(resolvePanelRect(avoidObstacles(leftBase, leftObstacles), leftObstacles, bounds));
+    const rightObstacles = [modeRect, top, dockRect, left];
+    const right = keepAboveDock(resolvePanelRect(avoidObstacles(rightBase, rightObstacles), rightObstacles, bounds));
+    const detailObstacles = passivePanelsVisible
+      ? [modeRect, top, dockRect, left, right]
+      : [modeRect, top, dockRect];
+    const detailSafe = avoidObstacles(detailBase, detailObstacles);
+    const detail = keepAboveDock(resolvePanelRect(detailSafe, detailObstacles, bounds));
+
+    return { top, left, right, detail, mode: modeRect, dock: dockRect };
   }, [dockPosition.x, dockPosition.y, dockSize.height, dockSize.width, passivePanelsVisible, viewport.height, viewport.width]);
 
   const calculateAvgTime = (startKeyword: string) => {
@@ -817,22 +884,45 @@ export default function LocalMapPage() {
   if (!isMounted) return null;
 
   return (
-    <Container>
+    <Container ref={containerRef}>
       <MapArea>
-        <VWorldMap
-          markers={markers}
-          focusedTitle={selectedVehicleId || targetIds.lgId || targetIds.gmtId || null}
-          markerInfoMode={infoMode}
-          selectedMarkerIds={activeSelectedMarkerIds}
-          onMarkerClick={handleMarkerClick}
-          onMapBlankClick={handleMapBlankClick}
-        />
+        {mapViewMode === "3d" ? (
+          <Transport3DMap
+            markers={markers}
+            focusedTitle={selectedVehicleId || targetIds.lgId || targetIds.gmtId || null}
+            markerInfoMode={infoMode}
+            selectedMarkerIds={activeSelectedMarkerIds}
+            onMarkerClick={handleMarkerClick}
+            onMapBlankClick={handleMapBlankClick}
+          />
+        ) : (
+          <VWorldMap
+            markers={markers}
+            focusedTitle={selectedVehicleId || targetIds.lgId || targetIds.gmtId || null}
+            markerInfoMode={infoMode}
+            selectedMarkerIds={activeSelectedMarkerIds}
+            onMarkerClick={handleMarkerClick}
+            onMapBlankClick={handleMapBlankClick}
+          />
+        )}
       </MapArea>
+
+      <MapModeFloating aria-label="지도 보기 방식" data-panel="mode-switch">
+        <span className="view-label">지도 보기</span>
+        <button type="button" className={mapViewMode === "2d" ? "active" : ""} onClick={() => setMapViewMode("2d")} aria-pressed={mapViewMode === "2d"}>
+          <MapIcon size={15} />
+          <span><strong>기존 지도</strong><small>2D 실시간 관제</small></span>
+        </button>
+        <button type="button" className={mapViewMode === "3d" ? "active" : ""} onClick={() => setMapViewMode("3d")} aria-pressed={mapViewMode === "3d"}>
+          <Box size={15} />
+          <span><strong>자연형 3D</strong><small>입체 디지털 트윈</small></span>
+        </button>
+      </MapModeFloating>
 
       {passivePanelsVisible && !isLoading && movingCount === 0 && <NoDataModal onShowSample={() => setIsSampleMode(true)} />}
 
       {isPanelVisible("top") && (
-        <TopRightWidget style={toPanelStyle(panelRects.top)}>
+        <TopRightWidget style={toRightAnchoredPanelStyle(panelRects.top, viewport.width || 1920)} data-panel="top-status">
           <div className="time">{currentTime ? format(currentTime, "HH:mm") : "00:00"}</div>
           <div className="date">{currentTime ? format(currentTime, "yyyy.MM.dd (EEE)") : "-"}</div>
           <div className="divider" />
@@ -854,12 +944,13 @@ export default function LocalMapPage() {
         ref={dockRef}
         style={{ left: dockPosition.x, top: dockPosition.y }}
         $dragging={isDragging}
+        data-panel="control-dock"
       >
         <DockDragHandle {...dragHandlers}>
           <GripHorizontal size={16} />
           <div>
             <span>지도 표시 설정</span>
-            <strong>{infoMode === "hidden" ? "전체 정보창 숨김" : infoMode === "all" ? "지도 정보창 전체 표시" : "지도 정보창 선택 표시"}</strong>
+            <strong>{mapViewMode === "3d" ? "3D 디지털 트윈" : "2D 실시간 지도"} · {infoMode === "hidden" ? "정보창 숨김" : infoMode === "all" ? "전체 표시" : "선택 표시"}</strong>
           </div>
           <span className="dock-count">{infoMode === "all" ? `${movingCount}대` : infoMode === "hidden" ? "OFF" : `${activeSelectedMarkerIds.length}대`}</span>
         </DockDragHandle>
@@ -909,7 +1000,7 @@ export default function LocalMapPage() {
       </ControlDock>
 
       {isPanelVisible("right") && (
-        <RightSideWrapper style={toPanelStyle(panelRects.right)}>
+        <RightSideWrapper style={toRightAnchoredPanelStyle(panelRects.right, viewport.width || 1920)} data-panel="right-status">
           <StatsPanel>
             <StatsHeader>
               <div className="title-box">
@@ -982,6 +1073,7 @@ export default function LocalMapPage() {
                     $isWarning={isWarning}
                     $isActive={selectedVehicleId === v.id}
                     onClick={() => openVehicleDetail(v.id)}
+                    data-vehicle-row={v.id}
                   >
                     <div className="v-info">
                       <div className="v-no">{v.vehicleNo}{isWarning && <AlertTriangle size={12} color="#b45309" />}</div>
@@ -1007,7 +1099,7 @@ export default function LocalMapPage() {
       )}
 
       {isPanelVisible("left") && (
-        <SidebarModal style={toPanelStyle(panelRects.left)}>
+        <SidebarModal style={toPanelStyle(panelRects.left)} data-panel="left-history">
           <SidebarHeaderSection>
             <SidebarHeader>운행 이력 및 통계</SidebarHeader>
             <AvgTimeSection>
@@ -1059,7 +1151,11 @@ export default function LocalMapPage() {
       )}
 
       {passivePanelsVisible && isPanelVisible("detail") && selectedVehicle && selectedRuntime && (
-        <VehicleDetailDrawer style={toPanelStyle(panelRects.detail)} $themeColor={selectedVehicle.startPos.title.includes("LG") ? "#ce0037" : "#0f172a"}>
+        <VehicleDetailDrawer
+          style={toRightAnchoredPanelStyle(panelRects.detail, viewport.width || 1920)}
+          $themeColor={selectedVehicle.startPos.title.includes("LG") ? "#ce0037" : "#0f172a"}
+          data-panel="vehicle-detail"
+        >
           <div className="drawer-head">
             <div>
               <span className="eyebrow"><Radio size={13} /> 선택 차량 상세</span>
@@ -1118,11 +1214,14 @@ const glassPanel = `
 `;
 
 const Container = styled.div`
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 100dvh;
   position: relative;
   overflow: hidden;
   background: #eef3f8;
+  contain: layout paint;
 `;
 
 const MapArea = styled.div`
@@ -1139,6 +1238,91 @@ const MapArea = styled.div`
   .ol-overlaycontainer-stopevent [data-marker-id] {
     pointer-events: auto !important;
     cursor: pointer;
+  }
+`;
+
+const MapModeFloating = styled.div`
+  position: absolute;
+  z-index: 145;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(390px, calc(100% - 48px));
+  display: grid;
+  grid-template-columns: auto repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.13);
+  backdrop-filter: blur(16px);
+
+  .view-label {
+    padding: 0 8px;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  button {
+    min-width: 0;
+    height: 44px;
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  button:hover {
+    color: #0f172a;
+    background: #f8fafc;
+  }
+
+  button > span {
+    min-width: 0;
+    display: block;
+  }
+
+  strong,
+  small {
+    display: block;
+    white-space: nowrap;
+  }
+
+  strong {
+    color: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.15;
+  }
+
+  small {
+    margin-top: 3px;
+    color: #94a3b8;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  button.active {
+    color: #ffffff;
+    background: #0f172a;
+    border-color: #0f172a;
+    box-shadow: 0 5px 12px rgba(15, 23, 42, 0.2);
+  }
+
+  button.active small {
+    color: #cbd5e1;
   }
 `;
 
@@ -1178,7 +1362,7 @@ const TopRightWidget = styled.div`
 const ControlDock = styled.div<{ $dragging: boolean }>`
   position: absolute;
   z-index: 140;
-  width: min(560px, calc(100vw - 48px));
+  width: min(560px, calc(100% - 48px));
   ${glassPanel}
   border-radius: 18px;
   padding: 10px;
@@ -1193,12 +1377,12 @@ const DockDragHandle = styled.div`
   grid-template-columns: 20px 1fr auto;
   gap: 8px;
   align-items: center;
-  cursor: grab;
+  cursor: ew-resize;
   color: #64748b;
   padding: 0 4px 8px;
   touch-action: none;
 
-  &:active { cursor: grabbing; }
+  &:active { cursor: ew-resize; }
   div { min-width: 0; display: flex; align-items: baseline; gap: 8px; }
   span { font-size: 11px; font-weight: 700; color: #64748b; white-space: nowrap; }
   strong { font-size: 14px; font-weight: 700; color: #0f172a; letter-spacing: -0.4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1321,6 +1505,8 @@ const RightSideWrapper = styled.div`
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-height: 0;
+  overflow: hidden;
 `;
 
 const StatsPanel = styled.div`
@@ -1328,8 +1514,15 @@ const StatsPanel = styled.div`
   border-radius: 22px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  flex-shrink: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 64%;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 `;
 
 const StatsHeader = styled.div`
@@ -1568,7 +1761,12 @@ const VehicleDetailDrawer = styled.div<{ $themeColor: string }>`
   display: flex;
   flex-direction: column;
   gap: 14px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
   .drawer-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
   .head-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
