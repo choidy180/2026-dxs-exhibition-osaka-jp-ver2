@@ -84,28 +84,6 @@ const modalPop = keyframes`
   }
 `;
 
-const emergencyBlink = keyframes`
-  0%, 100% {
-    background-color: rgba(50, 0, 0, 0.32);
-    box-shadow: inset 0 0 50px rgba(239, 68, 68, 0.2);
-  }
-
-  50% {
-    background-color: rgba(50, 0, 0, 0.62);
-    box-shadow: inset 0 0 150px rgba(239, 68, 68, 0.62);
-  }
-`;
-
-const textGlow = keyframes`
-  0%, 100% {
-    text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
-  }
-
-  50% {
-    text-shadow: 0 0 20px rgba(255, 0, 0, 1), 0 0 40px rgba(255, 0, 0, 0.8);
-  }
-`;
-
 const modeTheme = (mode: ViewerUiMode) => getSmartFactoryTheme(mode);
 
 const activeBorder = (mode: ViewerUiMode) => {
@@ -152,11 +130,7 @@ export const PageContainer = styled.div<{ $mode: ViewerUiMode }>`
     z-index: 1;
     content: '';
     pointer-events: none;
-    background-image:
-      linear-gradient(${({ $mode }) => modeTheme($mode).gridLine} 1px, transparent 1px),
-      linear-gradient(90deg, ${({ $mode }) => modeTheme($mode).gridLine} 1px, transparent 1px);
-    background-size: ${({ $mode }) => ($mode === 'command' ? '40px 40px' : '64px 64px')};
-    mask-image: linear-gradient(to bottom, black, transparent 88%);
+    display: none;
   }
 
   @media (min-width: 2200px) {
@@ -332,7 +306,7 @@ export const OperatorHeroBody = styled.div`
   gap: 8px;
   padding: 16px;
   margin-bottom: 14px;
-  background: linear-gradient(135deg, rgba(254, 242, 242, 0.96), rgba(255, 255, 255, 0.88));
+  background: #fff8f8;
   border: 1px solid rgba(239, 68, 68, 0.14);
   border-radius: 18px;
 `;
@@ -607,15 +581,17 @@ export const Toolbar = styled.div<{ $mode: ViewerUiMode }>`
   left: 50%;
   z-index: 90;
   display: flex;
-  gap: 10px;
+  gap: 9px;
   align-items: center;
   max-width: calc(100% - 48px);
-  padding: 6px;
-  overflow-x: auto;
+  padding: 7px;
+  overflow: visible;
   background: ${({ $mode }) => modeTheme($mode).panelBg};
   border: 1px solid ${({ $mode }) => modeTheme($mode).panelBorder};
-  border-radius: 16px;
-  box-shadow: ${({ $mode }) => modeTheme($mode).panelShadow};
+  background: #ffffff;
+  border-color: #e7e9ee;
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.10);
   transform: translateX(-50%);
   backdrop-filter: blur(24px);
 
@@ -626,8 +602,392 @@ export const Toolbar = styled.div<{ $mode: ViewerUiMode }>`
 
 export const ToolbarGroup = styled.div`
   display: flex;
-  gap: 4px;
+  flex: 0 0 auto;
+  gap: 2px;
   align-items: center;
+  min-height: 48px;
+  padding: 4px;
+  background: #f4f5f7;
+  border-radius: 10px;
+`;
+
+export const OverviewDock = styled.div`
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  z-index: 58;
+  display: grid;
+  grid-template-columns: minmax(0, 1.75fr) minmax(280px, 0.9fr);
+  gap: 16px;
+  width: min(1240px, calc(100% - 48px));
+  pointer-events: none;
+  transform: translateX(-50%);
+
+  > * {
+    pointer-events: auto;
+  }
+
+  @media (max-width: 1320px) {
+    bottom: 18px;
+    grid-template-columns: minmax(0, 1.7fr) minmax(250px, 0.8fr);
+    gap: 12px;
+    width: calc(100% - 32px);
+  }
+`;
+
+export const OverviewStatusCard = styled.section<{
+  $mode: ViewerUiMode;
+  $tone: 'normal' | 'warning' | 'error';
+}>`
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  min-height: 116px;
+  padding: 18px 20px;
+  background: #ffffff;
+  border: 1px solid ${({ $mode }) => modeTheme($mode).panelBorder};
+  border-radius: 16px;
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.10);
+
+  .status-summary {
+    display: flex;
+    flex: 1.5;
+    gap: 14px;
+    align-items: center;
+    min-width: 190px;
+    padding-right: 20px;
+  }
+
+  .status-indicator {
+    position: relative;
+    display: flex;
+    flex: 0 0 42px;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    background: ${({ $mode, $tone }) => {
+      if ($tone === 'normal') return modeTheme($mode).successSoft;
+      if ($tone === 'warning') return modeTheme($mode).warningSoft;
+      return modeTheme($mode).dangerSoft;
+    }};
+    border: 1px solid ${({ $mode, $tone }) => {
+      if ($tone === 'normal') return modeTheme($mode).success;
+      if ($tone === 'warning') return modeTheme($mode).warning;
+      return modeTheme($mode).danger;
+    }}33;
+    border-radius: 50%;
+  }
+
+  .status-indicator::before {
+    width: 12px;
+    height: 12px;
+    content: '';
+    background: ${({ $mode, $tone }) => {
+      if ($tone === 'normal') return modeTheme($mode).success;
+      if ($tone === 'warning') return modeTheme($mode).warning;
+      return modeTheme($mode).danger;
+    }};
+    border-radius: 50%;
+    box-shadow: 0 0 0 6px rgba(239, 51, 64, 0.08);
+  }
+
+  .status-copy {
+    min-width: 0;
+  }
+
+  .eyebrow {
+    margin-bottom: 4px;
+    color: ${({ $mode }) => modeTheme($mode).danger};
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .title {
+    color: ${({ $mode, $tone }) => {
+      if ($tone === 'normal') return modeTheme($mode).success;
+      if ($tone === 'warning') return modeTheme($mode).warning;
+      return modeTheme($mode).danger;
+    }};
+    font-size: clamp(20px, 1.5vw, 28px);
+    font-weight: 600;
+    letter-spacing: -0.05em;
+    white-space: nowrap;
+  }
+
+  .detail {
+    margin-top: 4px;
+    overflow: hidden;
+    color: #7b8494;
+    font-size: 12px;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .stats {
+    display: grid;
+    flex: 2;
+    grid-template-columns: repeat(4, minmax(58px, 1fr));
+    min-width: 0;
+    border-left: 1px solid #edf0f3;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    padding: 0 10px;
+    border-right: 1px solid #edf0f3;
+  }
+
+  .stat:last-child {
+    border-right: 0;
+  }
+
+  .stat-label {
+    margin-bottom: 6px;
+    color: #7b8494;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .stat-value {
+    color: #111827;
+    font-size: clamp(22px, 1.7vw, 30px);
+    font-weight: 600;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-value.normal { color: ${({ $mode }) => modeTheme($mode).success}; }
+  .stat-value.warning { color: ${({ $mode }) => modeTheme($mode).warning}; }
+  .stat-value.error { color: ${({ $mode }) => modeTheme($mode).danger}; }
+
+  @media (max-width: 1320px) {
+    min-height: 104px;
+    padding: 14px;
+
+    .status-summary {
+      gap: 10px;
+      min-width: 170px;
+      padding-right: 12px;
+    }
+
+    .status-indicator {
+      flex-basis: 36px;
+      width: 36px;
+      height: 36px;
+    }
+
+    .title { font-size: 20px; }
+    .stat { padding: 0 6px; }
+    .stat-value { font-size: 22px; }
+  }
+`;
+
+export const OverviewAdvisorCard = styled.section<{ $mode: ViewerUiMode }>`
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  min-width: 0;
+  min-height: 116px;
+  padding: 18px 20px;
+  background: #ffffff;
+  border: 1px solid ${({ $mode }) => modeTheme($mode).panelBorder};
+  border-radius: 16px;
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.10);
+
+  .advisor-icon {
+    display: flex;
+    flex: 0 0 42px;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    color: ${({ $mode }) => modeTheme($mode).danger};
+    background: ${({ $mode }) => modeTheme($mode).dangerSoft};
+    border-radius: 50%;
+  }
+
+  .advisor-copy {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .advisor-header {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    color: #111827;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .live-badge {
+    padding: 4px 8px;
+    color: ${({ $mode }) => modeTheme($mode).danger};
+    font-size: 9px;
+    font-weight: 600;
+    background: ${({ $mode }) => modeTheme($mode).dangerSoft};
+    border-radius: 999px;
+  }
+
+  .advisor-title {
+    overflow: hidden;
+    color: ${({ $mode }) => modeTheme($mode).danger};
+    font-size: clamp(16px, 1.1vw, 20px);
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .advisor-message {
+    margin-top: 4px;
+    overflow: hidden;
+    color: #7b8494;
+    font-size: 11px;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .signal {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 3px;
+    align-items: flex-end;
+    height: 20px;
+  }
+
+  .signal span {
+    width: 3px;
+    background: ${({ $mode }) => modeTheme($mode).danger};
+    border-radius: 999px;
+  }
+
+  .signal span:nth-child(1) { height: 7px; }
+  .signal span:nth-child(2) { height: 13px; }
+  .signal span:nth-child(3) { height: 18px; }
+
+  @media (max-width: 1320px) {
+    min-height: 104px;
+    padding: 14px;
+
+    .advisor-icon {
+      flex-basis: 36px;
+      width: 36px;
+      height: 36px;
+    }
+  }
+`;
+
+export const ToolbarSelect = styled.div<{ $mode: ViewerUiMode; $open: boolean }>`
+  position: relative;
+  display: flex;
+  flex: 0 0 118px;
+  align-items: center;
+  height: 48px;
+  color: ${({ $mode }) => modeTheme($mode).danger};
+
+  .line-select-trigger {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 0 12px;
+    color: inherit;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    background: ${({ $open }) => ($open ? '#fff8f8' : '#ffffff')};
+    border: 1px solid ${({ $open }) => ($open ? '#ef4444' : '#dfe3e8')};
+    border-radius: 10px;
+    outline: 0;
+    box-shadow: ${({ $open }) => ($open ? '0 0 0 3px rgba(239, 68, 68, 0.08)' : 'none')};
+    transition: 150ms ease;
+  }
+
+  .line-select-trigger:disabled {
+    cursor: wait;
+    opacity: 0.65;
+  }
+
+  .line-status-dot {
+    width: 7px;
+    height: 7px;
+    background: #ef4444;
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.09);
+  }
+
+  .line-select-chevron {
+    margin-left: auto;
+    color: #94a3b8;
+    transform: rotate(${({ $open }) => ($open ? '180deg' : '0deg')});
+    transition: transform 150ms ease;
+  }
+
+  .line-select-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 120;
+    display: grid;
+    gap: 3px;
+    width: 100%;
+    padding: 6px;
+    background: #ffffff;
+    border: 1px solid #e3e7ed;
+    border-radius: 11px;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.14);
+  }
+
+  .line-select-option {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+    min-height: 36px;
+    padding: 0 9px;
+    color: #667085;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    transition: 140ms ease;
+  }
+
+  .line-select-option:hover,
+  .line-select-option[aria-selected='true'] {
+    color: #dc2626;
+    background: #fff1f2;
+  }
+
+  .option-dot {
+    width: 6px;
+    height: 6px;
+    background: currentColor;
+    border-radius: 50%;
+    opacity: 0.7;
+  }
+
+  .selected-label {
+    margin-left: auto;
+    color: #ef4444;
+    font-size: 9px;
+    font-weight: 600;
+  }
 `;
 
 export const ToolbarDivider = styled.div<{ $mode: ViewerUiMode }>`
@@ -636,26 +996,63 @@ export const ToolbarDivider = styled.div<{ $mode: ViewerUiMode }>`
   background: ${({ $mode }) => modeTheme($mode).panelBorder};
 `;
 
-export const ToolbarButton = styled.button<{ $mode: ViewerUiMode; $active: boolean }>`
+export const ToolbarButton = styled.button<{
+  $mode: ViewerUiMode;
+  $active: boolean;
+  $variant?: 'primary' | 'secondary';
+}>`
+  position: relative;
   display: flex;
-  gap: 6px;
   align-items: center;
-  padding: 8px 12px;
-  color: ${({ $mode, $active }) => ($active ? modeTheme($mode).controlActiveText : modeTheme($mode).controlText)};
+  justify-content: center;
+  min-width: 104px;
+  height: 40px;
+  padding: 0 clamp(16px, 1.2vw, 24px);
+  color: ${({ $active, $variant }) => ($active ? ($variant === 'primary' ? '#ffffff' : '#111827') : '#7b8494')};
   font-family: inherit;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
-  background: ${({ $mode, $active }) => ($active ? modeTheme($mode).controlActiveBg : 'transparent')};
-  border: 1px solid ${({ $mode, $active }) => ($active ? activeBorder($mode) : 'transparent')};
-  border-radius: 11px;
+  overflow: hidden;
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  box-shadow: ${({ $active, $variant }) => {
+    if (!$active) return 'none';
+    return $variant === 'primary'
+      ? '0 4px 12px rgba(239, 68, 68, 0.24)'
+      : '0 2px 7px rgba(15, 23, 42, 0.10)';
+  }};
   transition: 160ms ease;
 
+  .toolbar-selection {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+  }
+
+  .toolbar-selection.primary {
+    background: #ef4444;
+  }
+
+  .toolbar-selection.secondary {
+    background: #ffffff;
+  }
+
+  .button-label {
+    position: relative;
+    z-index: 1;
+  }
+
   &:hover {
-    color: ${({ $mode, $active }) => ($active ? modeTheme($mode).controlActiveText : modeTheme($mode).textMain)};
-    background: ${({ $mode, $active }) => ($active ? modeTheme($mode).controlActiveBg : modeTheme($mode).accentSoft)};
-    border-color: ${({ $mode }) => activeBorder($mode)};
+    color: ${({ $active, $variant }) => ($active && $variant === 'primary' ? '#ffffff' : '#111827')};
+    background: ${({ $active }) => ($active ? 'transparent' : '#eaecf0')};
+  }
+
+  &:hover .toolbar-selection.primary {
+    background: #dc2626;
   }
 `;
 
@@ -784,9 +1181,7 @@ export const AlertOverlay = styled.div`
   align-items: center;
   justify-content: center;
   pointer-events: all;
-  background:
-    radial-gradient(circle at center, rgba(239, 68, 68, 0.16), transparent 42%),
-    rgba(15, 23, 42, 0.22);
+  background: rgba(15, 23, 42, 0.30);
   backdrop-filter: blur(12px);
 `;
 
@@ -811,7 +1206,7 @@ export const AlertBox = styled.div`
     left: 0;
     height: 5px;
     content: '';
-    background: linear-gradient(90deg, #ef4444, #fb7185, #ef4444);
+    background: #ef4444;
   }
 `;
 
@@ -937,7 +1332,7 @@ export const Track = styled.div`
 export const Fill = styled.div<{ $progress: number }>`
   width: ${({ $progress }) => `${$progress}%`};
   height: 100%;
-  background: linear-gradient(90deg, #ef4444, #dc2626);
+  background: #ef4444;
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.26);
   transition: width 0.1s linear;
 `;
@@ -1084,24 +1479,26 @@ export const ProcessLabelContainer = styled.div<{ $color: string }>`
   position: relative;
   display: flex;
   flex-direction: row;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
-  padding: 6px 12px;
+  min-height: 34px;
+  padding: 6px 11px;
   white-space: nowrap;
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.96);
   border: 1px solid ${({ $color }) => $color};
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.10);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.10);
   pointer-events: none;
-  transform: translateY(-24px);
-  backdrop-filter: blur(8px);
+  transform: translateY(-22px) scale(1.2);
+  transform-origin: center bottom;
+  backdrop-filter: blur(10px);
 
   &::after {
     position: absolute;
     top: 100%;
     left: 50%;
-    width: 2px;
-    height: 10px;
+    width: 1px;
+    height: 8px;
     content: '';
     background: ${({ $color }) => $color};
     border-radius: 999px;
@@ -1110,10 +1507,10 @@ export const ProcessLabelContainer = styled.div<{ $color: string }>`
 
   &::before {
     position: absolute;
-    top: calc(100% + 8px);
+    top: calc(100% + 6px);
     left: 50%;
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     content: '';
     background: ${({ $color }) => $color};
     border: 2px solid rgba(255, 255, 255, 0.95);
@@ -1124,17 +1521,17 @@ export const ProcessLabelContainer = styled.div<{ $color: string }>`
 `;
 
 export const ProcessDot = styled.div<{ $color: string }>`
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
   background-color: ${({ $color }) => $color};
   border-radius: 50%;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92);
 `;
 
 export const ProcessText = styled.div`
   color: #334155;
   font-family: 'Pretendard', sans-serif;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.2px;
 `;

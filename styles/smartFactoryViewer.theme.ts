@@ -27,7 +27,7 @@ interface SmartFactoryThemeTokens {
 
 export const smartFactoryThemes: Record<ViewerUiMode, SmartFactoryThemeTokens> = {
   operator: {
-    bgOverlay: 'linear-gradient(180deg, rgba(255, 255, 255, 0.70), rgba(241, 245, 249, 0.92))',
+    bgOverlay: 'rgba(241, 245, 249, 0.78)',
     bgBase: '#eef1f5',
     panelBg: 'rgba(255, 255, 255, 0.88)',
     panelStrongBg: 'rgba(248, 250, 252, 0.96)',
@@ -45,13 +45,13 @@ export const smartFactoryThemes: Record<ViewerUiMode, SmartFactoryThemeTokens> =
     warning: '#f59e0b',
     warningSoft: 'rgba(245, 158, 11, 0.12)',
     controlBg: 'rgba(255, 255, 255, 0.76)',
-    controlActiveBg: 'linear-gradient(180deg, #fff1f2, #ffffff)',
+    controlActiveBg: '#fff1f2',
     controlText: '#64748b',
     controlActiveText: '#dc2626',
     gridLine: 'rgba(239, 68, 68, 0.035)',
   },
   command: {
-    bgOverlay: 'linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(226, 232, 240, 0.88))',
+    bgOverlay: 'rgba(235, 240, 246, 0.82)',
     bgBase: '#edf1f6',
     panelBg: 'rgba(255, 255, 255, 0.90)',
     panelStrongBg: 'rgba(248, 250, 252, 0.98)',
@@ -69,7 +69,7 @@ export const smartFactoryThemes: Record<ViewerUiMode, SmartFactoryThemeTokens> =
     warning: '#d97706',
     warningSoft: 'rgba(217, 119, 6, 0.10)',
     controlBg: 'rgba(255, 255, 255, 0.78)',
-    controlActiveBg: 'linear-gradient(180deg, #fff1f2, #ffffff)',
+    controlActiveBg: '#fff1f2',
     controlText: '#64748b',
     controlActiveText: '#b91c1c',
     gridLine: 'rgba(220, 38, 38, 0.045)',

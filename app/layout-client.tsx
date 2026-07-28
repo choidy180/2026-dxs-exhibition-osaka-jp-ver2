@@ -115,15 +115,19 @@ const DesktopOnlyWrapper = styled.div<{ $allowMobile: boolean }>`
   }
 `;
 
-const NavContainer = styled.div`
+const NavContainer = styled.div<{ $hideOnMobile: boolean }>`
   position: fixed;
   inset: 0 auto 0 0;
   z-index: 5000; 
   width: 0;
   height: 0;
+
+  @media (max-width: 1024px) {
+    display: ${(props) => (props.$hideOnMobile ? "none" : "block")};
+  }
 `;
 
-const MainContent = styled.main<{ $isHidden: boolean; $isFullWidth: boolean }>`
+const MainContent = styled.main<{ $isHidden: boolean; $isFullWidth: boolean; $mobileFullWidth: boolean }>`
   position: relative;
   z-index: 1;
   min-height: 100vh;
@@ -137,6 +141,13 @@ const MainContent = styled.main<{ $isHidden: boolean; $isFullWidth: boolean }>`
     margin-left 240ms ease,
     width 240ms ease,
     opacity 0.8s ease-in-out;
+
+  @media (max-width: 1024px) {
+    margin-left: ${(props) =>
+      props.$mobileFullWidth || props.$isFullWidth ? "0" : "var(--app-sidebar-offset, 84px)"};
+    width: ${(props) =>
+      props.$mobileFullWidth || props.$isFullWidth ? "100%" : "calc(100% - var(--app-sidebar-offset, 84px))"};
+  }
 `;
 
 // --------------------------------------------------------------------------
@@ -154,7 +165,11 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
   const isSkipLoading = pathname?.includes("master-dashboard");
   const isMasterDashboard = pathname?.includes("master-dashboard") ?? false;
   const isMaterialCheckPage = pathname?.startsWith("/material/inbound-inspection/material-check") ?? false;
-  const isMobileAllowedPage = isMasterDashboard || isMaterialCheckPage;
+  const isWarehouseManagementPage =
+    pathname === "/transport/warehouse-management" ||
+    pathname?.startsWith("/transport/warehouse-management/") ||
+    false;
+  const isMobileAllowedPage = isMasterDashboard || isMaterialCheckPage || isWarehouseManagementPage;
   const isFullWidthPage = isMasterDashboard || isMaterialCheckPage;
 
   useLayoutEffect(() => {
@@ -208,13 +223,17 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
         </AnimatePresence>
 
         {!isFullWidthPage && (
-          <NavContainer>
+          <NavContainer $hideOnMobile={isWarehouseManagementPage}>
             <TopNavigation isLoading={isLoading && !isSkipLoading} />
           </NavContainer>
         )}
         
         {/* 로딩 중일 때 내용 숨김 ($isHidden) */}
-        <MainContent $isHidden={isLoading && !isSkipLoading} $isFullWidth={isFullWidthPage}>
+        <MainContent
+          $isHidden={isLoading && !isSkipLoading}
+          $isFullWidth={isFullWidthPage}
+          $mobileFullWidth={isWarehouseManagementPage}
+        >
             {children}
         </MainContent>
         

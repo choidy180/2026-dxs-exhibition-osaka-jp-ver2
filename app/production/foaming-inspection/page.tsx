@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import styled, { createGlobalStyle, css } from 'styled-components';
+import { createPortal } from 'react-dom';
+import styled, { createGlobalStyle, keyframes } from 'styled-components';
 import { 
   FiCheck, 
   FiAlertTriangle,
   FiX,
-  FiGrid
+  FiGrid,
+  FiDatabase
 } from 'react-icons/fi';
 
 // --------------------------------------------------------------------------
@@ -43,7 +45,7 @@ interface ApiDataItem {
   "온조#2 리턴온도": string;
   "온조#1 공급수압력": string;
   "온조#2 공급수압력": string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface ApiLimitItem {
@@ -130,47 +132,363 @@ const MOCK_API_RESPONSE: ApiResponse = {
 // 3. Styled Components
 // --------------------------------------------------------------------------
 const PageContainer = styled.div`
-  width: 100vw;
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   height: 100vh;
-  padding: 24px 32px;
+  height: 100dvh;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  background-color: #f8fafc;
+  background-color: #f1f5f9;
   overflow: hidden;
+
+  @media (max-width: 1280px) {
+    padding: 12px;
+  }
+`;
+
+const loadingSpin = keyframes`
+  to { transform: rotate(360deg); }
+`;
+
+const loadingPulse = keyframes`
+  0%, 100% { opacity: 0.42; transform: scale(0.94); }
+  50% { opacity: 1; transform: scale(1); }
+`;
+
+const loadingSweep = keyframes`
+  0% { transform: translateX(-130%); }
+  100% { transform: translateX(420%); }
+`;
+
+const loadingSkeleton = keyframes`
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.8; }
+`;
+
+const contentReveal = keyframes`
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+
+const modalReveal = keyframes`
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+`;
+
+const LoadingStage = styled.div<{ $leaving: boolean }>`
+  position: absolute;
+  inset: 16px;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  opacity: ${props => props.$leaving ? 0 : 1};
+  transform: ${props => props.$leaving ? 'scale(0.995)' : 'scale(1)'};
+  transition: opacity 0.36s ease, transform 0.36s ease;
+  pointer-events: ${props => props.$leaving ? 'none' : 'auto'};
+  z-index: 30;
+
+  @media (max-width: 1280px) {
+    inset: 12px;
+  }
+`;
+
+const LoadingSkeletonGrid = styled.div`
+  position: absolute;
+  inset: 24px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  opacity: 0.55;
+
+  @media (max-width: 1280px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+`;
+
+const LoadingSkeletonCard = styled.div`
+  min-width: 0;
+  min-height: 116px;
+  padding: 20px;
+  overflow: hidden;
+  background-color: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 18px;
+  animation: ${loadingSkeleton} 1.8s ease-in-out infinite;
+
+  &:nth-child(2n) { animation-delay: 180ms; }
+  &:nth-child(3n) { animation-delay: 360ms; }
+
+  span {
+    display: block;
+    height: 10px;
+    margin-bottom: 18px;
+    background-color: #e2e8f0;
+    border-radius: 99px;
+  }
+
+  span:first-child { width: 42%; }
+  span:last-child { width: 72%; height: 16px; margin: 0; }
+`;
+
+const LoadingPanel = styled.div`
+  position: relative;
+  z-index: 1;
+  width: min(520px, calc(100% - 40px));
+  padding: 34px 38px;
+  text-align: center;
+  background-color: rgba(255, 255, 255, 0.96);
+  border: 1px solid #dbe3ee;
+  border-radius: 18px;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.1);
+`;
+
+const LoadingIconShell = styled.div`
+  position: relative;
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 18px;
+  display: grid;
+  place-items: center;
+  color: #e11d48;
+  background-color: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-radius: 50%;
+  font-size: 28px;
+`;
+
+const LoadingOrbit = styled.span`
+  position: absolute;
+  inset: -7px;
+  border: 2px solid transparent;
+  border-top-color: #e11d48;
+  border-right-color: #fda4af;
+  border-radius: 50%;
+  animation: ${loadingSpin} 1.15s linear infinite;
+`;
+
+const LoadingEyebrow = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #e11d48;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+`;
+
+const LoadingLiveDot = styled.span`
+  width: 7px;
+  height: 7px;
+  background-color: #e11d48;
+  border-radius: 50%;
+  animation: ${loadingPulse} 1.2s ease-in-out infinite;
+`;
+
+const LoadingTitle = styled.h1`
+  margin: 0;
+  color: #0f172a;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+`;
+
+const LoadingDescription = styled.p`
+  margin: 10px 0 24px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.6;
+`;
+
+const LoadingSteps = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+`;
+
+const LoadingStep = styled.div`
+  min-width: 0;
+  padding: 10px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #475569;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    flex: 0 0 auto;
+    background-color: #fb7185;
+    border-radius: 50%;
+    animation: ${loadingPulse} 1.4s ease-in-out infinite;
+  }
+
+  &:nth-child(2)::before { animation-delay: 240ms; }
+  &:nth-child(3)::before { animation-delay: 480ms; }
+`;
+
+const LoadingProgressTrack = styled.div`
+  width: 100%;
+  height: 7px;
+  overflow: hidden;
+  background-color: #ffe4e6;
+  border-radius: 99px;
+`;
+
+const LoadingProgressBar = styled.div`
+  width: 24%;
+  height: 100%;
+  background-color: #e11d48;
+  border-radius: inherit;
+  animation: ${loadingSweep} 1.45s ease-in-out infinite;
+`;
+
+const LoadingFootnote = styled.div`
+  margin-top: 11px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
+`;
+
+const LoadingMotionGuard = styled.div`
+  display: contents;
+
+  @media (prefers-reduced-motion: reduce) {
+    ${LoadingStage} {
+      transition: none;
+    }
+
+    ${LoadingOrbit}, ${LoadingLiveDot}, ${LoadingStep}::before,
+    ${LoadingProgressBar}, ${LoadingSkeletonCard} {
+      animation: none;
+    }
+  }
+`;
+
+const DashboardContent = styled.div`
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  animation: ${contentReveal} 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 `;
 
 const TopNavContainer = styled.div`
   display: flex;
-  justify-content: center;
-  margin-bottom: 24px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-width: 0;
+  padding: 14px 18px;
+  margin-bottom: 16px;
   flex-shrink: 0;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+`;
+
+const PageTitleGroup = styled.div`
+  min-width: 0;
+`;
+
+const PageEyebrow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 4px;
+  color: #e11d48;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background-color: #e11d48;
+    border-radius: 50%;
+  }
+`;
+
+const PageTitleRow = styled.div`
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+`;
+
+const PageTitle = styled.h1`
+  flex: 0 0 auto;
+  margin: 0;
+  color: #0f172a;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+`;
+
+const PageDescription = styled.p`
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 `;
 
 const TabGroup = styled.div`
   display: flex;
-  background-color: #f1f5f9;
-  padding: 6px;
-  border-radius: 99px;
+  flex: 0 0 auto;
+  background-color: #f8fafc;
+  padding: 4px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
   gap: 4px;
 `;
 
 const Tab = styled.button<{ $active?: boolean; $hasError?: boolean; $isAction?: boolean }>`
-  background-color: ${props => props.$isAction ? '#0f172a' : (props.$active ? '#ffffff' : 'transparent')};
+  background-color: ${props => props.$isAction ? '#e11d48' : (props.$active ? '#ffffff' : 'transparent')};
   color: ${props => props.$isAction ? '#ffffff' : (props.$hasError ? '#ef4444' : (props.$active ? '#0f172a' : '#94a3b8'))};
-  border: none;
-  padding: 10px 24px;
-  border-radius: 99px;
-  font-size: 15px;
-  font-weight: 800;
+  border: 1px solid ${props => props.$active && !props.$isAction ? '#e2e8f0' : 'transparent'};
+  padding: 9px 16px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: ${props => props.$active || props.$isAction ? '0 2px 8px rgba(0,0,0,0.05)' : 'none'};
-  transition: all 0.2s ease;
+  box-shadow: ${props => props.$active || props.$isAction ? '0 2px 6px rgba(15, 23, 42, 0.05)' : 'none'};
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 
   &:hover {
-    background-color: ${props => props.$isAction ? '#1e293b' : (props.$active ? '#ffffff' : '#e2e8f0')};
+    background-color: ${props => props.$isAction ? '#be123c' : (props.$active ? '#ffffff' : '#f1f5f9')};
   }
 `;
 
@@ -184,30 +502,34 @@ const ErrorDot = styled.div`
   align-items: center;
   justify-content: center;
   font-size: 11px;
-  font-weight: 900;
+  font-weight: 600;
 `;
 
 // --- 모달 관련 스타일 추가 ---
 const ModalOverlay = styled.div`
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
+  inset: 0;
+  width: 100%;
   height: 100vh;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
+  height: 100dvh;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.58);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 10050;
 `;
 
 const ModalContainer = styled.div`
   background: #ffffff;
-  border-radius: 24px;
-  width: 750px;
-  padding: 32px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  width: min(750px, calc(100vw - 48px));
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  padding: 26px;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.2);
+  animation: ${modalReveal} 0.24s ease-out both;
 `;
 
 const ModalHeader = styled.div`
@@ -219,16 +541,19 @@ const ModalHeader = styled.div`
 
 const ModalTitle = styled.h2`
   margin: 0;
-  font-size: 24px;
-  font-weight: 900;
+  font-size: 20px;
+  font-weight: 600;
   color: #0f172a;
 `;
 
 const CloseButton = styled.button`
-  background: none;
-  border: none;
+  width: 36px;
+  height: 36px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
   cursor: pointer;
-  font-size: 28px;
+  font-size: 20px;
   color: #64748b;
   display: flex;
   align-items: center;
@@ -236,35 +561,36 @@ const CloseButton = styled.button`
   transition: color 0.2s;
 
   &:hover {
+    background: #f1f5f9;
     color: #0f172a;
   }
 `;
 
 const MachineGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
 `;
 
 const MachineButton = styled.button<{ $active?: boolean; $hasError?: boolean }>`
   position: relative;
-  background: ${props => props.$active ? '#0f172a' : (props.$hasError ? '#fef2f2' : '#f1f5f9')};
-  color: ${props => props.$active ? '#ffffff' : (props.$hasError ? '#ef4444' : '#475569')};
-  border: 2px solid ${props => props.$active ? '#0f172a' : (props.$hasError ? '#fca5a5' : 'transparent')};
-  border-radius: 12px;
-  padding: 16px 0;
-  font-size: 16px;
-  font-weight: 800;
+  background: ${props => props.$active ? '#fff1f2' : (props.$hasError ? '#fef2f2' : '#ffffff')};
+  color: ${props => props.$active ? '#be123c' : (props.$hasError ? '#dc2626' : '#475569')};
+  border: 1px solid ${props => props.$active ? '#fb7185' : (props.$hasError ? '#fca5a5' : '#e2e8f0')};
+  border-radius: 10px;
+  padding: 14px 0;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  transition: all 0.2s ease;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 
   &:hover {
-    background: ${props => props.$active ? '#0f172a' : (props.$hasError ? '#fee2e2' : '#e2e8f0')};
-    transform: translateY(-2px);
+    background: ${props => props.$active ? '#ffe4e6' : (props.$hasError ? '#fee2e2' : '#f8fafc')};
+    border-color: ${props => props.$active || props.$hasError ? '#fb7185' : '#cbd5e1'};
   }
 
   .status-dot {
@@ -277,26 +603,31 @@ const MachineButton = styled.button<{ $active?: boolean; $hasError?: boolean }>`
 
 const DashboardGrid = styled.div`
   display: flex;
-  gap: 24px;
+  gap: 16px;
+  width: 100%;
+  max-width: 100%;
   height: 100%;
+  min-width: 0;
   min-height: 0;
+  overflow: hidden;
 `;
 
 const LeftColumn = styled.div`
   display: flex;
   flex-direction: column;
-  width: 340px;
-  gap: 24px;
+  width: clamp(270px, 18vw, 310px);
+  gap: 16px;
   flex-shrink: 0;
   height: 100%;
 `;
 
 const StatusCard = styled.div<{ $type: 'good' | 'error' }>`
-  background-color: ${props => props.$type === 'good' ? '#ecfdf5' : '#fef2f2'};
-  border: 2px solid ${props => props.$type === 'good' ? '#10b981' : '#ef4444'};
-  border-radius: 20px;
+  background-color: #ffffff;
+  border: 1px solid ${props => props.$type === 'good' ? '#cbd5e1' : '#fda4af'};
+  border-radius: 16px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
   flex: 1;
-  padding: 24px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -306,53 +637,51 @@ const StatusCard = styled.div<{ $type: 'good' | 'error' }>`
 
 const CardTitle = styled.div`
   width: 100%;
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 600;
   color: #0f172a;
   margin-bottom: auto;
 `;
 
 const CircleIconWrapper = styled.div<{ $type: 'good' | 'error' }>`
-  width: 130px;
-  height: 130px;
+  width: 90px;
+  height: 90px;
   border-radius: 50%;
   background-color: ${props => props.$type === 'good' ? '#d1fae5' : '#fee2e2'};
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 16px 0;
+  margin: 10px 0;
 `;
 
 const CircleIconInner = styled.div<{ $type: 'good' | 'error' }>`
-  width: 90px;
-  height: 90px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   background-color: ${props => props.$type === 'good' ? '#10b981' : '#ef4444'};
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 42px;
-  box-shadow: ${props => props.$type === 'good' 
-    ? '0 10px 20px -5px rgba(16, 185, 129, 0.4)' 
-    : '0 10px 20px -5px rgba(239, 68, 68, 0.4)'};
+  font-size: 30px;
 `;
 
 const StatusMainText = styled.div`
-  font-size: 38px;
-  font-weight: 900;
+  font-size: 34px;
+  font-weight: 600;
   color: #0f172a;
   margin-bottom: 12px;
   letter-spacing: -1px;
 `;
 
 const StatusSubPill = styled.div<{ $type: 'good' | 'error' }>`
-  background-color: ${props => props.$type === 'good' ? '#d1fae5' : '#fee2e2'};
-  color: ${props => props.$type === 'good' ? '#059669' : '#dc2626'};
-  padding: 6px 14px;
+  background-color: ${props => props.$type === 'good' ? '#ecfdf5' : '#fff1f2'};
+  color: ${props => props.$type === 'good' ? '#047857' : '#be123c'};
+  border: 1px solid ${props => props.$type === 'good' ? '#a7f3d0' : '#fecdd3'};
+  padding: 7px 12px;
   border-radius: 99px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -362,12 +691,13 @@ const StatusSubPill = styled.div<{ $type: 'good' | 'error' }>`
 const LegendWrapper = styled.div`
   display: flex;
   justify-content: center;
-  gap: 12px;
-  margin-top: 16px;
-  background-color: #ffffff;
-  padding: 10px 20px;
-  border-radius: 99px;
-  width: calc(100% - 10px);
+  gap: 10px;
+  margin-top: 14px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  width: 100%;
 `;
 
 const LegendDot = styled.div<{ color: string }>`
@@ -375,13 +705,13 @@ const LegendDot = styled.div<{ color: string }>`
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  font-weight: 700;
-  color: #475569;
+  font-weight: 600;
+  color: #334155;
 
   &::before {
     content: '';
-    width: 10px;
-    height: 10px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     background-color: ${props => props.color};
   }
@@ -389,13 +719,16 @@ const LegendDot = styled.div<{ color: string }>`
 
 const RightColumn = styled.div`
   flex: 1;
+  min-width: 0;
+  max-width: 100%;
   background-color: #ffffff;
-  border-radius: 20px;
-  border: 1px solid #e2e8f0;
-  padding: 32px;
+  border-radius: 16px;
+  border: 1px solid #cbd5e1;
+  padding: 22px;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
 
   &::-webkit-scrollbar { width: 8px; }
   &::-webkit-scrollbar-track { background: transparent; }
@@ -406,13 +739,15 @@ const RightHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
   flex-shrink: 0;
 `;
 
 const RightTitle = styled.h2`
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 17px;
+  font-weight: 600;
   margin: 0;
   color: #0f172a;
 `;
@@ -423,7 +758,7 @@ const LiveBadge = styled.div`
   padding: 4px 10px;
   border-radius: 99px;
   font-size: 11px;
-  font-weight: 900;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -440,97 +775,112 @@ const LiveBadge = styled.div`
 
 const MetricsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
   padding-bottom: 10px;
 `;
 
 const MetricCardWrapper = styled.div<{ $isError: boolean }>`
-  border: 1px solid ${props => props.$isError ? '#fca5a5' : '#e2e8f0'};
-  background-color: ${props => props.$isError ? '#fef2f2' : '#ffffff'};
-  border-radius: 16px;
-  padding: 20px 24px;
+  min-width: 0;
+  border: 1px solid ${props => props.$isError ? '#fb7185' : '#cbd5e1'};
+  background-color: ${props => props.$isError ? '#fff7f7' : '#f8fafc'};
+  border-radius: 13px;
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
-  height: 130px;
+  height: 120px;
   justify-content: center;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+
+  &:hover {
+    border-color: ${props => props.$isError ? '#fb7185' : '#cbd5e1'};
+    background-color: ${props => props.$isError ? '#fff1f2' : '#ffffff'};
+  }
 `;
 
 const MetricHeader = styled.div`
   display: flex;
+  min-width: 0;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 16px;
+  margin-bottom: 13px;
 `;
 
 const MetricName = styled.div`
-  font-size: 16px;
-  font-weight: 800;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
   color: #0f172a;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 
   span {
     font-size: 12px;
-    color: #94a3b8;
+    color: #64748b;
     font-weight: 600;
     margin-left: 4px;
   }
 `;
 
 const MetricValueBox = styled.div<{ $isError: boolean }>`
-  background-color: ${props => props.$isError ? '#ef4444' : '#10b981'};
-  color: white;
-  padding: 4px 16px;
-  border-radius: 8px;
-  font-size: 18px;
-  font-weight: 800;
+  flex: 0 0 auto;
+  background-color: ${props => props.$isError ? '#fff1f2' : '#ecfdf5'};
+  color: ${props => props.$isError ? '#dc2626' : '#047857'};
+  border: 1px solid ${props => props.$isError ? '#fecdd3' : '#bbf7d0'};
+  padding: 4px 10px;
+  border-radius: 7px;
+  font-size: 15px;
+  font-weight: 600;
   letter-spacing: -0.5px;
 `;
 
 const GaugeContainer = styled.div`
   position: relative;
   width: 100%;
-  height: 30px;
+  height: 36px;
 `;
 
 const GaugeTrack = styled.div`
   position: absolute;
-  bottom: 0;
+  bottom: 13px;
   width: 100%;
-  height: 8px;
-  background-color: #e2e8f0;
+  height: 10px;
+  background-color: #cbd5e1;
   border-radius: 99px;
 `;
 
 const GaugeFill = styled.div<{ $percent: number; $isError: boolean }>`
   position: absolute;
-  bottom: 0;
+  bottom: 13px;
   left: 0;
   width: ${props => props.$percent}%;
-  height: 8px;
-  background-color: ${props => props.$isError ? '#ef4444' : '#10b981'};
+  height: 10px;
+  background-color: ${props => props.$isError ? '#dc2626' : '#059669'};
   border-radius: 99px;
   transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 `;
 
 const GaugeValueText = styled.div<{ $percent: number }>`
   position: absolute;
-  bottom: 12px;
+  bottom: 26px;
   left: ${props => props.$percent}%;
   transform: translateX(-50%);
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 600;
   color: #0f172a;
   transition: left 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 `;
 
 const GaugeMinMax = styled.div`
   position: absolute;
-  bottom: -18px;
+  bottom: -3px;
   width: 100%;
   display: flex;
   justify-content: space-between;
   font-size: 11px;
-  color: #94a3b8;
+  color: #64748b;
   font-weight: 600;
 `;
 
@@ -541,6 +891,7 @@ const MetricCard = ({ data }: { data: GaugeData }) => {
   let percent = ((data.value - data.min) / (data.max - data.min)) * 100;
   if (percent < 0) percent = 0;
   if (percent > 100) percent = 100;
+  const labelPercent = Math.min(96, Math.max(4, percent));
 
   // 중간값(최적값) 계산 로직 유지
   const optimalValue = (data.min + data.max) / 2;
@@ -558,7 +909,7 @@ const MetricCard = ({ data }: { data: GaugeData }) => {
       </MetricHeader>
       
       <GaugeContainer>
-        <GaugeValueText $percent={percent}>{data.value}</GaugeValueText>
+        <GaugeValueText $percent={labelPercent}>{data.value}</GaugeValueText>
         <GaugeTrack />
         <GaugeFill $percent={percent} $isError={data.isError} />
         <GaugeMinMax>
@@ -578,56 +929,19 @@ export default function ProcessDashboard() {
   const [selectedCartNo, setSelectedCartNo] = useState<string>('');
   const [metricsData, setMetricsData] = useState<GaugeData[]>([]);
   const [apiLimits, setApiLimits] = useState<Record<string, {min: number, max: number}>>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [showLoadingStage, setShowLoadingStage] = useState(true);
   
   // 모달 상태 추가
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // 1. Data Fetch
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await fetch('http://192.168.2.147:24830/api/DX_API000022');
-        if (!res.ok) throw new Error('API Failed');
-        const json: ApiResponse = await res.json();
-        processApiResponse(json);
-      } catch (err) {
-        console.warn('API Fetch failed, using Mock Data');
-        processApiResponse(MOCK_API_RESPONSE);
-      }
-    };
-    fetchData();
-  }, []);
-
-  // 2. Process Response
-  const processApiResponse = (json: ApiResponse) => {
-    const limitMap: Record<string, {min: number, max: number}> = {};
-    if (json.DX_LIMIT_LIST) {
-      json.DX_LIMIT_LIST.forEach(item => {
-        let min = parseFloat(item.min);
-        let max = parseFloat(item.max);
-        if (isNaN(min)) min = 0;
-        if (isNaN(max)) max = 100;
-        limitMap[item.name] = { min, max };
-      });
-    }
-    setApiLimits(limitMap);
-
-    if (json.data && json.data.length > 0) {
-      setCartList(json.data);
-      if (!selectedCartNo) {
-        setSelectedCartNo(json.data[0]['대차번호']);
-        updateMetricsForCart(json.data[0], limitMap);
-      }
-    }
-  };
-
-  // 3. Update Metrics when Cart Changes
+  // 1. Update Metrics when Cart Changes
   const updateMetricsForCart = useCallback((cartData: ApiDataItem, limits: Record<string, {min: number, max: number}>) => {
     const newMetrics: GaugeData[] = [];
 
     METRIC_CONFIG.forEach((config, index) => {
       const valStr = cartData[config.key];
-      const val = parseFloat(valStr);
+      const val = parseFloat(String(valStr));
       
       let min = 0, max = 100;
       if (limits[config.key]) {
@@ -652,6 +966,69 @@ export default function ProcessDashboard() {
     setMetricsData(newMetrics);
   }, []);
 
+  // 2. Process Response
+  const processApiResponse = useCallback((json: ApiResponse) => {
+    const limitMap: Record<string, {min: number, max: number}> = {};
+    if (json.DX_LIMIT_LIST) {
+      json.DX_LIMIT_LIST.forEach(item => {
+        let min = parseFloat(item.min);
+        let max = parseFloat(item.max);
+        if (isNaN(min)) min = 0;
+        if (isNaN(max)) max = 100;
+        limitMap[item.name] = { min, max };
+      });
+    }
+    setApiLimits(limitMap);
+
+    if (json.data && json.data.length > 0) {
+      const firstCart = json.data[0];
+      setCartList(json.data);
+      setSelectedCartNo(firstCart['대차번호']);
+      updateMetricsForCart(firstCart, limitMap);
+    }
+  }, [updateMetricsForCart]);
+
+  // 3. Data Fetch
+  useEffect(() => {
+    const controller = new AbortController();
+    const requestTimeout = window.setTimeout(() => controller.abort(), 10000);
+    let isActive = true;
+
+    const fetchData = async () => {
+      try {
+        const res = await fetch('http://192.168.2.147:24830/api/DX_API000022', {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error('API Failed');
+        const json: ApiResponse = await res.json();
+        if (isActive) processApiResponse(json);
+      } catch {
+        console.warn('API Fetch failed, using Mock Data');
+        if (isActive) processApiResponse(MOCK_API_RESPONSE);
+      } finally {
+        window.clearTimeout(requestTimeout);
+        if (isActive) setIsLoading(false);
+      }
+    };
+    fetchData();
+
+    return () => {
+      isActive = false;
+      window.clearTimeout(requestTimeout);
+      controller.abort();
+    };
+  }, [processApiResponse]);
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const transitionTimer = window.setTimeout(() => {
+      setShowLoadingStage(false);
+    }, 380);
+
+    return () => window.clearTimeout(transitionTimer);
+  }, [isLoading]);
+
   // Handle Tab Click
   const handleCartChange = (cartNo: string) => {
     setSelectedCartNo(cartNo);
@@ -672,7 +1049,7 @@ export default function ProcessDashboard() {
     if (!data) return false;
 
     return METRIC_CONFIG.some(config => {
-      const val = parseFloat(data[config.key]);
+      const val = parseFloat(String(data[config.key]));
       if (isNaN(val)) return false;
       const limit = apiLimits[config.key];
       if (!limit) return false;
@@ -691,111 +1068,166 @@ export default function ProcessDashboard() {
     <>
       <GlobalStyle />
       <PageContainer>
-        {/* 모달 오버레이 및 컨테이너 */}
-        {isModalOpen && (
-          <ModalOverlay onClick={() => setIsModalOpen(false)}>
-            <ModalContainer onClick={e => e.stopPropagation()}>
-              <ModalHeader>
-                <ModalTitle>설비 선택 (M-01 ~ M-24)</ModalTitle>
-                <CloseButton onClick={() => setIsModalOpen(false)}>
-                  <FiX />
-                </CloseButton>
-              </ModalHeader>
-              <MachineGrid>
-                {cartList.map(item => {
-                  const cNo = item['대차번호'];
-                  const hasErr = checkCartError(cNo);
-                  return (
-                    <MachineButton 
-                      key={cNo}
-                      $active={selectedCartNo === cNo}
-                      $hasError={hasErr}
-                      onClick={() => {
-                        handleCartChange(cNo);
-                        setIsModalOpen(false); // 선택 시 모달 닫기
-                      }}
-                    >
-                      {hasErr && <ErrorDot className="status-dot">!</ErrorDot>}
-                      {cNo}
-                    </MachineButton>
-                  );
-                })}
-              </MachineGrid>
-            </ModalContainer>
-          </ModalOverlay>
+        {!isLoading && (
+          <DashboardContent>
+            {isModalOpen && createPortal(
+              <ModalOverlay onClick={() => setIsModalOpen(false)}>
+                <ModalContainer onClick={e => e.stopPropagation()}>
+                  <ModalHeader>
+                    <ModalTitle>설비 선택 (M-01 ~ M-24)</ModalTitle>
+                    <CloseButton onClick={() => setIsModalOpen(false)} aria-label="설비 선택 닫기">
+                      <FiX />
+                    </CloseButton>
+                  </ModalHeader>
+                  <MachineGrid>
+                    {cartList.map(item => {
+                      const cNo = item['대차번호'];
+                      const hasErr = checkCartError(cNo);
+                      return (
+                        <MachineButton
+                          key={cNo}
+                          $active={selectedCartNo === cNo}
+                          $hasError={hasErr}
+                          onClick={() => {
+                            handleCartChange(cNo);
+                            setIsModalOpen(false);
+                          }}
+                        >
+                          {hasErr && <ErrorDot className="status-dot">!</ErrorDot>}
+                          {cNo}
+                        </MachineButton>
+                      );
+                    })}
+                  </MachineGrid>
+                </ModalContainer>
+              </ModalOverlay>,
+              document.body
+            )}
+
+            <TopNavContainer>
+              <PageTitleGroup>
+                <PageEyebrow>PRODUCTION INSPECTION</PageEyebrow>
+                <PageTitleRow>
+                  <PageTitle>발포 공정 검사</PageTitle>
+                  <PageDescription>설비별 핵심 공정 지표와 관리 범위를 실시간으로 확인합니다.</PageDescription>
+                </PageTitleRow>
+              </PageTitleGroup>
+
+              <TabGroup>
+                <Tab $active={true} $hasError={checkCartError(selectedCartNo)}>
+                  {checkCartError(selectedCartNo) && <ErrorDot>!</ErrorDot>}
+                  {selectedCartNo}
+                </Tab>
+                <Tab
+                  $isAction={true}
+                  onClick={() => setIsModalOpen(true)}
+                >
+                  <FiGrid />
+                  설비 전체보기
+                </Tab>
+              </TabGroup>
+            </TopNavContainer>
+
+            <DashboardGrid>
+              <LeftColumn>
+                <StatusCard $type={hasCriticalError ? "error" : "good"}>
+                  <CardTitle>설비 상태</CardTitle>
+                  <CircleIconWrapper $type={hasCriticalError ? "error" : "good"}>
+                    <CircleIconInner $type={hasCriticalError ? "error" : "good"}>
+                      {hasCriticalError ? <FiAlertTriangle strokeWidth={2.5} /> : <FiCheck strokeWidth={3} />}
+                    </CircleIconInner>
+                  </CircleIconWrapper>
+                  <StatusMainText>{hasCriticalError ? "점검" : "양호"}</StatusMainText>
+                  <StatusSubPill $type={hasCriticalError ? "error" : "good"}>
+                    {hasCriticalError ? <FiAlertTriangle size={14} /> : <FiCheck size={14} />}{' '}
+                    {hasCriticalError ? "관리 범위 이탈 발생" : "관리 범위 내 안정적으로 운영중"}
+                  </StatusSubPill>
+                  <LegendWrapper>
+                    <LegendDot color="#10b981">양호</LegendDot>
+                    <LegendDot color="#facc15">주의</LegendDot>
+                    <LegendDot color="#ef4444">불량</LegendDot>
+                  </LegendWrapper>
+                </StatusCard>
+
+                <StatusCard $type={errorCount > 0 ? "error" : "good"}>
+                  <CardTitle>발생 건수</CardTitle>
+                  <CircleIconWrapper $type={errorCount > 0 ? "error" : "good"}>
+                    <CircleIconInner $type={errorCount > 0 ? "error" : "good"}>
+                      {errorCount > 0 ? <FiAlertTriangle strokeWidth={2.5} /> : <FiCheck strokeWidth={3} />}
+                    </CircleIconInner>
+                  </CircleIconWrapper>
+                  <StatusMainText>{errorCount}건</StatusMainText>
+                  <StatusSubPill $type={errorCount > 0 ? "error" : "good"}>
+                    {errorCount > 0 ? <FiAlertTriangle size={14} /> : <FiCheck size={14} />}{' '}
+                    {errorCount > 0 ? `특이사항이 ${errorCount}건 발생했습니다.` : "특이사항 없음"}
+                  </StatusSubPill>
+                  <LegendWrapper>
+                    <LegendDot color="#10b981">없음</LegendDot>
+                    <LegendDot color="#facc15">1건 이상</LegendDot>
+                    <LegendDot color="#ef4444">3건 이상</LegendDot>
+                  </LegendWrapper>
+                </StatusCard>
+              </LeftColumn>
+
+              <RightColumn>
+                <RightHeader>
+                  <RightTitle>핵심 공정 지표 및 운영 범위</RightTitle>
+                  <LiveBadge>LIVE</LiveBadge>
+                </RightHeader>
+                <MetricsGrid>
+                  {metricsData.map((metric) => (
+                    <MetricCard key={metric.id} data={metric} />
+                  ))}
+                </MetricsGrid>
+              </RightColumn>
+            </DashboardGrid>
+          </DashboardContent>
         )}
 
-        <TopNavContainer>
-          <TabGroup>
-            {/* 현재 선택된 설비만 표시 */}
-            <Tab $active={true} $hasError={checkCartError(selectedCartNo)}>
-              {checkCartError(selectedCartNo) && <ErrorDot>!</ErrorDot>}
-              {selectedCartNo}
-            </Tab>
-            {/* 모달을 여는 버튼 추가 */}
-            <Tab 
-              $isAction={true} 
-              onClick={() => setIsModalOpen(true)}
+        {showLoadingStage && (
+          <LoadingMotionGuard>
+            <LoadingStage
+              $leaving={!isLoading}
+              role="status"
+              aria-live="polite"
+              aria-label="설비 데이터를 불러오는 중입니다"
             >
-              <FiGrid />
-              설비 전체보기
-            </Tab>
-          </TabGroup>
-        </TopNavContainer>
+              <LoadingSkeletonGrid aria-hidden="true">
+                {Array.from({ length: 12 }, (_, index) => (
+                  <LoadingSkeletonCard key={index}>
+                    <span />
+                    <span />
+                  </LoadingSkeletonCard>
+                ))}
+              </LoadingSkeletonGrid>
 
-        <DashboardGrid>
-          <LeftColumn>
-            <StatusCard $type={hasCriticalError ? "error" : "good"}>
-              <CardTitle>설비 상태</CardTitle>
-              <CircleIconWrapper $type={hasCriticalError ? "error" : "good"}>
-                <CircleIconInner $type={hasCriticalError ? "error" : "good"}>
-                  {hasCriticalError ? <FiAlertTriangle strokeWidth={2.5} /> : <FiCheck strokeWidth={3} />}
-                </CircleIconInner>
-              </CircleIconWrapper>
-              <StatusMainText>{hasCriticalError ? "점검" : "양호"}</StatusMainText>
-              <StatusSubPill $type={hasCriticalError ? "error" : "good"}>
-                {hasCriticalError ? <FiAlertTriangle size={14} /> : <FiCheck size={14} />} 
-                {hasCriticalError ? "관리 범위 이탈 발생" : "관리 범위 내 안정적으로 운영중"}
-              </StatusSubPill>
-              <LegendWrapper>
-                <LegendDot color="#10b981">양호</LegendDot>
-                <LegendDot color="#facc15">주의</LegendDot>
-                <LegendDot color="#ef4444">불량</LegendDot>
-              </LegendWrapper>
-            </StatusCard>
-
-            <StatusCard $type={errorCount > 0 ? "error" : "good"}>
-              <CardTitle>발생 건수</CardTitle>
-              <CircleIconWrapper $type={errorCount > 0 ? "error" : "good"}>
-                <CircleIconInner $type={errorCount > 0 ? "error" : "good"}>
-                  {errorCount > 0 ? <FiAlertTriangle strokeWidth={2.5} /> : <FiCheck strokeWidth={3} />}
-                </CircleIconInner>
-              </CircleIconWrapper>
-              <StatusMainText>{errorCount}건</StatusMainText>
-              <StatusSubPill $type={errorCount > 0 ? "error" : "good"}>
-                {errorCount > 0 ? <FiAlertTriangle size={14} /> : <FiCheck size={14} />} 
-                {errorCount > 0 ? `특이사항이 ${errorCount}건 발생했습니다.` : "특이사항 없음"}
-              </StatusSubPill>
-              <LegendWrapper>
-                <LegendDot color="#10b981">없음</LegendDot>
-                <LegendDot color="#facc15">1건 이상</LegendDot>
-                <LegendDot color="#ef4444">3건 이상</LegendDot>
-              </LegendWrapper>
-            </StatusCard>
-          </LeftColumn>
-
-          <RightColumn>
-            <RightHeader>
-              <RightTitle>핵심 공정 지표 및 운영 범위</RightTitle>
-              <LiveBadge>LIVE</LiveBadge>
-            </RightHeader>
-            <MetricsGrid>
-              {metricsData.map((metric) => (
-                <MetricCard key={metric.id} data={metric} />
-              ))}
-            </MetricsGrid>
-          </RightColumn>
-        </DashboardGrid>
+              <LoadingPanel>
+                <LoadingIconShell aria-hidden="true">
+                  <LoadingOrbit />
+                  <FiDatabase />
+                </LoadingIconShell>
+                <LoadingEyebrow>
+                  <LoadingLiveDot />
+                  LIVE DATA SYNC
+                </LoadingEyebrow>
+                <LoadingTitle>설비 데이터를 불러오는 중입니다</LoadingTitle>
+                <LoadingDescription>
+                  센서 기준값과 실시간 설비 상태를 동기화하고 있습니다.<br />
+                  잠시만 기다려 주세요.
+                </LoadingDescription>
+                <LoadingSteps aria-hidden="true">
+                  <LoadingStep>설비 연결</LoadingStep>
+                  <LoadingStep>기준값 확인</LoadingStep>
+                  <LoadingStep>화면 구성</LoadingStep>
+                </LoadingSteps>
+                <LoadingProgressTrack aria-hidden="true">
+                  <LoadingProgressBar />
+                </LoadingProgressTrack>
+                <LoadingFootnote>실시간 공정 데이터를 안전하게 준비하고 있습니다</LoadingFootnote>
+              </LoadingPanel>
+            </LoadingStage>
+          </LoadingMotionGuard>
+        )}
       </PageContainer>
     </>
   );

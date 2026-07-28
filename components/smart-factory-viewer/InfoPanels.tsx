@@ -1,14 +1,13 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Activity, ChevronRight, Cpu, Droplets, Gauge, Thermometer } from 'lucide-react';
+import { Activity, Bot, ChevronRight, Cpu, Droplets, Gauge, Thermometer } from 'lucide-react';
 import { AIAdvisor } from '@/components/smart-factory-viewer/AIAdvisor';
 import type { ApiDataItem, UnitData, ViewerLayoutType, ViewerUiMode } from '@/types/smartFactoryViewer';
 import { findApiItemByUnitName, formatUnitName } from '@/utils/smartFactoryViewer';
 import {
   AccentLine,
   ActionButton,
-  BalancedPanel,
   CommandCell,
   CommandGrid,
   CommandHeader,
@@ -38,8 +37,10 @@ import {
   OperatorHeroBody,
   OperatorHeroStatus,
   OperatorHeroTitle,
+  OverviewAdvisorCard,
+  OverviewDock,
+  OverviewStatusCard,
   Panel,
-  PanelLayer,
   SectionEyebrow,
   SectionHeader,
   SectionTitle,
@@ -47,6 +48,7 @@ import {
 } from '@/styles/smartFactoryViewer.styles';
 
 interface InfoPanelsProps {
+  activeTab: string;
   layout: ViewerLayoutType;
   mode: ViewerUiMode;
   hoveredInfo: UnitData | null;
@@ -54,6 +56,71 @@ interface InfoPanelsProps {
   apiData: ApiDataItem[];
   injectUnit: ApiDataItem | null;
   isFallback: boolean;
+}
+
+function BalancedOverview({
+  activeTab,
+  mode,
+  apiData,
+  errorUnits,
+}: Pick<InfoPanelsProps, 'activeTab' | 'mode' | 'apiData' | 'errorUnits'>) {
+  const warningCount = apiData.filter((item) => item.AI_LABEL?.trim() === '불량').length;
+  const criticalErrors = errorUnits.filter((unit) => unit.problem?.trim() !== '불량');
+  const errorCount = criticalErrors.length;
+  const normalCount = Math.max(apiData.length - warningCount - errorCount, 0);
+  const focusUnit = criticalErrors[0] ?? errorUnits[0] ?? null;
+  const tone = errorCount > 0 ? 'error' : warningCount > 0 ? 'warning' : 'normal';
+  const statusTitle = tone === 'error' ? '주의 필요' : tone === 'warning' ? '확인 필요' : '정상 운전';
+  const statusDetail = focusUnit
+    ? `${focusUnit.name} ${focusUnit.problem ?? '이상 상태'} 감지`
+    : '현재 감지된 특이사항 없음';
+  const advisorTitle = focusUnit ? `${focusUnit.name} 우선 확인` : '라인 상태 정상';
+  const advisorMessage = focusUnit
+    ? `${focusUnit.problem ?? '설비 상태'} · ${focusUnit.solution ?? '현장 점검 권장'}`
+    : '모든 공정이 정상 범위에서 가동 중입니다.';
+
+  const stats = [
+    { label: '전체 설비', value: apiData.length, tone: '' },
+    { label: '정상', value: normalCount, tone: 'normal' },
+    { label: '주의', value: warningCount, tone: 'warning' },
+    { label: '오류', value: errorCount, tone: 'error' },
+  ];
+
+  return (
+    <OverviewDock>
+      <OverviewStatusCard $mode={mode} $tone={tone}>
+        <div className="status-summary">
+          <div className="status-indicator" aria-hidden="true" />
+          <div className="status-copy">
+            <div className="eyebrow">{activeTab} · 관제 요약</div>
+            <div className="title">{statusTitle}</div>
+            <div className="detail">{statusDetail}</div>
+          </div>
+        </div>
+        <div className="stats">
+          {stats.map((stat) => (
+            <div className="stat" key={stat.label}>
+              <div className="stat-label">{stat.label}</div>
+              <div className={`stat-value ${stat.tone}`}>{stat.value}</div>
+            </div>
+          ))}
+        </div>
+      </OverviewStatusCard>
+
+      <OverviewAdvisorCard $mode={mode}>
+        <div className="advisor-icon"><Bot size={21} /></div>
+        <div className="advisor-copy">
+          <div className="advisor-header">
+            <span>Factory AI</span>
+            <span className="live-badge">● LIVE</span>
+          </div>
+          <div className="advisor-title">{advisorTitle}</div>
+          <div className="advisor-message">{advisorMessage}</div>
+        </div>
+        <div className="signal" aria-hidden="true"><span /><span /><span /></div>
+      </OverviewAdvisorCard>
+    </OverviewDock>
+  );
 }
 
 const getActiveUnit = (hoveredInfo: UnitData | null, errorUnits: UnitData[]): UnitData => {
@@ -414,7 +481,7 @@ function CommandInjectionPanel({ mode, injectUnit }: Pick<InfoPanelsProps, 'mode
 }
 
 export const InfoPanels = React.memo((props: InfoPanelsProps) => {
-  const { layout, mode, hoveredInfo, errorUnits, apiData, injectUnit, isFallback } = props;
+  const { activeTab, layout, mode, hoveredInfo, errorUnits, apiData, injectUnit, isFallback } = props;
 
   if (layout === 'modelOnly') return null;
 
@@ -444,41 +511,7 @@ export const InfoPanels = React.memo((props: InfoPanelsProps) => {
     );
   }
 
-  if (mode === 'command') {
-    return (
-      <PanelLayer>
-        <BalancedPanel $side="left" $slot="top" $uiMode={mode}>
-          <CommandKpiPanel mode={mode} apiData={apiData} errorUnits={errorUnits} isFallback={isFallback} />
-        </BalancedPanel>
-        <BalancedPanel $side="left" $slot="bottom" $uiMode={mode}>
-          <CommandTelemetryPanel mode={mode} apiData={apiData} />
-        </BalancedPanel>
-        <BalancedPanel $side="right" $slot="top" $uiMode={mode}>
-          <CommandDefectPanel mode={mode} apiData={apiData} />
-        </BalancedPanel>
-        <BalancedPanel $side="right" $slot="bottom" $uiMode={mode}>
-          <CommandInjectionPanel mode={mode} injectUnit={injectUnit} />
-        </BalancedPanel>
-      </PanelLayer>
-    );
-  }
-
-  return (
-    <PanelLayer>
-      <BalancedPanel $side="left" $slot="top" $uiMode={mode}>
-        <OperatorStatusPanel mode={mode} apiData={apiData} errorUnits={errorUnits} isFallback={isFallback} />
-      </BalancedPanel>
-      <BalancedPanel $side="left" $slot="bottom" $uiMode={mode}>
-        <ActiveUnitPanel mode={mode} hoveredInfo={hoveredInfo} errorUnits={errorUnits} apiData={apiData} />
-      </BalancedPanel>
-      <BalancedPanel $side="right" $slot="top" $uiMode={mode}>
-        <AIAdvisor mode={mode} errors={errorUnits} compact />
-      </BalancedPanel>
-      <BalancedPanel $side="right" $slot="bottom" $uiMode={mode}>
-        <InjectionPanel mode={mode} injectUnit={injectUnit} />
-      </BalancedPanel>
-    </PanelLayer>
-  );
+  return <BalancedOverview activeTab={activeTab} mode={mode} apiData={apiData} errorUnits={errorUnits} />;
 });
 
 InfoPanels.displayName = 'InfoPanels';

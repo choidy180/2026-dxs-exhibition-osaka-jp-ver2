@@ -144,10 +144,20 @@ const GlobalStyle = createGlobalStyle`
   ::-webkit-scrollbar-thumb:hover { background: #ADB5BD; }
 `;
 
-const LayoutContainer = styled.div`display: flex; width: 100vw; height: 100vh; background-color: ${COLORS.bgPage}; overflow: hidden;`;
+const LayoutContainer = styled.div`
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 100vh;
+  height: 100dvh;
+  background-color: ${COLORS.bgPage};
+  overflow: hidden;
+`;
 
 const Sidebar = styled.div`
   width: 110px; 
+  flex: 0 0 110px;
   background: ${COLORS.bgCard}; border-right: 1px solid ${COLORS.grid}; 
   display: flex; flex-direction: column; align-items: center; padding-top: 32px; gap: 24px; z-index: 20;
   box-shadow: 4px 0 24px rgba(0,0,0,0.02);
@@ -194,10 +204,36 @@ const NavItem = styled.button<{ $active: boolean }>`
   }
 `;
 
-const MainContent = styled.div`flex: 1; display: flex; flex-direction: column; height: 100%; overflow: hidden; position: relative;`;
+const MainContent = styled.div`
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+`;
 
-const DashboardBody = styled.div`flex: 1; display: flex; padding: 24px; gap: 24px; height: 100%; overflow: hidden;`;
-const ChartSection = styled.div`flex: 3; display: flex; flex-direction: column; gap: 16px; height: 100%; overflow: hidden;`;
+const DashboardBody = styled.div`
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  padding: 24px;
+  gap: 24px;
+  height: 100%;
+  overflow: hidden;
+`;
+const ChartSection = styled.div`
+  flex: 3;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  overflow: hidden;
+`;
 const InfoSection = styled.div`flex: 1; min-width: 320px; max-width: 400px; display: flex; flex-direction: column; gap: 16px; height: 100%; overflow: hidden;`;
 const ViewContainer = styled(motion.div)`flex: 1; display: flex; flex-direction: column; gap: 16px; height: 100%; overflow: hidden;`;
 

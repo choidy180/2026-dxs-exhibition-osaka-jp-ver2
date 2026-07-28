@@ -12,7 +12,7 @@ type Props = {
 
 export default function CameraFullscreen({ cameraNumber, host, isScanning, onClose }: Props) {
   const cameraLabel = `CAM ${String(cameraNumber).padStart(2, '0')}`;
-  const isLive = Boolean(host && !isScanning);
+  const isLive = Boolean(host);
   const statusText = isLive ? 'LIVE' : isScanning ? '확인 중' : '대기';
 
   return (

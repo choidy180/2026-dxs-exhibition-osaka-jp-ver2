@@ -1,9 +1,8 @@
 "use client";
 
-import GmtLoadingScreen from '@/components/loading/gmt-loading';
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import styled, { createGlobalStyle, keyframes } from 'styled-components';
-import { X, ZoomIn, ZoomOut, Maximize, Video, Clock, Activity, Search, MapPin } from 'lucide-react'; 
+import styled, { createGlobalStyle, css, keyframes } from 'styled-components';
+import { Check, ChevronDown, Info, Maximize, Minimize, Search, MapPin, X, ZoomIn, ZoomOut } from 'lucide-react';
 
 // =============================================================================
 // 0. GLOBAL STYLE & THEME
@@ -21,6 +20,16 @@ const GlobalStyle = createGlobalStyle`
     overflow: hidden;
   }
   * { box-sizing: border-box; }
+
+  @media (max-width: 1024px) {
+    html,
+    body {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+  }
 `;
 
 const THEME_COLOR = "#00B87C"; 
@@ -73,6 +82,19 @@ const GD_GRID = [
   ['27','26','25'],['24','23','22'],['21','20','19'],['18','17','16'],['15','14','13'],['12','11','10'],['09','08','07'],['06','05','04'],['03','02','01']
 ];
 
+type MapViewKey = 'all' | 'GJ' | 'GA' | 'GB' | 'GC' | 'GD' | 'GE' | 'GF';
+
+const MAP_VIEW_OPTIONS: Array<{ key: MapViewKey; label: string; description: string }> = [
+  { key: 'all', label: '전체보기', description: '제품창고의 모든 구역을 한 화면에서 확인' },
+  { key: 'GJ', label: 'JIG ZONE', description: 'JIG 적재 구역만 확대해서 확인' },
+  { key: 'GA', label: 'GA 구역', description: 'GA 적재 슬롯만 확대해서 확인' },
+  { key: 'GB', label: 'GB 구역', description: 'GB 적재 슬롯만 확대해서 확인' },
+  { key: 'GC', label: 'GC 구역', description: 'GC 적재 슬롯만 확대해서 확인' },
+  { key: 'GD', label: 'GD 구역', description: 'GD 적재 슬롯만 확대해서 확인' },
+  { key: 'GE', label: 'GE 구역', description: 'GE 적재 슬롯만 확대해서 확인' },
+  { key: 'GF', label: 'GF 구역', description: 'GF 적재 슬롯만 확대해서 확인' },
+];
+
 // =============================================================================
 // 2. STYLED COMPONENTS 
 // =============================================================================
@@ -90,19 +112,69 @@ const pulse = keyframes`
 
 const Layout = styled.div`
   display: flex;
-  width: 100vw;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   height: 100vh;
+  height: 100dvh;
   padding: 16px;
   gap: 16px;
+  overflow: hidden;
   background-color: #F1F5F9;
+
+  @media (max-width: 1500px) {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  @media (max-width: 1024px) {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 12px;
+    overflow: visible;
+    flex-direction: column;
+  }
+
+  @media (max-width: 640px) {
+    padding: 8px;
+    gap: 8px;
+  }
 `;
 
 const LeftColumn = styled.div`
-  width: 320px;
+  width: clamp(250px, 16vw, 300px);
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
   flex-shrink: 0;
+
+  @media (max-width: 1500px) {
+    width: 250px;
+    gap: 12px;
+  }
+
+  @media (max-width: 1024px) {
+    order: 2;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+
+    > :last-child {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+    gap: 8px;
+
+    > :last-child {
+      grid-column: auto;
+    }
+  }
 `;
 
 const PanelBlock = styled.div`
@@ -112,6 +184,15 @@ const PanelBlock = styled.div`
   padding: 20px;
   display: flex;
   flex-direction: column;
+
+  @media (max-width: 1500px) {
+    padding: 16px;
+  }
+
+  @media (max-width: 640px) {
+    padding: 16px;
+    border-radius: 12px;
+  }
 `;
 
 const PanelTitle = styled.h2<{ flex?: boolean }>`
@@ -163,14 +244,56 @@ const VideoInfoRow = styled.div`
   .val { color: #0F172A; font-weight: 800; }
 `;
 
-const CenterColumn = styled.div`
+const CenterColumn = styled.div<{ $fullscreen: boolean }>`
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   background: white;
   border-radius: 16px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.03);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+
+  @media (max-width: 1024px) {
+    order: 1;
+    width: 100%;
+    height: 68dvh;
+    min-height: 520px;
+    max-height: 720px;
+    flex: none;
+    border-radius: 14px;
+  }
+
+  @media (max-width: 640px) {
+    height: 66dvh;
+    min-height: 480px;
+    border-radius: 12px;
+  }
+
+  ${(props) => props.$fullscreen && css`
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    max-height: none;
+    border-radius: 0;
+    box-shadow: none;
+  `}
+
+  &:fullscreen,
+  &:-webkit-full-screen {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    max-height: none;
+    border-radius: 0;
+    background: #ffffff;
+  }
 `;
 
 const CenterHeader = styled.div`
@@ -179,12 +302,53 @@ const CenterHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid #F1F5F9;
+
+  @media (max-width: 640px) {
+    padding: 14px 16px;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
 `;
 
 const HeaderControls = styled.div`
   display: flex;
   align-items: center;
   gap: 20px;
+
+  @media (max-width: 640px) {
+    width: 100%;
+    justify-content: space-between;
+    gap: 10px;
+  }
+`;
+
+const MapTitleGroup = styled.div`
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const MobileViewButton = styled.button`
+  display: none;
+
+  @media (max-width: 1024px) {
+    min-width: 0;
+    height: 34px;
+    padding: 0 11px;
+    border: 1px solid #d8dee8;
+    border-radius: 9px;
+    background: #ffffff;
+    color: #334155;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
+  }
 `;
 
 const Legend = styled.div`
@@ -193,6 +357,11 @@ const Legend = styled.div`
   .box { width: 14px; height: 14px; border-radius: 4px; }
   .box.empty { border: 1px solid #CBD5E1; background: white; }
   .box.full { background: ${THEME_COLOR}; }
+
+  @media (max-width: 640px) {
+    gap: 10px;
+    font-size: 11px;
+  }
 `;
 
 const ZoomButtonGroup = styled.div`
@@ -203,11 +372,38 @@ const ZoomButtonGroup = styled.div`
     &:hover { background: #F8FAFC; color: #0F172A; }
     &:not(:last-child) { border-right: 1px solid #E2E8F0; }
   }
+  .zoom-value {
+    min-width: 50px;
+    padding: 0 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid #E2E8F0;
+    color: #475569;
+    background: #F8FAFC;
+    font-size: 11px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: 640px) {
+    button {
+      padding: 7px 10px;
+    }
+    .zoom-value {
+      min-width: 44px;
+      padding: 0 6px;
+    }
+  }
 `;
 
 const MapScrollArea = styled.div<{ $isDragging: boolean }>`
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
   position: relative;
   background: #F8FAFC;
   cursor: ${(props) => (props.$isDragging ? 'grabbing' : 'grab')};
@@ -217,13 +413,32 @@ const MapScrollArea = styled.div<{ $isDragging: boolean }>`
 `;
 
 const RightColumn = styled.div`
-  width: 320px;
+  width: clamp(260px, 16vw, 300px);
+  min-width: 0;
   background: white;
   border-radius: 16px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.03);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+
+  @media (max-width: 1500px) {
+    width: 270px;
+  }
+
+  @media (max-width: 1024px) {
+    order: 3;
+    width: 100%;
+    height: min(620px, 70dvh);
+    min-height: 460px;
+    border-radius: 14px;
+  }
+
+  @media (max-width: 640px) {
+    height: 62dvh;
+    min-height: 440px;
+    border-radius: 12px;
+  }
 `;
 
 const RightHeader = styled.div`
@@ -259,7 +474,34 @@ const InventoryCard = styled.div`
 `;
 
 // --- 스마트 맵 구성요소 ---
-const MapContentWrapper = styled.div` display: flex; gap: 40px; `;
+const MapStage = styled.div`
+  width: max-content;
+  min-width: 100%;
+  min-height: 100%;
+  padding: 24px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+
+  @media (max-width: 1024px) {
+    padding: 16px;
+  }
+
+  @media (max-width: 640px) {
+    padding: 12px;
+  }
+`;
+
+const MapCanvas = styled.div`
+  width: max-content;
+  transform-origin: top left;
+`;
+
+const MapContentWrapper = styled.div<{ $focused?: boolean }>`
+  display: flex;
+  gap: ${(props) => props.$focused ? '0' : '40px'};
+  width: max-content;
+`;
 const ColLeftMap = styled.div` display: flex; flex-direction: column; gap: 25px; width: fit-content; `;
 const ColRightMap = styled.div` display: flex; flex-direction: column; gap: 25px; padding-top: 5px; `;
 
@@ -268,26 +510,35 @@ const GridContainer = styled.div`
 `;
 const Row = styled.div` display: flex; `;
 
-const CellBox = styled.div<{ w: string }>`
+const CellBox = styled.div<{ w: string; $related: boolean; $origin: boolean }>`
   width: ${props => props.w}; height: ${CELL_HEIGHT}; display: flex; flex-direction: column; border-right: 1px solid #CBD5E1; border-bottom: 1px solid #CBD5E1; background: white; position: relative;
-  &:hover { z-index: 10; box-shadow: inset 0 0 0 2px #3B82F6; }
+  z-index: ${(props) => props.$origin ? 14 : props.$related ? 12 : 1};
+  outline: ${(props) => props.$origin ? '3px solid #F43F5E' : props.$related ? '3px solid #F59E0B' : 'none'};
+  outline-offset: -1px;
+  box-shadow: ${(props) => props.$origin
+    ? '0 0 0 4px rgba(244, 63, 94, 0.18), 0 7px 16px rgba(15, 23, 42, 0.18)'
+    : props.$related
+      ? '0 0 0 3px rgba(245, 158, 11, 0.16)'
+      : 'none'};
+  transition: outline-color 0.15s ease, box-shadow 0.15s ease;
+  &:hover { z-index: 15; box-shadow: inset 0 0 0 2px #3B82F6, 0 7px 16px rgba(15, 23, 42, 0.18); }
 `;
 
-const CellHeader = styled.div`
-  height: 14px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #475569; background: #F8FAFC; border-bottom: 1px solid #E2E8F0;
+const CellHeader = styled.div<{ $related: boolean }>`
+  height: 14px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: ${(props) => props.$related ? '#B45309' : '#475569'}; background: ${(props) => props.$related ? '#FFF7ED' : '#F8FAFC'}; border-bottom: 1px solid #E2E8F0;
 `;
 
-const CellValue = styled.div<{ $active?: boolean }>`
-  flex: 1; width: 100%; display: flex; align-items: center; justify-content: center; 
-  font-size: 11px; font-weight: 800;
-  background-color: ${props => props.$active ? THEME_COLOR : 'white'};
+const CellValue = styled.div<{ $active?: boolean; $related: boolean }>`
+  flex: 1; width: 100%; min-width: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800; letter-spacing: -0.3px;
+  background-color: ${props => props.$related ? '#047857' : props.$active ? THEME_COLOR : 'white'};
   color: ${props => props.$active ? 'white' : 'transparent'};
   transition: background-color 0.2s; cursor: pointer;
-  
-  /* 텍스트 오버플로우 방지 및 생략 기호 처리 */
-  white-space: nowrap; 
-  overflow: hidden; 
-  text-overflow: ellipsis; 
+
+  /* 제품번호가 길면 말줄임 처리 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   padding: 0 4px;
 `;
 
@@ -300,17 +551,100 @@ const ActiveZoneBox = styled.div` background: rgba(239, 246, 255, 0.5); border: 
 const InactiveZoneBox = styled.div` background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 30px; `;
 
 const TooltipBox = styled.div`
-  position: fixed; z-index: 3000; background: rgba(255, 255, 255, 0.98); border: 1px solid #E2E8F0; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 12px; min-width: 220px; pointer-events: none; display: flex; flex-direction: column; gap: 6px; backdrop-filter: blur(4px);
+  position: fixed; z-index: 100010; background: rgba(255, 255, 255, 0.98); border: 1px solid #E2E8F0; border-radius: 12px; box-shadow: 0 18px 42px rgba(15,23,42,0.18); padding: 14px; width: 340px; max-width: calc(100vw - 24px); pointer-events: auto; display: flex; flex-direction: column; gap: 7px; backdrop-filter: blur(8px);
   .tooltip-header { font-size: 14px; font-weight: 800; color: #0F172A; border-bottom: 1px solid #E2E8F0; padding-bottom: 6px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
   .tooltip-row { display: flex; justify-content: space-between; font-size: 12px; .label { color: #64748B; font-weight: 600; } .value { color: #0F172A; font-weight: 800; } }
   .status-badge { padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; &.occupied { background: #F0FDF4; color: ${THEME_COLOR}; border: 1px solid #BBF7D0; } &.empty { background: #F1F5F9; color: #64748B; } }
+  .product-summary { margin-top: 6px; padding-top: 10px; border-top: 1px solid #E2E8F0; }
+  .product-summary-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #334155; font-size: 12px; font-weight: 800; }
+  .product-summary-title span { display: inline-flex; align-items: center; gap: 6px; }
+  .product-count { color: #D31145; font-size: 16px; font-weight: 900; }
+  .product-code { margin-top: 7px; color: #047857; font-size: 13px; font-weight: 900; word-break: break-all; }
+  .location-list { margin-top: 8px; padding-right: 3px; display: flex; flex-wrap: wrap; gap: 5px; max-height: 112px; overflow-y: auto; }
+  .location-chip { padding: 4px 7px; border-radius: 6px; background: #FFF7ED; border: 1px solid #FED7AA; color: #9A3412; font-size: 10px; font-weight: 850; }
+
+  @media (max-width: 640px) {
+    top: auto !important;
+    right: 12px;
+    bottom: 12px;
+    left: 12px !important;
+    width: auto;
+    max-width: none;
+  }
+`;
+
+const ViewPickerOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 100020;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.48);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const ViewPickerModal = styled.div`
+  width: min(460px, 100%);
+  max-height: min(720px, calc(100dvh - 40px));
+  overflow: hidden;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.28);
+  display: flex;
+  flex-direction: column;
+`;
+
+const ViewPickerHeader = styled.div`
+  padding: 20px;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+
+  strong { display: block; color: #0F172A; font-size: 18px; font-weight: 900; }
+  span { display: block; margin-top: 5px; color: #64748B; font-size: 12px; line-height: 1.45; }
+  button { width: 34px; height: 34px; flex: 0 0 auto; border: 0; border-radius: 9px; background: #F1F5F9; color: #475569; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+`;
+
+const ViewPickerList = styled.div`
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const ViewPickerOption = styled.button<{ $active: boolean }>`
+  min-height: 78px;
+  padding: 13px;
+  border: 1px solid ${(props) => props.$active ? 'rgba(0, 184, 124, 0.45)' : '#E2E8F0'};
+  border-radius: 12px;
+  background: ${(props) => props.$active ? '#ECFDF5' : '#ffffff'};
+  color: ${(props) => props.$active ? '#047857' : '#334155'};
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+
+  .check { width: 22px; height: 22px; flex: 0 0 auto; margin-top: 1px; border-radius: 7px; background: ${(props) => props.$active ? THEME_COLOR : '#F1F5F9'}; color: ${(props) => props.$active ? '#ffffff' : '#94A3B8'}; display: inline-flex; align-items: center; justify-content: center; }
+  strong { display: block; color: inherit; font-size: 13px; font-weight: 900; }
+  .option-copy > span { display: block; margin-top: 4px; color: #64748B; font-size: 11px; line-height: 1.4; word-break: keep-all; }
 `;
 
 // =============================================================================
 // 3. TYPES & SUB-COMPONENTS
 // =============================================================================
 
-interface ApiSlotDetail { slot_id: number; occupied: boolean; loc_code: string; label001: string | null; vehicle_id: string | null; entry_time: string | null; }
+interface ApiSlotDetail { slot_id: number; occupied: boolean; loc_code: string; label001: string | null; vehicle_id: string | null; cdgitem: string | null; entry_time: string | null; }
 interface ApiZoneData { total: number; occupied: number; slots_detail: ApiSlotDetail[]; }
 type ApiResponse = Record<string, ApiZoneData>;
 interface SlotDataMap { [locCode: string]: ApiSlotDetail; }
@@ -318,95 +652,172 @@ interface InventoryItem { code: string; loc: string; zone: string; qty: number; 
 interface ZoneStat { name: string; total: number; used: number; }
 interface TooltipState { x: number; y: number; data: ApiSlotDetail | null; locCode: string; }
 
-const CellItem = React.memo(({ id, w, data, onHover }: { id: string, w: string, data: ApiSlotDetail | undefined, onHover: (e: React.MouseEvent, id: string, data: ApiSlotDetail | undefined) => void }) => {
+interface CellItemProps {
+  id: string;
+  w: string;
+  data: ApiSlotDetail | undefined;
+  related: boolean;
+  origin: boolean;
+  onHover: (e: React.MouseEvent, id: string, data: ApiSlotDetail | undefined) => void;
+}
+
+const CellItem = React.memo(({ id, w, data, related, origin, onHover }: CellItemProps) => {
   const isOccupied = data?.occupied;
-  
-  // 라벨(label001)이 아닌 차량번호(vehicle_id)를 표시값으로 사용
-  const displayVal = isOccupied ? (data?.vehicle_id ? data.vehicle_id : '----') : ''; 
+
+  // 차량번호(vehicle_id)는 표시하지 않고 제품번호(cdgitem)의 뒤 4자리만 표시
+  const displayVal = isOccupied ? (data?.cdgitem ? data.cdgitem.slice(-4) : '----') : '';
 
   return (
-    <CellBox w={w} onMouseEnter={(e) => onHover(e, id, data)} onMouseLeave={(e) => onHover(e, id, undefined)}>
-      <CellHeader>{id}</CellHeader>
-      <CellValue $active={isOccupied} title={data?.vehicle_id || ''}>{displayVal}</CellValue>
+    <CellBox
+      w={w}
+      $related={related}
+      $origin={origin}
+      onMouseEnter={(e) => onHover(e, id, data)}
+      onMouseLeave={(e) => onHover(e, id, undefined)}
+      onClick={(e) => {
+        e.stopPropagation();
+        onHover(e, id, data);
+      }}
+    >
+      <CellHeader $related={related}>{id}</CellHeader>
+      <CellValue $active={isOccupied} $related={related} title={data?.cdgitem || ''}>{displayVal}</CellValue>
     </CellBox>
   );
-}, (prev, next) => prev.id === next.id && prev.w === next.w && prev.data === next.data);
+}, (prev, next) =>
+  prev.id === next.id &&
+  prev.w === next.w &&
+  prev.data === next.data &&
+  prev.related === next.related &&
+  prev.origin === next.origin
+);
 CellItem.displayName = "CellItem";
 
-const WarehouseLayout = React.memo(({ renderCell }: { renderCell: (id: string, w: string) => React.ReactNode }) => {
-  const JigStrip = ({ ids }: { ids: string[] }) => ( <Row>{ids.map(id => renderCell(id, W_JIG))}</Row> );
+const JigStrip = ({ ids, renderCell }: { ids: string[]; renderCell: (id: string, w: string) => React.ReactNode }) => (
+  <Row>{ids.map(id => renderCell(id, W_JIG))}</Row>
+);
+
+const WarehouseLayout = React.memo(({ renderCell, view }: { renderCell: (id: string, w: string) => React.ReactNode; view: MapViewKey }) => {
+  const jigZone = (
+    <JigZoneBox>
+      <MapSectionTitle $isActive={false} style={{color:'#A855F7'}}>JIG ZONE</MapSectionTitle>
+      <div style={{display:'flex', gap:'20px', alignItems:'flex-end'}}>
+        <GridContainer><JigStrip ids={JIG_1_L} renderCell={renderCell} /><JigStrip ids={JIG_1_L} renderCell={renderCell} /></GridContainer>
+        <GridContainer><JigStrip ids={JIG_1_R} renderCell={renderCell} /><JigStrip ids={JIG_1_R} renderCell={renderCell} /></GridContainer>
+      </div>
+      <div style={{marginTop:'10px', marginLeft:'60px'}}><GridContainer><JigStrip ids={JIG_BTM} renderCell={renderCell} /><JigStrip ids={JIG_BTM} renderCell={renderCell} /></GridContainer></div>
+    </JigZoneBox>
+  );
+
+  const gaZone = (
+    <>
+      <div>
+        <MapSectionTitle $isActive={true}>GA</MapSectionTitle>
+        <GridContainer>
+          <Row>{GA_TOP_1.slice(0,3).map((n) => renderCell(`GA${n}`, W_NARROW))}{GA_TOP_1.slice(3).map((n) => renderCell(`GA${n}`, W_WIDE))}</Row>
+          <Row>{GA_TOP_2.slice(0,3).map((n) => renderCell(`GA${n}`, W_NARROW))}{GA_TOP_2.slice(3).map((n) => renderCell(`GA${n}`, W_WIDE))}</Row>
+        </GridContainer>
+      </div>
+      <div>
+        <MapSectionTitle $isActive={true}>GA 상세</MapSectionTitle>
+        <GridContainer>
+          {GA_ROWS.map((row, i) => (
+            <Row key={i}>{row.l.map(n => renderCell(`GA${n}`, W_NARROW))}{row.r.map(n => renderCell(`GA${n}`, W_WIDE))}</Row>
+          ))}
+        </GridContainer>
+      </div>
+    </>
+  );
+
+  const gbZone = (
+    <div>
+      <MapSectionTitle $isActive={true}>GB</MapSectionTitle>
+      <GridContainer>
+        <Row>{GB_34_L.map(n => renderCell(`GB${n}`, W_NARROW))}{GB_34_R.map(n => renderCell(`GB${n}`, W_NARROW))}</Row>
+        <Row>{GB_17_L.map(n => renderCell(`GB${n}`, W_NARROW))}{GB_17_R.map(n => renderCell(`GB${n}`, W_NARROW))}</Row>
+      </GridContainer>
+    </div>
+  );
+
+  const gcZone = (
+    <div>
+      <MapSectionTitle $isActive={true}>GC</MapSectionTitle>
+      <div style={{display:'flex', gap:'20px'}}>
+        <GridContainer><Row>{GC_L_TOP.map(n => renderCell(`GC${n}`, W_NARROW))}</Row><Row>{GC_L_BTM.map(n => renderCell(`GC${n}`, W_NARROW))}</Row></GridContainer>
+        <GridContainer><Row>{GC_R_TOP.map(n => renderCell(`GC${n}`, W_NARROW))}</Row><Row>{GC_R_BTM.map(n => renderCell(`GC${n}`, W_NARROW))}</Row></GridContainer>
+      </div>
+    </div>
+  );
+
+  const gfZone = (
+    <div>
+      <MapSectionTitle $isActive={false}>GF</MapSectionTitle>
+      <div style={{display:'flex', gap:'15px'}}>
+        <GridContainer>
+          <Row>
+            <div style={{display:'flex', flexDirection:'column'}}>{GF_LEFT_COL.map(n => renderCell(`GF${n}`, W_NARROW))}</div>
+            <div style={{display:'flex', flexDirection:'column'}}>{GF_RIGHT_COL.map(n => renderCell(`GF${n}`, W_NARROW))}</div>
+          </Row>
+        </GridContainer>
+        <GridContainer>{GF_GRID.map((row, i) => (<Row key={i}>{row.map(n => renderCell(`GF${n}`, W_NARROW))}</Row>))}</GridContainer>
+      </div>
+    </div>
+  );
+
+  const geZone = (
+    <div>
+      <MapSectionTitle $isActive={false}>GE</MapSectionTitle>
+      <div style={{display:'flex', gap:'20px', alignItems:'flex-start'}}>
+        <div style={{display:'flex', flexDirection:'column', alignItems:'flex-end'}}>
+          <GridContainer style={{marginRight: W_NARROW}}>{renderCell(`GE${GE_L[0]}`, W_NARROW)}</GridContainer>
+          <GridContainer>{GE_BODY.map((p,i) => (<Row key={i}>{renderCell(`GE${p.l}`, W_NARROW)}{renderCell(`GE${p.r}`, W_NARROW)}</Row>))}</GridContainer>
+        </div>
+        <div style={{display:'flex', flexDirection:'column', gap:'20px'}}>
+          <GridContainer>{GE_GRID.map((row,i) => (<Row key={i}>{row.map(n => renderCell(`GE${n}`, W_NARROW))}</Row>))}</GridContainer>
+          <GridContainer><Row>{GD_GRID_H.map(id => renderCell(id, W_NARROW))}</Row></GridContainer>
+        </div>
+      </div>
+    </div>
+  );
+
+  const gdZone = (
+    <div>
+      <MapSectionTitle $isActive={false}>GD</MapSectionTitle>
+      <div style={{display:'flex', gap:'20px'}}>
+        <GridContainer>{GD_STRIP.map((p,i) => (<Row key={i}>{renderCell(`GD${p.l}`, W_NARROW)}{renderCell(`GD${p.r}`, W_NARROW)}</Row>))}</GridContainer>
+        <GridContainer>{GD_GRID.map((row,i) => (<Row key={i}>{row.map(n => renderCell(`GD${n}`, W_NARROW))}</Row>))}</GridContainer>
+      </div>
+    </div>
+  );
+
+  if (view !== 'all') {
+    let focusedZone: React.ReactNode;
+    if (view === 'GJ') focusedZone = jigZone;
+    else if (view === 'GA') focusedZone = <ActiveZoneBox>{gaZone}</ActiveZoneBox>;
+    else if (view === 'GB') focusedZone = <ActiveZoneBox>{gbZone}</ActiveZoneBox>;
+    else if (view === 'GC') focusedZone = <ActiveZoneBox>{gcZone}</ActiveZoneBox>;
+    else if (view === 'GF') focusedZone = <InactiveZoneBox>{gfZone}</InactiveZoneBox>;
+    else if (view === 'GE') focusedZone = <InactiveZoneBox>{geZone}</InactiveZoneBox>;
+    else focusedZone = <InactiveZoneBox>{gdZone}</InactiveZoneBox>;
+
+    return <MapContentWrapper $focused>{focusedZone}</MapContentWrapper>;
+  }
+
   return (
     <MapContentWrapper>
       <ColLeftMap>
-        <JigZoneBox>
-          <MapSectionTitle $isActive={false} style={{color:'#A855F7'}}>JIG ZONE</MapSectionTitle>
-          <div style={{display:'flex', gap:'20px', alignItems:'flex-end'}}>
-            <GridContainer><JigStrip ids={JIG_1_L} /><JigStrip ids={JIG_1_L} /></GridContainer>
-            <GridContainer><JigStrip ids={JIG_1_R} /><JigStrip ids={JIG_1_R} /></GridContainer>
-          </div>
-          <div style={{marginTop:'10px', marginLeft:'60px'}}><GridContainer><JigStrip ids={JIG_BTM} /><JigStrip ids={JIG_BTM} /></GridContainer></div>
-        </JigZoneBox>
-
+        {jigZone}
         <ActiveZoneBox>
-          <div>
-            <MapSectionTitle $isActive={true}>GA</MapSectionTitle>
-            <GridContainer>
-              <Row>{GA_TOP_1.slice(0,3).map((n) => renderCell(`GA${n}`, W_NARROW))}{GA_TOP_1.slice(3).map((n) => renderCell(`GA${n}`, W_WIDE))}</Row>
-              <Row>{GA_TOP_2.slice(0,3).map((n) => renderCell(`GA${n}`, W_NARROW))}{GA_TOP_2.slice(3).map((n) => renderCell(`GA${n}`, W_WIDE))}</Row>
-            </GridContainer>
-          </div>
-          <div>
-            <MapSectionTitle $isActive={true}>GA / GB</MapSectionTitle>
-            <GridContainer>
-              {GA_ROWS.map((row, i) => (
-                <Row key={i}>{row.l.map(n => renderCell(`GA${n}`, W_NARROW))}{row.r.map(n => renderCell(`GA${n}`, W_WIDE))}</Row>
-              ))}
-              <Row>{GB_34_L.map(n => renderCell(`GB${n}`, W_NARROW))}{GB_34_R.map(n => renderCell(`GB${n}`, W_NARROW))}</Row>
-              <Row>{GB_17_L.map(n => renderCell(`GB${n}`, W_NARROW))}{GB_17_R.map(n => renderCell(`GB${n}`, W_NARROW))}</Row>
-            </GridContainer>
-          </div>
-          <div>
-            <MapSectionTitle $isActive={true}>GC</MapSectionTitle>
-            <div style={{display:'flex', gap:'20px'}}>
-              <GridContainer><Row>{GC_L_TOP.map(n => renderCell(`GC${n}`, W_NARROW))}</Row><Row>{GC_L_BTM.map(n => renderCell(`GC${n}`, W_NARROW))}</Row></GridContainer>
-              <GridContainer><Row>{GC_R_TOP.map(n => renderCell(`GC${n}`, W_NARROW))}</Row><Row>{GC_R_BTM.map(n => renderCell(`GC${n}`, W_NARROW))}</Row></GridContainer>
-            </div>
-          </div>
+          {gaZone}
+          {gbZone}
+          {gcZone}
         </ActiveZoneBox>
       </ColLeftMap>
 
       <ColRightMap>
         <InactiveZoneBox>
-          <div>
-            <MapSectionTitle $isActive={false}>GF</MapSectionTitle>
-            <div style={{display:'flex', gap:'15px'}}>
-                <GridContainer>
-                    <Row>
-                      <div style={{display:'flex', flexDirection:'column'}}>{GF_LEFT_COL.map(n => renderCell(`GF${n}`, W_NARROW))}</div>
-                      <div style={{display:'flex', flexDirection:'column'}}>{GF_RIGHT_COL.map(n => renderCell(`GF${n}`, W_NARROW))}</div>
-                    </Row>
-                </GridContainer>
-                <GridContainer>{GF_GRID.map((row, i) => (<Row key={i}>{row.map(n => renderCell(`GF${n}`, W_NARROW))}</Row>))}</GridContainer>
-            </div>
-          </div>
-          <div>
-            <MapSectionTitle $isActive={false}>GE / GD</MapSectionTitle>
-            <div style={{display:'flex', gap:'20px'}}>
-                <div style={{display:'flex', flexDirection:'column', alignItems:'flex-end'}}>
-                    <GridContainer style={{marginRight: W_NARROW}}>{renderCell(`GE${GE_L[0]}`, W_NARROW)}</GridContainer>
-                    <GridContainer style={{marginBottom:'20px'}}>{GE_BODY.map((p,i) => (<Row key={i}>{renderCell(`GE${p.l}`, W_NARROW)}{renderCell(`GE${p.r}`, W_NARROW)}</Row>))}</GridContainer>
-                    <GridContainer>{GD_STRIP.map((p,i) => (<Row key={i}>{renderCell(`GD${p.l}`, W_NARROW)}{renderCell(`GD${p.r}`, W_NARROW)}</Row>))}</GridContainer>
-                </div>
-                <div style={{display:'flex', flexDirection:'column'}}>
-                    <div style={{height:'40px'}}></div>
-                    <GridContainer style={{marginBottom:'20px'}}>{GE_GRID.map((row,i) => (<Row key={i}>{row.map(n => renderCell(`GE${n}`, W_NARROW))}</Row>))}</GridContainer>
-                    <GridContainer>
-                        <Row>{GD_GRID_H.map(id => renderCell(id, W_NARROW))}</Row>
-                        {GD_GRID.map((row,i) => (<Row key={i}>{row.map(n => renderCell(`GD${n}`, W_NARROW))}</Row>))}
-                    </GridContainer>
-                </div>
-            </div>
-          </div>
+          {gfZone}
+          {geZone}
+          {gdZone}
         </InactiveZoneBox>
       </ColRightMap>
     </MapContentWrapper>
@@ -454,6 +865,8 @@ const WsVideoPlayer = ({ wsUrl }: { wsUrl: string }) => {
     return <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:'#94A3B8', fontSize:'13px'}}>실시간 카메라 연결 중...</div>;
   }
 
+  // WebSocket Blob 프레임은 Next Image 최적화 대상이 아니므로 일반 img를 사용합니다.
+  // eslint-disable-next-line @next/next/no-img-element
   return <img src={imgSrc} alt="Live Stream" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
 };
 
@@ -462,24 +875,138 @@ const WsVideoPlayer = ({ wsUrl }: { wsUrl: string }) => {
 // =============================================================================
 
 export default function FinalDashboard() {
-  const [loading, setLoading] = useState(true);
   const [mapData, setMapData] = useState<SlotDataMap>({});
   const [hoverInfo, setHoverInfo] = useState<TooltipState | null>(null);
   
   const [zoomLevel, setZoomLevel] = useState(0.85); // 화면 맞춤용 초기 배율
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedMapView, setSelectedMapView] = useState<MapViewKey>('all');
+  const [isViewPickerOpen, setIsViewPickerOpen] = useState(false);
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
 
+  const centerPanelRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const mapContentRef = useRef<HTMLDivElement>(null);
+  const hoverHideTimerRef = useRef<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [startY, setStartY] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [scrollTop, setScrollTop] = useState(0);
 
+  const fitMapToViewport = useCallback(() => {
+    const viewport = containerRef.current;
+    const content = mapContentRef.current;
+    if (!viewport || !content || content.offsetWidth === 0 || content.offsetHeight === 0) return;
+
+    const isMobile = window.innerWidth <= 1024;
+    const stagePadding = window.innerWidth <= 640 ? 24 : isMobile ? 32 : 48;
+    const availableWidth = Math.max(1, viewport.clientWidth - stagePadding);
+    const availableHeight = Math.max(1, viewport.clientHeight - stagePadding);
+    const widthScale = availableWidth / content.offsetWidth;
+    const heightScale = availableHeight / content.offsetHeight;
+    const isFocusedView = selectedMapView !== 'all';
+    const minimumScale = isMobile ? (isFocusedView ? 0.8 : 0.55) : 0.45;
+    const maximumScale = isFocusedView ? 1.4 : 1.15;
+    const fittedScale = Math.max(minimumScale, Math.min(maximumScale, widthScale, heightScale));
+
+    setZoomLevel(Number(fittedScale.toFixed(2)));
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (!containerRef.current) return;
+        containerRef.current.scrollLeft = Math.max(0, (containerRef.current.scrollWidth - containerRef.current.clientWidth) / 2);
+        containerRef.current.scrollTop = 0;
+      });
+    });
+  }, [selectedMapView]);
+
+  useEffect(() => {
+    const viewport = containerRef.current;
+    if (!viewport) return;
+
+    const frame = window.requestAnimationFrame(fitMapToViewport);
+    const resizeObserver = new ResizeObserver(fitMapToViewport);
+    resizeObserver.observe(viewport);
+    window.addEventListener('resize', fitMapToViewport);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', fitMapToViewport);
+    };
+  }, [fitMapToViewport]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isNativeFullscreen = document.fullscreenElement === centerPanelRef.current;
+      setIsMapFullscreen(isNativeFullscreen);
+      window.setTimeout(fitMapToViewport, 80);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, [fitMapToViewport]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(fitMapToViewport, 60);
+    return () => window.clearTimeout(timer);
+  }, [selectedMapView, isMapFullscreen, fitMapToViewport]);
+
+  useEffect(() => {
+    if (!isMapFullscreen || document.fullscreenElement) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsMapFullscreen(false);
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isMapFullscreen]);
+
+  useEffect(() => () => {
+    if (hoverHideTimerRef.current !== null) window.clearTimeout(hoverHideTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 1024px)');
+    const handleViewportMode = () => {
+      if (!mediaQuery.matches) {
+        setSelectedMapView('all');
+        setIsViewPickerOpen(false);
+      }
+    };
+    mediaQuery.addEventListener('change', handleViewportMode);
+    return () => mediaQuery.removeEventListener('change', handleViewportMode);
+  }, []);
+
+  const toggleMapFullscreen = useCallback(async () => {
+    const panel = centerPanelRef.current;
+    if (!panel) return;
+
+    if (isMapFullscreen) {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        setIsMapFullscreen(false);
+      }
+      return;
+    }
+
+    try {
+      if (panel.requestFullscreen) {
+        await panel.requestFullscreen();
+        setIsMapFullscreen(true);
+      } else {
+        setIsMapFullscreen(true);
+      }
+    } catch {
+      setIsMapFullscreen(true);
+    }
+  }, [isMapFullscreen]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch('http://192.168.2.147:24828/api/DX_API000014');
+        const res = await fetch('http://gapi.dxsplatform.com/api/DX_API000014');
         const json: ApiResponse = await res.json();
         const newMap: SlotDataMap = {};
         Object.values(json).forEach((zone) => {
@@ -492,8 +1019,6 @@ export default function FinalDashboard() {
         setMapData(newMap);
       } catch (error) {
         console.error("API Fetch Error:", error);
-      } finally {
-        setLoading(false);
       }
     };
     fetchData();
@@ -569,6 +1094,15 @@ export default function FinalDashboard() {
   const totalCap = stats.reduce((a, b) => a + b.total, 0);
   const totalUsed = stats.reduce((a, b) => a + b.used, 0);
   const totalPercent = totalCap > 0 ? Math.round((totalUsed / totalCap) * 100) : 0;
+  const hoveredProductCode = hoverInfo?.data?.occupied ? hoverInfo.data.cdgitem?.trim() || null : null;
+  const selectedMapViewLabel = MAP_VIEW_OPTIONS.find((option) => option.key === selectedMapView)?.label ?? '전체보기';
+
+  const matchingProductSlots = useMemo(() => {
+    if (!hoveredProductCode) return [];
+    return Object.values(mapData)
+      .filter((slot) => slot.occupied && slot.cdgitem?.trim() === hoveredProductCode)
+      .sort((a, b) => a.loc_code.localeCompare(b.loc_code));
+  }, [hoveredProductCode, mapData]);
 
   const formatTime = (isoString: string | null) => {
     if (!isoString) return '-';
@@ -579,14 +1113,37 @@ export default function FinalDashboard() {
   };
 
   const handleCellHover = useCallback((e: React.MouseEvent, id: string, data: ApiSlotDetail | undefined) => {
-    if (data || id) { 
-      setHoverInfo(data !== undefined ? { x: e.clientX, y: e.clientY, data: data || null, locCode: id } : null);
+    if (hoverHideTimerRef.current !== null) {
+      window.clearTimeout(hoverHideTimerRef.current);
+      hoverHideTimerRef.current = null;
     }
+
+    if (!data) {
+      hoverHideTimerRef.current = window.setTimeout(() => setHoverInfo(null), 140);
+      return;
+    }
+
+    const x = Math.min(e.clientX, Math.max(0, window.innerWidth - 380));
+    const y = Math.min(e.clientY, Math.max(0, window.innerHeight - 340));
+    setHoverInfo({ x, y, data, locCode: id });
   }, []);
 
   const renderCell = useCallback((id: string, w: string) => {
-    return <CellItem key={id} id={id} w={w} data={mapData[id]} onHover={handleCellHover} />;
-  }, [mapData, handleCellHover]);
+    const data = mapData[id];
+    const related = !!hoveredProductCode && data?.occupied === true && data.cdgitem?.trim() === hoveredProductCode;
+    const origin = related && hoverInfo?.locCode === id;
+    return (
+      <CellItem
+        key={id}
+        id={id}
+        w={w}
+        data={data}
+        related={related}
+        origin={origin}
+        onHover={handleCellHover}
+      />
+    );
+  }, [mapData, hoveredProductCode, hoverInfo?.locCode, handleCellHover]);
 
   // Drag to scroll logic for map
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -610,31 +1167,93 @@ export default function FinalDashboard() {
     containerRef.current.scrollTop = scrollTop - walkY;
   };
 
+  const productInfoOverlay = hoverInfo ? (
+    <TooltipBox
+      style={{ top: hoverInfo.y + 15, left: hoverInfo.x + 15 }}
+      onMouseEnter={() => {
+        if (hoverHideTimerRef.current !== null) window.clearTimeout(hoverHideTimerRef.current);
+      }}
+      onMouseLeave={() => setHoverInfo(null)}
+    >
+      <div className="tooltip-header">
+        <span>{hoverInfo.locCode}</span>
+        <span className={`status-badge ${hoverInfo.data?.occupied ? 'occupied' : 'empty'}`}>
+          {hoverInfo.data?.occupied ? '적재 완료' : '빈 슬롯'}
+        </span>
+      </div>
+      {hoverInfo.data?.occupied ? (
+        <>
+          <div className="tooltip-row"><span className="label">차량식별ID</span><span className="value">{hoverInfo.data.vehicle_id || '-'}</span></div>
+          <div className="tooltip-row"><span className="label">제품번호</span><span className="value">{hoverInfo.data.cdgitem || '-'}</span></div>
+          <div className="tooltip-row"><span className="label">바코드(라벨)</span><span className="value" style={{fontWeight: 600, fontSize: '11px'}}>{hoverInfo.data.label001 || '-'}</span></div>
+          <div className="tooltip-row"><span className="label">입고 시간</span><span className="value">{formatTime(hoverInfo.data.entry_time)}</span></div>
+          {hoveredProductCode && (
+            <div className="product-summary">
+              <div className="product-summary-title">
+                <span><Info size={14} /> 동일 제품 적재 현황</span>
+                <strong className="product-count">총 {matchingProductSlots.length}대</strong>
+              </div>
+              <div className="product-code">
+                {hoveredProductCode} · 표시번호 {hoveredProductCode.slice(-4)}
+              </div>
+              <div className="location-list">
+                {matchingProductSlots.map((slot) => (
+                  <span className="location-chip" key={slot.loc_code}>
+                    {slot.loc_code}{slot.loc_code === hoverInfo.locCode ? ' · 현재' : ''}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="tooltip-row" style={{justifyContent: 'center', color: '#94A3B8', padding: '10px 0'}}>데이터 없음</div>
+      )}
+    </TooltipBox>
+  ) : null;
+
+  const viewPickerOverlay = isViewPickerOpen ? (
+    <ViewPickerOverlay role="presentation" onClick={() => setIsViewPickerOpen(false)}>
+      <ViewPickerModal role="dialog" aria-modal="true" aria-label="스마트맵 보기 선택" onClick={(event) => event.stopPropagation()}>
+        <ViewPickerHeader>
+          <div>
+            <strong>스마트맵 보기 선택</strong>
+            <span>전체 지도를 보거나 필요한 구역만 확대해서 확인하세요.</span>
+          </div>
+          <button type="button" aria-label="보기 선택 닫기" onClick={() => setIsViewPickerOpen(false)}>
+            <X size={18} />
+          </button>
+        </ViewPickerHeader>
+        <ViewPickerList>
+          {MAP_VIEW_OPTIONS.map((option) => (
+            <ViewPickerOption
+              type="button"
+              key={option.key}
+              $active={selectedMapView === option.key}
+              onClick={() => {
+                setSelectedMapView(option.key);
+                setHoverInfo(null);
+                setIsViewPickerOpen(false);
+              }}
+            >
+              <span className="check"><Check size={14} /></span>
+              <span className="option-copy">
+                <strong>{option.label}</strong>
+                <span>{option.description}</span>
+              </span>
+            </ViewPickerOption>
+          ))}
+        </ViewPickerList>
+      </ViewPickerModal>
+    </ViewPickerOverlay>
+  ) : null;
+
   return (
     <>
       <GlobalStyle />
-      {loading && <GmtLoadingScreen />}
       
-      {/* 마우스 툴팁 */}
-      {hoverInfo && (
-        <TooltipBox style={{ top: hoverInfo.y + 15, left: hoverInfo.x + 15 }}>
-          <div className="tooltip-header">
-            <span>{hoverInfo.locCode}</span>
-            <span className={`status-badge ${hoverInfo.data?.occupied ? 'occupied' : 'empty'}`}>
-              {hoverInfo.data?.occupied ? '적재 완료' : '빈 슬롯'}
-            </span>
-          </div>
-          {hoverInfo.data?.occupied ? (
-            <>
-              <div className="tooltip-row"><span className="label">차량식별ID</span><span className="value">{hoverInfo.data.vehicle_id || '-'}</span></div>
-              <div className="tooltip-row"><span className="label">바코드(라벨)</span><span className="value" style={{fontWeight: 600, fontSize: '11px'}}>{hoverInfo.data.label001 || '-'}</span></div>
-              <div className="tooltip-row"><span className="label">입고 시간</span><span className="value">{formatTime(hoverInfo.data.entry_time)}</span></div>
-            </>
-          ) : (
-            <div className="tooltip-row" style={{justifyContent: 'center', color: '#94A3B8', padding: '10px 0'}}>데이터 없음</div>
-          )}
-        </TooltipBox>
-      )}
+      {!isMapFullscreen && productInfoOverlay}
+      {!isMapFullscreen && viewPickerOverlay}
 
       <Layout>
         {/* 🟢 왼쪽 패널: 전체 운영 요약, 구역별 현황, 영상 모니터링 */}
@@ -695,18 +1314,34 @@ export default function FinalDashboard() {
         </LeftColumn>
 
         {/* 🟢 중앙 패널: 스마트 맵 */}
-        <CenterColumn>
+        <CenterColumn ref={centerPanelRef} $fullscreen={isMapFullscreen}>
+          {isMapFullscreen && productInfoOverlay}
+          {isMapFullscreen && viewPickerOverlay}
           <CenterHeader>
-            <PanelTitle style={{ margin: 0 }}>제품창고 스마트 맵</PanelTitle>
+            <MapTitleGroup>
+              <PanelTitle style={{ margin: 0 }}>제품창고 스마트 맵</PanelTitle>
+              <MobileViewButton type="button" onClick={() => setIsViewPickerOpen(true)} aria-haspopup="dialog">
+                {selectedMapViewLabel}
+                <ChevronDown size={14} />
+              </MobileViewButton>
+            </MapTitleGroup>
             <HeaderControls>
               <Legend>
                 <div className="item"><div className="box empty" /> 빈 슬롯</div>
                 <div className="item"><div className="box full" /> 적재 완료</div>
               </Legend>
               <ZoomButtonGroup>
-                <button onClick={() => setZoomLevel(prev => Math.max(0.5, prev - 0.1))}><ZoomOut size={16}/></button>
-                <button onClick={() => setZoomLevel(prev => Math.min(2.5, prev + 0.1))}><ZoomIn size={16}/></button>
-                <button onClick={() => setZoomLevel(0.85)}><Maximize size={16}/></button>
+                <button type="button" aria-label="지도 축소" onClick={() => setZoomLevel(prev => Math.max(0.4, prev - 0.1))}><ZoomOut size={16}/></button>
+                <span className="zoom-value">{Math.round(zoomLevel * 100)}%</span>
+                <button type="button" aria-label="지도 확대" onClick={() => setZoomLevel(prev => Math.min(2.5, prev + 0.1))}><ZoomIn size={16}/></button>
+                <button
+                  type="button"
+                  aria-label={isMapFullscreen ? '전체화면 종료' : '지도 전체화면'}
+                  aria-pressed={isMapFullscreen}
+                  onClick={toggleMapFullscreen}
+                >
+                  {isMapFullscreen ? <Minimize size={16}/> : <Maximize size={16}/>}
+                </button>
               </ZoomButtonGroup>
             </HeaderControls>
           </CenterHeader>
@@ -714,10 +1349,15 @@ export default function FinalDashboard() {
             ref={containerRef} $isDragging={isDragging}
             onMouseDown={handleMouseDown} onMouseLeave={handleMouseLeave}
             onMouseUp={handleMouseUp} onMouseMove={handleMouseMove}
+            onClick={() => setHoverInfo(null)}
           >
-            <div style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top left', padding: '60px', width: 'fit-content' }}>
-              <WarehouseLayout renderCell={renderCell} />
-            </div>
+            <MapStage>
+              <MapCanvas style={{ zoom: zoomLevel }}>
+                <div ref={mapContentRef} style={{ width: 'max-content' }}>
+                  <WarehouseLayout renderCell={renderCell} view={selectedMapView} />
+                </div>
+              </MapCanvas>
+            </MapStage>
           </MapScrollArea>
         </CenterColumn>
 

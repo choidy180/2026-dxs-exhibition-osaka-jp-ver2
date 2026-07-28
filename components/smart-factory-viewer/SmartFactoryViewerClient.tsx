@@ -51,7 +51,7 @@ export default function SmartFactoryViewerClient() {
   const [modalTarget, setModalTarget] = useState<string | null>(null);
   const [hoveredInfo, setHoveredInfo] = useState<UnitData | null>(null);
   const [injectUnit, setInjectUnit] = useState<ApiDataItem | null>(null);
-  const [alertDismissed, setAlertDismissed] = useState(false);
+  const [dismissedAlertUnit, setDismissedAlertUnit] = useState<string | null>(null);
   const [layout, setLayout] = useState<ViewerLayoutType>(getInitialLayout);
   const [mode, setMode] = useState<ViewerUiMode>(getInitialMode);
   const { apiData, isFallback } = useSmartFactoryData();
@@ -70,10 +70,6 @@ export default function SmartFactoryViewerClient() {
   useEffect(() => {
     window.localStorage.setItem(UI_MODE_STORAGE_KEY, mode);
   }, [mode]);
-
-  useEffect(() => {
-    if (!criticalUnit) setAlertDismissed(false);
-  }, [criticalUnit]);
 
   const handleTabClick = (tab: string) => {
     if (tab === activeTab || isNavigating) return;
@@ -98,8 +94,8 @@ export default function SmartFactoryViewerClient() {
 
   return (
     <PageContainer $mode={mode}>
-      {criticalUnit && !alertDismissed && (
-        <EmergencyAlert unit={criticalUnit} onClose={() => setAlertDismissed(true)} />
+      {criticalUnit && dismissedAlertUnit !== criticalUnit.name && (
+        <EmergencyAlert unit={criticalUnit} onClose={() => setDismissedAlertUnit(criticalUnit.name)} />
       )}
 
       <MainContent>
@@ -127,6 +123,7 @@ export default function SmartFactoryViewerClient() {
           </SceneSlot>
 
           <InfoPanels
+            activeTab={activeTab}
             layout={layout}
             mode={mode}
             hoveredInfo={hoveredInfo}
@@ -137,10 +134,12 @@ export default function SmartFactoryViewerClient() {
           />
         </ViewerBody>
 
-        <InstructionBadge $mode={mode}>
-          <Layers size={14} />
-          <HighlightText $mode={mode}>좌클릭</HighlightText>: 회전 / <HighlightText $mode={mode}>스크롤</HighlightText>: 확대·축소
-        </InstructionBadge>
+        {layout !== 'balanced' && (
+          <InstructionBadge $mode={mode}>
+            <Layers size={14} />
+            <HighlightText $mode={mode}>좌클릭</HighlightText>: 회전 / <HighlightText $mode={mode}>스크롤</HighlightText>: 확대·축소
+          </InstructionBadge>
+        )}
       </MainContent>
     </PageContainer>
   );

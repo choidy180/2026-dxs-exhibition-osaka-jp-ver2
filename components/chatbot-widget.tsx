@@ -626,37 +626,41 @@ function Portal({ children }: { children: React.ReactNode }) {
  * ------------------------------*/
 const NavbarTrigger = styled(m.button)<{ $active?: boolean }>`
   position: fixed;
-  right: 24px;
-  bottom: 24px;
+  left: 12px;
+  bottom: 15px;
   z-index: 10030;
-  display: inline-flex;
+  width: 60px;
+  height: 67px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
   align-items: center;
-  gap: 10px;
-  height: 52px;
-  padding: 0 18px;
-  border-radius: 12px;
-  border: 1px solid ${(p) => (p.$active ? "rgba(211, 17, 69, 0.72)" : BORDER)};
-  background: ${(p) => (p.$active ? "rgba(255, 241, 245, 0.98)" : "rgba(255, 255, 255, 0.96)")};
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-
-  color: ${(p) => (p.$active ? ACCENT : TEXT)};
-  font-weight: 800;
-  font-size: 14px;
-  letter-spacing: 0;
+  gap: 5px;
+  border: 0;
+  background: transparent;
+  color: ${ACCENT};
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
   cursor: pointer;
-
-  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.16);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+  transition: transform 0.15s ease;
 
   svg {
-    color: ${ACCENT};
+    width: 18px;
+    height: 18px;
+    box-sizing: content-box;
+    padding: 10px;
+    border-radius: 50%;
+    background: ${ACCENT};
+    color: #ffffff;
+    stroke-width: 2;
   }
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.20);
-    border-color: rgba(211, 17, 69, 0.34);
   }
 `;
 

@@ -2,11 +2,12 @@ import { RefreshCw } from 'lucide-react';
 import { PinkButton } from '@/styles/styles';
 import { CameraStage, MonitorShell, VideoHeader } from './styles';
 import CameraGrid from './CameraGrid';
+import type { CameraHost } from '@/hooks/use-camera-hosts';
 import { MaterialListItem } from '@/types/material-monitoring';
 import CameraRpaStepList from './CameraRpaStepList';
 
 type Props = {
-  hosts: string[];
+  hosts: CameraHost[];
   isScanning: boolean;
   scanMessage: string;
   logs: MaterialListItem[];
@@ -19,9 +20,6 @@ type Props = {
 export default function MonitoringSection({
   hosts,
   isScanning,
-  scanMessage,
-  logs,
-  isLogLoading,
   onRetryScan,
   onOpenMap,
   onExpandCamera
@@ -45,7 +43,7 @@ export default function MonitoringSection({
       </VideoHeader>
       <MonitorShell>
         <CameraStage>
-          <CameraRpaStepList />
+          <CameraRpaStepList hosts={hosts} isScanning={isScanning} />
           <CameraGrid hosts={hosts} isScanning={isScanning} onExpand={onExpandCamera} />
         </CameraStage>
       </MonitorShell>

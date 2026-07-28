@@ -1,69 +1,100 @@
-import { useCallback, useEffect, useState } from 'react';
-import { DEFAULT_STREAM_HOSTS, MAX_CAMERA_COUNT, PORT } from '@/constants/material-monitoring';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  CAMERA_RECHECK_INTERVAL_MS,
+  DEFAULT_STREAM_HOSTS,
+  MAX_CAMERA_COUNT,
+  PORT
+} from '@/constants/material-monitoring';
+
+export type CameraHost = string | null;
+
+const EMPTY_CAMERA_HOSTS: CameraHost[] = Array.from(
+  { length: MAX_CAMERA_COUNT },
+  () => null
+);
 
 export function useCameraHosts() {
-  const [hosts, setHosts] = useState<string[]>([]);
-  const [isScanning, setIsScanning] = useState(false);
+  const [hosts, setHosts] = useState<CameraHost[]>(EMPTY_CAMERA_HOSTS);
+  const [isScanning, setIsScanning] = useState(true);
   const [scanMessage, setScanMessage] = useState('');
-  const [scanVersion, setScanVersion] = useState(0);
+  const isScanningRef = useRef(false);
 
-  // 입력 IP 중 최대 6개 카메라 연결 확인
+  // 설정된 순서를 CAM 01~06에 그대로 매핑해 각 카메라의 연결 상태를 확인한다.
   const scan = useCallback(async () => {
-    if (hosts.length) return;
+    if (isScanningRef.current) return;
 
     const candidates = DEFAULT_STREAM_HOSTS.split(',')
       .map(ip => ip.trim())
-      .filter(Boolean)
       .slice(0, MAX_CAMERA_COUNT);
 
-    if (!candidates.length) {
+    if (!candidates.some(Boolean)) {
+      setHosts(EMPTY_CAMERA_HOSTS);
       setScanMessage('IP를 입력해주세요.');
+      setIsScanning(false);
       return;
     }
 
+    isScanningRef.current = true;
     setIsScanning(true);
     setScanMessage('카메라 신호를 찾는 중...');
 
-    const found: string[] = [];
+    const checkConnection = async (ip: string): Promise<CameraHost> => {
+      if (!ip) return null;
 
-    for (const ip of candidates) {
       const controller = new AbortController();
       const timeoutId = window.setTimeout(() => controller.abort(), 2000);
 
       try {
-        setScanMessage(`${ip} 연결 확인 중...`);
         await fetch(`http://${ip}:${PORT}/`, {
           method: 'HEAD',
           mode: 'no-cors',
+          cache: 'no-store',
           signal: controller.signal
         });
-        found.push(ip);
+        return ip;
       } catch (error) {
         console.log(`Failed to connect to ${ip}`, error);
+        return null;
       } finally {
         window.clearTimeout(timeoutId);
       }
-    }
+    };
 
-    setHosts(found);
-    setScanMessage(found.length ? `${found.length}개 카메라 연결됨` : '연결 가능한 카메라가 없습니다.');
-    setIsScanning(false);
-  }, [hosts.length]);
+    try {
+      const checkedHosts = await Promise.all(candidates.map(checkConnection));
+      const nextHosts = Array.from(
+        { length: MAX_CAMERA_COUNT },
+        (_, index) => checkedHosts[index] ?? null
+      );
+      const connectedCount = nextHosts.filter(Boolean).length;
+
+      setHosts(nextHosts);
+      setScanMessage(
+        connectedCount
+          ? `${connectedCount}개 카메라 연결됨`
+          : '연결 가능한 카메라가 없습니다.'
+      );
+    } finally {
+      isScanningRef.current = false;
+      setIsScanning(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (!hosts.length) scan();
-  }, [hosts.length, scan, scanVersion]);
+    void scan();
 
-  const retry = useCallback(() => {
-    setHosts([]);
-    setScanVersion(value => value + 1);
-  }, []);
+    const intervalId = window.setInterval(() => {
+      void scan();
+    }, CAMERA_RECHECK_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [scan]);
 
   return {
     hosts,
-    connectedIp: hosts[0] || null,
+    connectedIp: hosts.find((host): host is string => Boolean(host)) ?? null,
     isScanning,
     scanMessage,
-    retry
+    retry: scan
   };
 }

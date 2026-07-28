@@ -11,7 +11,7 @@ type Props = {
 };
 
 function CameraFrame({ num, host, isScanning, onExpand }: Props) {
-  const isLive = Boolean(host && !isScanning);
+  const isLive = Boolean(host);
 
   return (
     <CamBox>

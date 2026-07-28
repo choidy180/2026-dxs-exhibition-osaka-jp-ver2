@@ -30,30 +30,30 @@ export const PROCESS_TABS = ['GR2', 'GR3', 'GR5', 'GR9'];
 export const VIEW_LAYOUT_OPTIONS: ViewOption<ViewerLayoutType>[] = [
   {
     id: 'modelOnly',
-    label: 'MODEL',
-    description: '모델 단독 보기',
+    label: '전체 모델',
+    description: '3D 전체 모델만 보기',
   },
   {
     id: 'balanced',
-    label: 'BALANCED',
-    description: '중앙 모델 + 좌우 정보 배치',
+    label: '관제 요약',
+    description: '3D 모델과 핵심 관제 현황 보기',
   },
   {
     id: 'detailRight',
-    label: 'DETAIL',
-    description: '왼쪽 모델 + 오른쪽 상세 정보',
+    label: '설비 상세',
+    description: '3D 모델과 오른쪽 설비 상세 정보 보기',
   },
 ];
 
 export const UI_MODE_OPTIONS: ViewOption<ViewerUiMode>[] = [
   {
     id: 'operator',
-    label: 'OPERATOR',
+    label: '현장 작업자',
     description: '현장 작업자가 한눈에 보는 친화형 운영 UI',
   },
   {
     id: 'command',
-    label: 'DATA OPS',
+    label: '데이터 관리자',
     description: '수치와 이상 항목을 우선하는 데이터 중심 관제 UI',
   },
 ];

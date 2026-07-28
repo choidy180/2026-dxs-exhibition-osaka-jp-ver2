@@ -1,6 +1,8 @@
 export const PORT = 8080;
 export const MAX_CAMERA_COUNT = 6;
-export const DEFAULT_STREAM_HOSTS = '10.172.167.185, 192.168.0.54';
+export const CAMERA_RECHECK_INTERVAL_MS = 15_000;
+export const DEFAULT_STREAM_HOSTS =
+  process.env.NEXT_PUBLIC_MATERIAL_CAMERA_HOSTS ?? '10.172.167.185, 192.168.0.54';
 
 const DEV_API_BASE_URL = 'https://gapi.dxsplatform.com/api';
 const INTERNAL_API_BASE_URL = 'http://192.168.2.147:24828/api';

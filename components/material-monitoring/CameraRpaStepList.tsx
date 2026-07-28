@@ -1,93 +1,71 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import styled from 'styled-components';
+import { MAX_CAMERA_COUNT, PORT } from '@/constants/material-monitoring';
+import type { CameraHost } from '@/hooks/use-camera-hosts';
 
-const CAMERA_COUNT = 6;
-
-const RPA_STEPS = [
-  '이미지 수집',
-  '자재 인식',
-  '송장 매칭',
-  '수량 검증',
-  '결과 전송'
-];
-
-type StepColor = {
+type StatusColor = {
   text: string;
   bg: string;
   border: string;
 };
 
-const DEFAULT_STEP_COLOR: StepColor = {
+const CONNECTED_COLOR: StatusColor = {
+  text: '#15803d',
+  bg: 'rgba(21, 128, 61, 0.08)',
+  border: 'rgba(21, 128, 61, 0.28)'
+};
+
+const CHECKING_COLOR: StatusColor = {
+  text: '#2563eb',
+  bg: 'rgba(37, 99, 235, 0.08)',
+  border: 'rgba(37, 99, 235, 0.25)'
+};
+
+const DISCONNECTED_COLOR: StatusColor = {
   text: '#64748b',
   bg: '#f1f5f9',
   border: '#e2e8f0'
 };
 
-const RPA_STEP_COLORS: StepColor[] = [
-  {
-    text: '#15803d',
-    bg: 'rgba(21, 128, 61, 0.08)',
-    border: 'rgba(21, 128, 61, 0.28)'
-  },
-  {
-    text: '#65a30d',
-    bg: 'rgba(101, 163, 13, 0.08)',
-    border: 'rgba(101, 163, 13, 0.28)'
-  },
-  {
-    text: '#ca8a04',
-    bg: 'rgba(202, 138, 4, 0.1)',
-    border: 'rgba(202, 138, 4, 0.32)'
-  },
-  {
-    text: '#ea580c',
-    bg: 'rgba(234, 88, 12, 0.09)',
-    border: 'rgba(234, 88, 12, 0.3)'
-  },
-  {
-    text: '#dc2626',
-    bg: 'rgba(220, 38, 38, 0.09)',
-    border: 'rgba(220, 38, 38, 0.32)'
-  }
-];
 type Props = {
-  intervalMs?: number;
+  hosts: CameraHost[];
+  isScanning: boolean;
 };
 
-export default function CameraRpaStepList({ intervalMs = 5000 }: Props) {
-  const [tick, setTick] = useState(0);
-
-  // 더미 RPA 진행 상태 갱신
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setTick(prev => prev + 1);
-    }, intervalMs);
-
-    return () => window.clearInterval(timer);
-  }, [intervalMs]);
-
+export default function CameraRpaStepList({ hosts, isScanning }: Props) {
   return (
     <RpaStepGrid>
-      {Array.from({ length: CAMERA_COUNT }, (_, index) => {
+      {Array.from({ length: MAX_CAMERA_COUNT }, (_, index) => {
         const cameraNumber = index + 1;
-        const stepIndex = (tick + index) % RPA_STEPS.length;
-        const stepName = RPA_STEPS[stepIndex] ?? '';
-        const stepColor = RPA_STEP_COLORS[stepIndex] ?? DEFAULT_STEP_COLOR;
-        const progress = ((stepIndex + 1) / RPA_STEPS.length) * 100;
-        const isDone = stepIndex === RPA_STEPS.length - 1;
+        const host = hosts[index];
+        const isConnected = Boolean(host);
+        const isChecking = !isConnected && isScanning;
+        const statusText = isConnected ? '연결됨' : isChecking ? '확인 중' : '연결 안 됨';
+        const detailText = host
+          ? `${host}:${PORT}`
+          : isChecking
+            ? '카메라 신호 확인 중'
+            : '카메라 신호 없음';
+        const statusColor = isConnected
+          ? CONNECTED_COLOR
+          : isChecking
+            ? CHECKING_COLOR
+            : DISCONNECTED_COLOR;
+        const progress = isConnected ? 100 : isChecking ? 45 : 0;
 
         return (
-          <RpaStepCard key={cameraNumber} $stepColor={stepColor}>
+          <RpaStepCard
+            key={cameraNumber}
+            $statusColor={statusColor}
+            aria-label={`CAM ${String(cameraNumber).padStart(2, '0')} ${statusText}`}
+          >
             <div className="card-head">
               <strong>CAM {String(cameraNumber).padStart(2, '0')}</strong>
-              <span>{isDone ? '완료' : '진행중'}</span>
+              <span>{statusText}</span>
             </div>
 
-            <div className="step-title">
-              STEP {stepIndex + 1}. {stepName}
-            </div>
+            <div className="step-title">{detailText}</div>
 
             <div className="progress">
               <b style={{ width: `${progress}%` }} />
@@ -115,11 +93,11 @@ const RpaStepGrid = styled.div`
   }
 `;
 
-const RpaStepCard = styled.article<{ $stepColor: StepColor }>`
+const RpaStepCard = styled.article<{ $statusColor: StatusColor }>`
   min-height: 88px;
   padding: 11px 12px;
   background: #fff;
-  border: 1px solid ${props => props.$stepColor.border};
+  border: 1px solid ${props => props.$statusColor.border};
   border-radius: 12px;
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
 
@@ -138,9 +116,9 @@ const RpaStepCard = styled.article<{ $stepColor: StepColor }>`
   }
 
   .card-head span {
-    color: ${props => props.$stepColor.text};
-    background: ${props => props.$stepColor.bg};
-    border: 1px solid ${props => props.$stepColor.border};
+    color: ${props => props.$statusColor.text};
+    background: ${props => props.$statusColor.bg};
+    border: 1px solid ${props => props.$statusColor.border};
     border-radius: 10px;
     padding: 4px 8px;
     font-size: 0.7rem;
@@ -168,7 +146,7 @@ const RpaStepCard = styled.article<{ $stepColor: StepColor }>`
   .progress b {
     display: block;
     height: 100%;
-    background: ${props => props.$stepColor.text};
+    background: ${props => props.$statusColor.text};
     border-radius: inherit;
     transition: width 0.35s ease;
   }

@@ -4,7 +4,6 @@ import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } fr
 import { Canvas, ThreeEvent, useFrame, useThree } from '@react-three/fiber';
 import {
   Center,
-  Environment,
   Html,
   OrbitControls,
   Stage,
@@ -47,7 +46,6 @@ interface JigModelProps {
 }
 
 interface MeshLocation {
-  id: string;
   position: THREE.Vector3;
   localPosition: THREE.Vector3;
   inwardFacingYaw: number;
@@ -57,13 +55,20 @@ interface MeshLocation {
   neutralColor: THREE.Color;
   edgeOpacity: number;
   mesh: THREE.Mesh;
+  material: THREE.MeshPhysicalMaterial;
+  edge: THREE.LineSegments | null;
+  edgeMaterial: THREE.LineBasicMaterial | null;
 }
 
 interface ProcessLabelLocation {
   position: THREE.Vector3;
-  stationNumber: number;
   name: string;
   color: string;
+}
+
+interface SceneRuntimeState {
+  meshLocations: MeshLocation[];
+  processLabelLocations: ProcessLabelLocation[];
 }
 
 type Vector3Tuple = [number, number, number];
@@ -104,8 +109,8 @@ const SCENE_VIEW_CONFIG: Record<ViewerLayoutType, SceneViewConfig> = {
 
   detailRight: {
     cameraPosition: [-26, 20, -26],
-    modelPosition: [-1.2, -0.95, -1.2],
-    controlTarget: [-0.4, -0.15, -0.4],
+    modelPosition: [0, 0.15, 0],
+    controlTarget: [0, 0.1, 0],
     cameraFov: 16,
     modelScale: 1.15,
   },
@@ -114,6 +119,7 @@ const SCENE_VIEW_CONFIG: Record<ViewerLayoutType, SceneViewConfig> = {
 const SOFT_EDGE_NAME = '__soft-object-edge__';
 
 const CART_BASE_POSITION_OFFSET: Vector3Tuple = [0, 0, 0];
+const CART_BASE_OFFSET_VECTOR = new THREE.Vector3(...CART_BASE_POSITION_OFFSET);
 
 const CART_LABEL_OFFSET: Vector3Tuple = [0.5, 0.35, 0];
 
@@ -148,26 +154,58 @@ const isAiLabelError = (aiLabel?: string | null) => {
 
 function SceneCameraController({ config }: { config: SceneViewConfig }) {
   const { camera } = useThree();
-  const controlsRef = useRef<any>(null);
+  const { cameraPosition, cameraFov, controlTarget } = config;
+  const cameraRef = useRef(camera);
+  const controlsRef = useRef<React.ElementRef<typeof OrbitControls>>(null);
+  const initializedRef = useRef(false);
+  const transitioningRef = useRef(false);
+  const transitionStartedAtRef = useRef(0);
+  const fromPositionRef = useRef(new THREE.Vector3());
+  const toPositionRef = useRef(new THREE.Vector3());
+  const fromTargetRef = useRef(new THREE.Vector3());
+  const toTargetRef = useRef(new THREE.Vector3());
+  const fromFovRef = useRef(config.cameraFov);
+  const toFovRef = useRef(config.cameraFov);
 
   const resetCamera = useCallback(() => {
-    camera.position.set(...config.cameraPosition);
+    const activeCamera = cameraRef.current;
+    transitioningRef.current = false;
+    activeCamera.position.set(...cameraPosition);
 
-    if (camera instanceof THREE.PerspectiveCamera) {
-      camera.fov = config.cameraFov;
+    if (activeCamera instanceof THREE.PerspectiveCamera) {
+      activeCamera.fov = cameraFov;
     }
 
-    camera.updateProjectionMatrix();
+    activeCamera.updateProjectionMatrix();
 
     if (controlsRef.current) {
-      controlsRef.current.target.set(...config.controlTarget);
+      controlsRef.current.enabled = true;
+      controlsRef.current.target.set(...controlTarget);
       controlsRef.current.update();
       controlsRef.current.saveState();
     }
-  }, [camera, config]);
+  }, [cameraFov, cameraPosition, controlTarget]);
 
   useEffect(() => {
-    resetCamera();
+    const activeCamera = cameraRef.current;
+    const controls = controlsRef.current;
+
+    if (!initializedRef.current || !controls) {
+      initializedRef.current = true;
+      resetCamera();
+    } else {
+      fromPositionRef.current.copy(activeCamera.position);
+      toPositionRef.current.set(...cameraPosition);
+      fromTargetRef.current.copy(controls.target);
+      toTargetRef.current.set(...controlTarget);
+      fromFovRef.current = activeCamera instanceof THREE.PerspectiveCamera
+        ? activeCamera.fov
+        : cameraFov;
+      toFovRef.current = cameraFov;
+      transitionStartedAtRef.current = performance.now();
+      transitioningRef.current = true;
+      controls.enabled = false;
+    }
 
     const handlePageShow = () => {
       resetCamera();
@@ -178,13 +216,53 @@ function SceneCameraController({ config }: { config: SceneViewConfig }) {
     return () => {
       window.removeEventListener('pageshow', handlePageShow);
     };
-  }, [resetCamera]);
+  }, [cameraFov, cameraPosition, controlTarget, resetCamera]);
+
+  useFrame(() => {
+    if (!transitioningRef.current) return;
+
+    const activeCamera = cameraRef.current;
+    const controls = controlsRef.current;
+    if (!controls) return;
+
+    const progress = Math.min((performance.now() - transitionStartedAtRef.current) / 700, 1);
+    const easedProgress = 1 - Math.pow(1 - progress, 3);
+
+    activeCamera.position.lerpVectors(
+      fromPositionRef.current,
+      toPositionRef.current,
+      easedProgress,
+    );
+    controls.target.lerpVectors(
+      fromTargetRef.current,
+      toTargetRef.current,
+      easedProgress,
+    );
+
+    if (activeCamera instanceof THREE.PerspectiveCamera) {
+      activeCamera.fov = THREE.MathUtils.lerp(
+        fromFovRef.current,
+        toFovRef.current,
+        easedProgress,
+      );
+      activeCamera.updateProjectionMatrix();
+    }
+
+    controls.update();
+
+    if (progress >= 1) {
+      transitioningRef.current = false;
+      controls.enabled = true;
+      controls.saveState();
+    }
+  });
 
   return (
     <OrbitControls
       ref={controlsRef}
-      target={config.controlTarget}
       makeDefault
+      enableDamping
+      dampingFactor={0.08}
       minPolarAngle={0}
       maxPolarAngle={Math.PI / 2.1}
     />
@@ -288,6 +366,10 @@ const MovingLabel = React.memo(({
   apiData: ApiDataItem[];
 }) => {
   const groupRef = useRef<THREE.Group>(null);
+  const currentLabelPositionRef = useRef(new THREE.Vector3());
+  const nextLabelPositionRef = useRef(new THREE.Vector3());
+  const lastCycleIndexRef = useRef(-1);
+  const lastLocationsRef = useRef<MeshLocation[] | null>(null);
   const cycleDuration = 15;
   const waitDuration = 10;
   const moveDuration = 5;
@@ -308,18 +390,28 @@ const MovingLabel = React.memo(({
     const time = state.clock.getElapsedTime();
     const cycleIndex = Math.floor(time / cycleDuration);
     const timeInCycle = time % cycleDuration;
+    const isMoving = timeInCycle >= waitDuration;
+
+    if (lastLocationsRef.current !== locations) {
+      lastLocationsRef.current = locations;
+      lastCycleIndexRef.current = -1;
+    }
+
+    if (!isMoving && lastCycleIndexRef.current === cycleIndex) return;
+
+    lastCycleIndexRef.current = cycleIndex;
     const currentIndex = (labelIndex + cycleIndex) % locations.length;
     const nextIndex = (currentIndex + 1) % locations.length;
     const currentPos = locations[currentIndex].position;
     const nextPos = locations[nextIndex].position;
-    const currentLabelPosition = currentPos.clone().add(labelOffset);
-    const nextLabelPosition = nextPos.clone().add(labelOffset);
+    const currentLabelPosition = currentLabelPositionRef.current.copy(currentPos).add(labelOffset);
 
-    if (timeInCycle < waitDuration) {
+    if (!isMoving) {
       groupRef.current.position.copy(currentLabelPosition);
       return;
     }
 
+    const nextLabelPosition = nextLabelPositionRef.current.copy(nextPos).add(labelOffset);
     const moveTime = timeInCycle - waitDuration;
     const progress = Math.min(moveTime / moveDuration, 1);
 
@@ -392,7 +484,6 @@ MovingLabel.displayName = 'MovingLabel';
 
 const ProcessLabel = React.memo(({
   position,
-  stationNumber,
   name,
   color,
 }: ProcessLabelLocation) => {
@@ -400,13 +491,12 @@ const ProcessLabel = React.memo(({
     <Html
       position={position}
       center
-      distanceFactor={15}
       zIndexRange={[42, 31]}
       wrapperClass="process-station-label"
     >
       <ProcessLabelContainer $color={color}>
         <ProcessDot $color={color} />
-        <ProcessText>{stationNumber} · {name}</ProcessText>
+        <ProcessText>{name}</ProcessText>
       </ProcessLabelContainer>
     </Html>
   );
@@ -425,14 +515,17 @@ function InteractiveJigModel({
   const modelScene = useMemo(() => scene.clone(true), [scene]);
   const activeIdRef = useRef<string | null>(null);
   const lastInjectKeyRef = useRef<string | null>(null);
+  const lastMotionCycleRef = useRef(-1);
   const lineCenterRef = useRef(new THREE.Vector3());
   const facingStartRef = useRef(new THREE.Quaternion());
   const facingEndRef = useRef(new THREE.Quaternion());
   const highlightColor = useMemo(() => new THREE.Color('#ef4444'), []);
   const errorColor = useMemo(() => new THREE.Color('#ff0000'), []);
   const contrastColor = useMemo(() => new THREE.Color('#70827e'), []);
-  const [meshLocations, setMeshLocations] = useState<MeshLocation[]>([]);
-  const [processLabelLocations, setProcessLabelLocations] = useState<ProcessLabelLocation[]>([]);
+  const [{ meshLocations, processLabelLocations }, setSceneRuntime] = useState<SceneRuntimeState>({
+    meshLocations: [],
+    processLabelLocations: [],
+  });
   const offsetStartIndex = 6;
   const cycleDuration = 15;
   const waitDuration = 10;
@@ -447,8 +540,26 @@ function InteractiveJigModel({
       // ===== [임시 수정 끝] =====
       .map((item) => Number.parseInt(item.대차번호, 10) - 1);
   }, [apiData]);
+  const activeErrorIndexSet = useMemo(() => new Set(activeErrorIndices), [activeErrorIndices]);
+  const apiDataByCartNumber = useMemo(() => {
+    return new Map(apiData.map((item) => [Number.parseInt(item.대차번호, 10), item]));
+  }, [apiData]);
+  const meshIndexByUuid = useMemo(() => {
+    return new Map(meshLocations.map((location, index) => [location.mesh.uuid, index]));
+  }, [meshLocations]);
 
   useEffect(() => {
+    if (activeErrorIndices.length > 0) return;
+
+    meshLocations.forEach((location) => {
+      if (location.mesh.uuid !== activeIdRef.current) {
+        location.material.emissiveIntensity = 0;
+      }
+    });
+  }, [activeErrorIndices.length, meshLocations]);
+
+  useEffect(() => {
+    let cancelled = false;
     const meshes: { mesh: THREE.Mesh; position: THREE.Vector3 }[] = [];
 
     modelScene.traverse((child) => {
@@ -567,13 +678,11 @@ function InteractiveJigModel({
 
       processLabels.push({
         position: labelPosition,
-        stationNumber: index + 1,
         name: config.name,
         color: config.color,
       });
     });
 
-    setProcessLabelLocations(processLabels);
     const nextMeshLocations = sortedMeshes.map((item, index) => {
       const material = item.mesh.material as THREE.MeshPhysicalMaterial;
       const edge = item.mesh.children.find(
@@ -584,14 +693,7 @@ function InteractiveJigModel({
       material.transparent = false;
 
       return {
-        id: item.mesh.uuid,
-        position: item.mesh.position.clone().add(
-          new THREE.Vector3(
-            CART_BASE_POSITION_OFFSET[0],
-            CART_BASE_POSITION_OFFSET[1],
-            CART_BASE_POSITION_OFFSET[2],
-          ),
-        ),
+        position: item.mesh.position.clone().add(CART_BASE_OFFSET_VECTOR),
         localPosition: item.mesh.position.clone(),
         // 1~4번은 같은 직선 구간이므로 곡선 접선값을 섞지 않고
         // 완전히 동일한 정면 방향을 사용한다.
@@ -602,10 +704,24 @@ function InteractiveJigModel({
         neutralColor: material.color.clone(),
         edgeOpacity: edgeMaterial?.opacity ?? 0,
         mesh: item.mesh,
+        material,
+        edge: edge ?? null,
+        edgeMaterial: edgeMaterial ?? null,
       };
     });
 
-    setMeshLocations(nextMeshLocations);
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setSceneRuntime({
+          meshLocations: nextMeshLocations,
+          processLabelLocations: processLabels,
+        });
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [contrastColor, highContrast, modelScene]);
 
   useFrame((state) => {
@@ -616,90 +732,91 @@ function InteractiveJigModel({
 
     const total = meshLocations.length;
     const timeInCycle = time % cycleDuration;
+    const isMoving = timeInCycle >= waitDuration;
+    const shouldUpdateMotion = isMoving || lastMotionCycleRef.current !== cycleIndex;
     const moveProgress = timeInCycle < waitDuration
       ? 0
       : Math.min((timeInCycle - waitDuration) / moveDuration, 1);
     const rotationProgress = moveProgress * moveProgress * (3 - 2 * moveProgress);
 
-    meshLocations.forEach((movingLocation, labelIndex) => {
-      const currentStationIndex = (labelIndex + cycleIndex) % total;
-      const nextStationIndex = (currentStationIndex + 1) % total;
-      const currentLocation = meshLocations[currentStationIndex];
-      const nextLocation = meshLocations[nextStationIndex];
-      const movingMesh = movingLocation.mesh;
+    if (shouldUpdateMotion) {
+      lastMotionCycleRef.current = cycleIndex;
 
-      movingMesh.position.lerpVectors(
-        currentLocation.localPosition,
-        nextLocation.localPosition,
-        moveProgress,
-      );
+      meshLocations.forEach((movingLocation, labelIndex) => {
+        const currentStationIndex = (labelIndex + cycleIndex) % total;
+        const nextStationIndex = (currentStationIndex + 1) % total;
+        const currentLocation = meshLocations[currentStationIndex];
+        const nextLocation = meshLocations[nextStationIndex];
+        const movingMesh = movingLocation.mesh;
 
-      facingStartRef.current.setFromAxisAngle(
-        THREE.Object3D.DEFAULT_UP,
-        currentLocation.inwardFacingYaw,
-      );
-      facingEndRef.current.setFromAxisAngle(
-        THREE.Object3D.DEFAULT_UP,
-        nextLocation.inwardFacingYaw,
-      );
-      movingMesh.quaternion.slerpQuaternions(
-        facingStartRef.current,
-        facingEndRef.current,
-        rotationProgress,
-      );
-      movingMesh.rotateY(currentLocation.facingOffset);
+        movingMesh.position.lerpVectors(
+          currentLocation.localPosition,
+          nextLocation.localPosition,
+          moveProgress,
+        );
 
-      if (movingMesh.geometry !== currentLocation.stationGeometry) {
-        movingMesh.geometry = currentLocation.stationGeometry;
-      }
+        facingStartRef.current.setFromAxisAngle(
+          THREE.Object3D.DEFAULT_UP,
+          currentLocation.inwardFacingYaw,
+        );
+        facingEndRef.current.setFromAxisAngle(
+          THREE.Object3D.DEFAULT_UP,
+          nextLocation.inwardFacingYaw,
+        );
+        movingMesh.quaternion.slerpQuaternions(
+          facingStartRef.current,
+          facingEndRef.current,
+          rotationProgress,
+        );
+        movingMesh.rotateY(currentLocation.facingOffset);
 
-      const edge = movingMesh.children.find(
-        (child) => child.name === SOFT_EDGE_NAME,
-      ) as THREE.LineSegments | undefined;
+        if (movingMesh.geometry !== currentLocation.stationGeometry) {
+          movingMesh.geometry = currentLocation.stationGeometry;
+        }
 
-      if (
-        edge &&
-        currentLocation.stationEdgeGeometry &&
-        edge.geometry !== currentLocation.stationEdgeGeometry
-      ) {
-        edge.geometry = currentLocation.stationEdgeGeometry;
-      }
+        const edge = movingLocation.edge;
 
-      const material = movingMesh.material as THREE.MeshPhysicalMaterial;
-      const currentColor = PROCESS_COLORS[currentStationIndex] ?? movingLocation.neutralColor;
-      const nextColor = PROCESS_COLORS[nextStationIndex] ?? movingLocation.neutralColor;
-      const edgeMaterial = edge?.material as THREE.LineBasicMaterial | undefined;
+        if (
+          edge &&
+          currentLocation.stationEdgeGeometry &&
+          edge.geometry !== currentLocation.stationEdgeGeometry
+        ) {
+          edge.geometry = currentLocation.stationEdgeGeometry;
+        }
 
-      material.color.lerpColors(currentColor, nextColor, rotationProgress);
-      material.opacity = 1;
-      material.depthWrite = true;
-      if (edgeMaterial) edgeMaterial.opacity = movingLocation.edgeOpacity;
-    });
+        const material = movingLocation.material;
+        const currentColor = PROCESS_COLORS[currentStationIndex] ?? movingLocation.neutralColor;
+        const nextColor = PROCESS_COLORS[nextStationIndex] ?? movingLocation.neutralColor;
+
+        material.color.lerpColors(currentColor, nextColor, rotationProgress);
+        material.opacity = 1;
+        material.depthWrite = true;
+        if (movingLocation.edgeMaterial) {
+          movingLocation.edgeMaterial.opacity = movingLocation.edgeOpacity;
+        }
+      });
+    }
 
     const flashIntensity = 1.5 + Math.sin(time * 12) * 1.0;
 
-    meshLocations.forEach((location) => {
-      if (location.mesh.uuid === activeIdRef.current) return;
+    if (activeErrorIndices.length > 0) {
+      meshLocations.forEach((location, labelIndex) => {
+        if (location.mesh.uuid === activeIdRef.current) return;
 
-      const material = location.mesh.material as THREE.MeshPhysicalMaterial;
-      material.emissiveIntensity = 0;
-    });
-
-    activeErrorIndices.forEach((labelIndex) => {
-      const mesh = meshLocations[labelIndex]?.mesh;
-
-      if (!mesh || mesh.uuid === activeIdRef.current) return;
-
-      const material = mesh.material as THREE.MeshPhysicalMaterial;
-      material.emissive.set(errorColor);
-      material.emissiveIntensity = flashIntensity;
-    });
+        if (activeErrorIndexSet.has(labelIndex)) {
+          location.material.emissive.set(errorColor);
+          location.material.emissiveIntensity = flashIntensity;
+        } else {
+          location.material.emissiveIntensity = 0;
+        }
+      });
+    }
 
     const injectStationIndex = 4;
     let targetCartIndex = (injectStationIndex - cycleIndex) % total;
     if (targetCartIndex < 0) targetCartIndex += total;
 
-    const matchedUnit = apiData.find((item) => Number.parseInt(item.대차번호, 10) === targetCartIndex + 1) ?? null;
+    const matchedUnit = apiDataByCartNumber.get(targetCartIndex + 1) ?? null;
     const nextKey = matchedUnit?.대차번호 ?? null;
 
     if (nextKey !== lastInjectKeyRef.current) {
@@ -716,6 +833,9 @@ function InteractiveJigModel({
     if (!mesh.isMesh) return;
 
     activeIdRef.current = mesh.uuid;
+    const meshIndex = meshIndexByUuid.get(mesh.uuid);
+    if (meshIndex === undefined) return;
+
     const material = mesh.material as THREE.MeshPhysicalMaterial;
 
     if (material.emissive) {
@@ -723,12 +843,9 @@ function InteractiveJigModel({
       material.emissiveIntensity = 2;
     }
 
-    const meshIndex = meshLocations.findIndex((location) => location.mesh.uuid === mesh.uuid);
-    if (meshIndex === -1) return;
-
     const foundLabelIndex = meshIndex;
     const name = `M-${String(foundLabelIndex + 1).padStart(2, '0')}`;
-    const matchedData = apiData.find((item) => Number.parseInt(item.대차번호, 10) === foundLabelIndex + 1);
+    const matchedData = apiDataByCartNumber.get(foundLabelIndex + 1);
 
     // ===== [임시 수정] AI_LABEL '불량'은 hover 상태에서도 error로 처리하지 않음 =====
     // 기존 코드:
@@ -744,7 +861,7 @@ function InteractiveJigModel({
       problem: matchedData?.AI_LABEL,
       uuid: mesh.uuid,
     });
-  }, [apiData, highlightColor, meshLocations, onHoverChange]);
+  }, [apiDataByCartNumber, highlightColor, meshIndexByUuid, onHoverChange]);
 
   const handlePointerOut = useCallback((event: ThreeEvent<PointerEvent>) => {
     const mesh = event.object as THREE.Mesh;
@@ -755,7 +872,7 @@ function InteractiveJigModel({
     activeIdRef.current = null;
 
     const material = mesh.material as THREE.MeshPhysicalMaterial;
-    if (material) material.emissiveIntensity = 0;
+    material.emissiveIntensity = 0;
 
     onHoverChange(null);
   }, [onHoverChange]);
@@ -776,7 +893,6 @@ function InteractiveJigModel({
         <ProcessLabel
           key={`proc-${location.name}`}
           position={location.position}
-          stationNumber={location.stationNumber}
           name={location.name}
           color={location.color}
         />
@@ -831,12 +947,10 @@ export function FactoryScene({
 
   return (
     <Canvas
-      key={layout}
-      dpr={[1, 1.5]}
+      dpr={[1, 1.25]}
       camera={{ position: cameraPosition, fov: cameraFov }}
-      shadows="soft"
+      shadows="basic"
       gl={{
-        logarithmicDepthBuffer: true,
         antialias: true,
         powerPreference: 'high-performance',
       }}
@@ -846,7 +960,7 @@ export function FactoryScene({
         position={[-20, 30, -20]}
         intensity={1.5}
         castShadow
-        shadow-mapSize={[4096, 4096]}
+        shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0001}
         shadow-normalBias={0.05}
       >
@@ -862,7 +976,6 @@ export function FactoryScene({
             onInjectUnitChange={onInjectUnitChange}
           />
         </Stage>
-        <Environment preset="city" blur={1} background={false} />
       </Suspense>
 
       <SceneCameraController config={sceneConfig} />

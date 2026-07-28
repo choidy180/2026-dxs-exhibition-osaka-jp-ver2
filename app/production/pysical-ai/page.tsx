@@ -33,7 +33,11 @@ const theme = {
 };
 
 type MyThemeType = typeof theme;
-declare module 'styled-components' { export interface DefaultTheme extends MyThemeType {} }
+declare module 'styled-components' {
+  export interface DefaultTheme extends MyThemeType {
+    readonly __physicalAiTheme?: never;
+  }
+}
 
 // --- Types ---
 type StatusType = '정상' | '주의' | '위험';
@@ -140,7 +144,9 @@ export default function PhysicalAIDashboard() {
 
   // 데이터 생성 로직
   useEffect(() => {
-    setLogs(Array.from({ length: 12 }).map(generateLog));
+    const initialLogsTimer = window.setTimeout(() => {
+      setLogs(Array.from({ length: 12 }).map(generateLog));
+    }, 0);
     
     const interval = setInterval(() => {
       const newLog = generateLog();
@@ -156,7 +162,10 @@ export default function PhysicalAIDashboard() {
         statusCounts: { ...prev.statusCounts, [newLog.status]: prev.statusCounts[newLog.status] + 1 }
       }));
     }, 800);
-    return () => clearInterval(interval);
+    return () => {
+      window.clearTimeout(initialLogsTimer);
+      clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
@@ -306,22 +315,22 @@ export default function PhysicalAIDashboard() {
 // -------------------------------------------------------------------------
 
 // --- Layout ---
-const Container = styled.div` width: 100vw; height: 100vh; background: ${p=>p.theme.bg}; color: ${p=>p.theme.text}; display: flex; flex-direction: column; `;
-const Header = styled.header` height: 64px; flex-shrink: 0; background: ${p=>p.theme.cardBg}; border-bottom: 1px solid ${p=>p.theme.border}; display: flex; justify-content: space-between; align-items: center; padding: 0 24px; box-shadow: ${p=>p.theme.shadow}; z-index: 10; `;
-const Brand = styled.div` display: flex; align-items: center; gap: 12px; `;
+const Container = styled.div` width: 100%; max-width: 100%; min-width: 0; height: 100vh; height: 100dvh; overflow: hidden; background: ${p=>p.theme.bg}; color: ${p=>p.theme.text}; display: flex; flex-direction: column; `;
+const Header = styled.header` width: 100%; max-width: 100%; min-width: 0; height: 64px; flex-shrink: 0; background: ${p=>p.theme.cardBg}; border-bottom: 1px solid ${p=>p.theme.border}; display: flex; justify-content: space-between; align-items: center; padding: 0 24px; box-shadow: ${p=>p.theme.shadow}; z-index: 10; `;
+const Brand = styled.div` min-width: 0; display: flex; align-items: center; gap: 12px; `;
 const LogoIcon = styled.div` width: 36px; height: 36px; background: #0F172A; border-radius: 8px; display: flex; align-items: center; justify-content: center; `;
 const Title = styled.h1` font-size: 18px; font-weight: 800; margin: 0; line-height: 1; letter-spacing: -0.5px; `;
 const SubTitle = styled.div` font-size: 12px; color: ${p=>p.theme.textSub}; margin-top: 3px; font-weight: 500; `;
-const StatusGroup = styled.div` display: flex; align-items: center; gap: 16px; `;
+const StatusGroup = styled.div` flex: 0 0 auto; display: flex; align-items: center; gap: 16px; `;
 const StatusItem = styled.div` text-align: right; `;
 const Label = styled.div` font-size: 11px; color: ${p=>p.theme.textSub}; font-weight: 600; margin-bottom: 2px; `;
 const Value = styled.div` font-size: 15px; font-weight: 700; font-family: 'Pretendard', sans-serif; `;
 const Divider = styled.div` width: 1px; height: 24px; background: ${p=>p.theme.border}; `;
 
-const Main = styled.main` flex: 1; padding: 20px; display: flex; gap: 20px; overflow: hidden; `;
+const Main = styled.main` width: 100%; max-width: 100%; min-width: 0; min-height: 0; flex: 1; padding: 20px; display: flex; gap: 20px; overflow: hidden; `;
 
 // --- Video & HUD ---
-const VideoCard = styled.div` flex: 2; background: #000; border-radius: 16px; overflow: hidden; position: relative; border: 1px solid ${p=>p.theme.videoBorder}; box-shadow: ${p=>p.theme.shadow}; `;
+const VideoCard = styled.div` flex: 2; min-width: 0; min-height: 0; background: #000; border-radius: 16px; overflow: hidden; position: relative; border: 1px solid ${p=>p.theme.videoBorder}; box-shadow: ${p=>p.theme.shadow}; `;
 const VideoWrapper = styled.div` width: 100%; height: 100%; position: relative; background: #000; overflow: hidden; /* 중요: 확대된 비디오 잘리도록 설정 */ `;
 
 // [수정] 비디오 1.1배 확대
@@ -381,13 +390,15 @@ const StatsHud = styled(motion.div)`
   color: #1E293B;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
   width: 95%;
+  max-width: 100%;
+  min-width: 0;
   align-self: center;
   margin-bottom: 10px;
   pointer-events: auto;
 `;
 
 const HudItem = styled.div`
-  display: flex; align-items: center; gap: 14px; flex: 1;
+  min-width: 0; display: flex; align-items: center; gap: 14px; flex: 1;
   .icon-box { 
     width: 42px; height: 42px; 
     background: #F1F5F9; 
@@ -418,7 +429,7 @@ const StatusRow = styled.div`
 `;
 
 // --- Log Section ---
-const LogCard = styled.div` flex: 1.2; background: ${p=>p.theme.cardBg}; border-radius: 16px; border: 1px solid ${p=>p.theme.border}; display: flex; flex-direction: column; overflow: hidden; box-shadow: ${p=>p.theme.shadow}; `;
+const LogCard = styled.div` flex: 1.2; min-width: 0; min-height: 0; background: ${p=>p.theme.cardBg}; border-radius: 16px; border: 1px solid ${p=>p.theme.border}; display: flex; flex-direction: column; overflow: hidden; box-shadow: ${p=>p.theme.shadow}; `;
 const LogHeader = styled.div` padding: 18px 20px; border-bottom: 1px solid ${p=>p.theme.border}; display: flex; justify-content: space-between; align-items: center; background: #fff; `;
 const HeaderTitle = styled.div` font-size: 16px; font-weight: 700; color: ${p=>p.theme.text}; display: flex; align-items: center; gap: 8px; `;
 const LiveIndicator = styled.div` font-size: 12px; font-weight: 800; color: #EF4444; display: flex; align-items: center; gap: 6px; .dot { width: 6px; height: 6px; background: #EF4444; border-radius: 50%; animation: ${pulse} 1s infinite; } `;

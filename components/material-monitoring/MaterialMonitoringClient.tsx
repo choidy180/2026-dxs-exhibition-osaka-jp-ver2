@@ -54,7 +54,7 @@ export default function MaterialMonitoringClient() {
   }, [fetchMaterialData, fetchVehicleData]);
 
   useVuzixLog({ onDetected: refreshData });
-  const maximizedHost = maximizedCam ? hosts[maximizedCam - 1] : undefined;
+  const maximizedHost = maximizedCam ? hosts[maximizedCam - 1] ?? undefined : undefined;
 
   // 최초 진입 데이터 조회
   useEffect(() => {

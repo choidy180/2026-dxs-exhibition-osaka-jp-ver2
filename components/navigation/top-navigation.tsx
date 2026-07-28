@@ -8,16 +8,16 @@ import {
   Bell,
   BarChart3,
   Bot,
+  Box,
   Boxes,
   CheckCircle2,
+  ChartNoAxesColumnIncreasing,
   CircleDotDashed,
   ClipboardCheck,
   Cog,
   Droplets,
-  Factory,
   LayoutGrid,
   Layers,
-  Package,
   PackageCheck,
   PanelLeftClose,
   QrCode,
@@ -71,7 +71,7 @@ type NoticeItem = {
 };
 
 const RAIL_WIDTH = 84;
-const SUB_SIDEBAR_WIDTH = 356;
+const SUB_SIDEBAR_WIDTH = 312;
 
 const NAV_ITEMS: NavEntry[] = [
   {
@@ -85,7 +85,7 @@ const NAV_ITEMS: NavEntry[] = [
     key: "material",
     label: "자재관리",
     description: "입고, 창고, 공정 재고",
-    icon: Package,
+    icon: Box,
     children: [
       { label: "입고검사", href: "/material/inbound-inspection", detail: "자재 입고 품질 확인", icon: ClipboardCheck },
       { label: "입고검사현황", href: "/material/inbound-inspection/status", detail: "일·주·월·연간 검수 현황", icon: BarChart3 },
@@ -120,7 +120,7 @@ const NAV_ITEMS: NavEntry[] = [
     key: "production",
     label: "생산관리",
     description: "생산 시간과 목표 관리",
-    icon: Factory,
+    icon: ChartNoAxesColumnIncreasing,
     children: [
       { label: "작업시간관리", href: "/production/takttime-dashboard", detail: "택타임과 생산 흐름 분석", icon: CheckCircle2 },
     ],
@@ -232,8 +232,6 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
     [openPanel],
   );
   const trimmedSearch = searchValue.trim().toLowerCase();
-  const unreadCount = NOTICES.filter((notice) => notice.unread).length;
-
   const filteredGroups = useMemo(() => {
     const groups = NAV_ITEMS.filter((item) => item.children?.length);
 
@@ -333,42 +331,41 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
       {isSidebarCollapsed && <SidebarHoverZone onMouseEnter={expandSidebar} aria-hidden="true" />}
 
       <RailShell $disabled={isLoading} $collapsed={isSidebarCollapsed} aria-label="메인 네비게이션">
-        <RailSection>
-          <RailButton
+        <RailMain>
+          <DashboardButton
             type="button"
-            $state={activeKey === "dashboard" ? "active" : "idle"}
             onClick={() => handleEntryClick(NAV_ITEMS[0])}
             title="대시보드"
             aria-label="대시보드"
           >
             <DashboardLogoIcon aria-hidden="true" />
-          </RailButton>
+          </DashboardButton>
 
-          <RailDivider />
+          <RailMenu>
+            {NAV_ITEMS.slice(1).map((entry) => {
+              const Icon = entry.icon;
+              const state = openPanel === entry.key ? "open" : activeKey === entry.key ? "active" : "idle";
 
-          {NAV_ITEMS.slice(1).map((entry) => {
-            const Icon = entry.icon;
-            const state = openPanel === entry.key ? "open" : activeKey === entry.key ? "active" : "idle";
+              return (
+                <RailButton
+                  key={entry.key}
+                  type="button"
+                  $state={state}
+                  onClick={() => handleEntryClick(entry)}
+                  title={entry.label}
+                  aria-label={entry.label}
+                  aria-expanded={openPanel === entry.key}
+                >
+                  <Icon size={21} />
+                  <span>{entry.label}</span>
+                </RailButton>
+              );
+            })}
+          </RailMenu>
+        </RailMain>
 
-            return (
-              <RailButton
-                key={entry.key}
-                type="button"
-                $state={state}
-                onClick={() => handleEntryClick(entry)}
-                title={entry.label}
-                aria-label={entry.label}
-                aria-expanded={openPanel === entry.key}
-              >
-                <Icon size={21} />
-                <span>{entry.label}</span>
-              </RailButton>
-            );
-          })}
-        </RailSection>
-
-        <RailSection>
-          <RailButton
+        <RailTools>
+          <UtilityButton
             type="button"
             $state={openPanel === "search" ? "open" : "idle"}
             onClick={handleSearchOpen}
@@ -376,20 +373,31 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
             aria-label="메뉴 검색"
             aria-expanded={openPanel === "search"}
           >
-            <Search size={21} />
-            <span>검색</span>
-          </RailButton>
-          <RailButton
+            <Search size={20} />
+          </UtilityButton>
+          <UtilityButton
+            type="button"
+            $state={isNotificationOpen ? "open" : "idle"}
+            onClick={() => {
+              setIsNotificationOpen((current) => !current);
+              setOpenPanel(null);
+            }}
+            title="알림"
+            aria-label="알림 열기"
+            aria-expanded={isNotificationOpen}
+          >
+            <Bell size={20} />
+          </UtilityButton>
+          <UtilityButton
             type="button"
             $state="idle"
             onClick={collapseSidebar}
             title="사이드바 닫기"
             aria-label="사이드바 닫기"
           >
-            <PanelLeftClose size={21} />
-            <span>닫기</span>
-          </RailButton>
-        </RailSection>
+            <PanelLeftClose size={20} />
+          </UtilityButton>
+        </RailTools>
       </RailShell>
 
       <AIAgentSystem />
@@ -425,11 +433,6 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
                 </ClearSearchButton>
               )}
             </SearchBox>
-
-            <ResultSummary>
-              <span>{filteredGroups.reduce((total, group) => total + (group.children?.length ?? 0), 0)}개 메뉴</span>
-              <em>{trimmedSearch ? "검색 결과" : "바로가기"}</em>
-            </ResultSummary>
 
             <SubContent className="custom-scrollbar">
               {filteredGroups.length > 0 ? (
@@ -470,19 +473,6 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
           </>
         )}
       </SubSidebar>
-
-      <NotificationFab
-        type="button"
-        $active={isNotificationOpen}
-        onClick={() => {
-          setIsNotificationOpen((current) => !current);
-          setOpenPanel(null);
-        }}
-        aria-label="알림 열기"
-      >
-        <Bell size={21} />
-        {unreadCount > 0 && <NotificationBadge>{unreadCount}</NotificationBadge>}
-      </NotificationFab>
 
       {isNotificationOpen && (
         <NotificationPanel role="dialog" aria-label="알림">
@@ -555,14 +545,13 @@ const RailShell = styled.nav<{ $disabled: boolean; $collapsed: boolean }>`
   width: ${RAIL_WIDTH}px;
   height: 100vh;
   height: 100dvh;
-  padding: 16px 10px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
   background: #ffffff;
-  border-right: 1px solid #eceff3;
-  box-shadow: 8px 0 24px rgba(15, 23, 42, 0.06);
+  border-top: 1px solid #d9dee7;
+  border-right: 1px solid #d9dee7;
   opacity: ${({ $disabled, $collapsed }) => ($collapsed ? 0 : $disabled ? 0.55 : 1)};
   pointer-events: ${({ $disabled, $collapsed }) => ($disabled || $collapsed ? "none" : "auto")};
   transform: translateX(${({ $collapsed }) => ($collapsed ? "-100%" : "0")});
@@ -571,89 +560,158 @@ const RailShell = styled.nav<{ $disabled: boolean; $collapsed: boolean }>`
     opacity 180ms ease;
 `;
 
-const RailSection = styled.div`
+const RailMain = styled.div`
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
 `;
 
-const RailDivider = styled.div`
+const DashboardButton = styled.button`
   width: 100%;
-  height: 1px;
-  margin: 4px 0;
-  background: #eef0f4;
+  height: 83px;
+  flex: 0 0 83px;
+  border: 0;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  @media (max-height: 920px) {
+    height: 70px;
+    flex-basis: 70px;
+  }
 `;
 
 const DashboardLogoIcon = styled.span`
-  width: 42px;
-  height: 24px;
+  width: 64px;
+  height: 40px;
   flex: 0 0 auto;
   display: block;
   background: url("/icons/GMT.png") no-repeat center / contain;
-  transform: scale(1.25);
+`;
+
+const RailMenu = styled.div`
+  width: 100%;
+  padding-top: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  @media (max-height: 920px) {
+    padding-top: 2px;
+  }
 `;
 
 const RailButton = styled.button<{ $state: "idle" | "active" | "open" }>`
   position: relative;
   width: 100%;
-  height: 58px;
-  flex: 0 0 58px;
-  border-radius: 12px;
-  border: 1px solid
-    ${({ $state }) =>
-      $state === "open"
-        ? "rgba(211, 17, 69, 0.56)"
-        : $state === "active"
-          ? "rgba(211, 17, 69, 0.20)"
-          : "transparent"};
-  background: ${({ $state }) =>
-    $state === "active" ? "#fff1f5" : $state === "open" ? "#ffffff" : "#ffffff"};
+  height: 89px;
+  flex: 0 0 89px;
+  border: 0;
+  background: #ffffff;
   color: ${({ $state }) =>
-    $state === "active" || $state === "open" ? "#d31145" : "#4b5563"};
+    $state === "active" || $state === "open" ? "#d50045" : "#344054"};
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   cursor: pointer;
-  box-shadow: ${({ $state }) =>
-    $state === "active"
-      ? "0 10px 20px rgba(211, 17, 69, 0.10)"
-      : $state === "open"
-        ? "inset 0 0 0 2px rgba(211, 17, 69, 0.08)"
-        : "none"};
   transition:
-    transform 160ms ease,
-    background 160ms ease,
-    border-color 160ms ease,
-    color 160ms ease,
-    box-shadow 160ms ease;
+    color 160ms ease;
 
   span {
     max-width: 100%;
     overflow: hidden;
     color: inherit;
-    font-size: 11px;
-    font-weight: 800;
-    line-height: 1.1;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.25;
     text-overflow: ellipsis;
     white-space: nowrap;
-    letter-spacing: 0;
+    letter-spacing: -0.04em;
   }
 
   svg {
     flex: 0 0 auto;
     color: inherit;
+    width: 22px;
+    height: 22px;
+    box-sizing: content-box;
+    padding: 14px;
+    border-radius: 50%;
+    background: ${({ $state }) =>
+      $state === "active" || $state === "open" ? "#fff0f4" : "#f4f5f7"};
+    stroke-width: 1.65;
+    transition: background 160ms ease, color 160ms ease;
   }
 
   &:hover {
-    transform: translateY(-1px);
-    background: #fff7f9;
-    border-color: rgba(211, 17, 69, 0.22);
-    color: #d31145;
-    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
+    color: #d50045;
+
+    svg {
+      background: #fff0f4;
+    }
+  }
+
+  @media (max-height: 920px) {
+    height: 70px;
+    flex-basis: 70px;
+    gap: 4px;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      padding: 11px;
+    }
+
+    span {
+      font-size: 11px;
+    }
+  }
+`;
+
+const RailTools = styled.div`
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  padding: 22px 0 106px;
+  border-top: 1px solid #d9dee7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+
+  @media (max-height: 920px) {
+    padding-top: 15px;
+    gap: 8px;
+  }
+`;
+
+const UtilityButton = styled.button<{ $state: "idle" | "open" }>`
+  width: 32px;
+  height: 31px;
+  flex: 0 0 31px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: ${({ $state }) => ($state === "open" ? "#d50045" : "#344054")};
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 150ms ease;
+
+  svg {
+    stroke-width: 1.7;
+  }
+
+  &:hover {
+    color: #d50045;
   }
 `;
 
@@ -669,9 +727,9 @@ const SubSidebar = styled.aside<{ $open: boolean }>`
   display: flex;
   flex-direction: column;
   background: #ffffff;
-  border-right: 1px solid #eceff3;
-  box-shadow: 16px 0 42px rgba(15, 23, 42, 0.10);
-  transform: translateX(${({ $open }) => ($open ? "0" : "-20px")});
+  border-right: 1px solid #dfe3e8;
+  box-shadow: 10px 0 28px rgba(15, 23, 42, 0.06);
+  transform: translateX(${({ $open }) => ($open ? "0" : "-12px")});
   opacity: ${({ $open }) => ($open ? 1 : 0)};
   pointer-events: ${({ $open }) => ($open ? "auto" : "none")};
   transition:
@@ -690,12 +748,13 @@ const SubSidebarScrim = styled.button`
 
 const SubHeader = styled.div`
   flex: 0 0 auto;
-  padding: 22px 18px 16px;
+  min-height: 100px;
+  padding: 22px 18px 17px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  border-bottom: 1px solid #e6e9ee;
 `;
 
 const SubTitleBlock = styled.div`
@@ -703,27 +762,27 @@ const SubTitleBlock = styled.div`
 
   span {
     display: block;
-    margin-bottom: 6px;
-    color: #d31145;
-    font-size: 11px;
-    font-weight: 900;
+    margin-bottom: 5px;
+    color: #d50045;
+    font-size: 10px;
+    font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
   }
 
   strong {
     display: block;
-    color: #111827;
-    font-size: 22px;
-    font-weight: 850;
+    color: #202939;
+    font-size: 20px;
+    font-weight: 600;
     letter-spacing: -0.05em;
   }
 
   p {
-    margin: 6px 0 0;
-    color: #667085;
-    font-size: 13px;
-    font-weight: 700;
+    margin: 5px 0 0;
+    color: #697586;
+    font-size: 12px;
+    font-weight: 500;
     line-height: 1.45;
     word-break: keep-all;
   }
@@ -733,35 +792,41 @@ const CloseButton = styled.button`
   width: 38px;
   height: 38px;
   flex: 0 0 auto;
-  border-radius: 12px;
-  border: 1px solid rgba(15, 23, 42, 0.10);
-  background: #ffffff;
-  color: #667085;
+  border-radius: 50%;
+  border: 0;
+  background: #f4f5f7;
+  color: #475467;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+  transition: background 150ms ease, color 150ms ease;
 
   &:hover {
-    background: #fff1f5;
-    border-color: rgba(211, 17, 69, 0.24);
-    color: #d31145;
+    background: #fff0f4;
+    color: #d50045;
   }
 `;
 
 const SearchBox = styled.label`
   flex: 0 0 auto;
-  margin: 16px 16px 10px;
-  height: 46px;
-  border-radius: 12px;
-  border: 1px solid rgba(15, 23, 42, 0.10);
-  background: #f8fafc;
+  margin: 15px 16px 10px;
+  height: 44px;
+  border-radius: 22px;
+  border: 1px solid transparent;
+  background: #f4f5f7;
   color: #98a2b3;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 0 12px;
+  transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+
+  &:focus-within {
+    border-color: rgba(213, 0, 69, 0.24);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(213, 0, 69, 0.07);
+  }
 
   input {
     min-width: 0;
@@ -771,7 +836,7 @@ const SearchBox = styled.label`
     background: transparent;
     color: #111827;
     font-size: 13px;
-    font-weight: 750;
+    font-weight: 500;
   }
 
   input::placeholder {
@@ -782,7 +847,8 @@ const SearchBox = styled.label`
 const ClearSearchButton = styled.button`
   width: 26px;
   height: 26px;
-  border-radius: 9px;
+  border-radius: 50%;
+  border: 0;
   background: #ffffff;
   color: #98a2b3;
   display: inline-flex;
@@ -791,57 +857,46 @@ const ClearSearchButton = styled.button`
   cursor: pointer;
 `;
 
-const ResultSummary = styled.div`
-  flex: 0 0 auto;
-  margin: 0 18px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: #344054;
-  font-size: 13px;
-  font-weight: 850;
-
-  em {
-    color: #667085;
-    font-style: normal;
-    font-weight: 800;
-  }
-`;
-
 const SubContent = styled.div`
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 3px 14px 18px;
+  padding: 2px 12px 18px;
 `;
 
 const ResultGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 12px;
 `;
 
 const ResultButton = styled.button<{ $active: boolean }>`
   width: 100%;
-  min-height: 70px;
+  min-height: 64px;
   border-radius: 12px;
-  border: 1px solid ${({ $active }) => ($active ? "rgba(211, 17, 69, 0.40)" : "rgba(15, 23, 42, 0.11)")};
-  background: ${({ $active }) => ($active ? "#fff1f5" : "#ffffff")};
-  color: ${({ $active }) => ($active ? "#d31145" : "#182230")};
+  border: 1px solid ${({ $active }) => ($active ? "rgba(213, 0, 69, 0.34)" : "#e3e7ed")};
+  background: ${({ $active }) => ($active ? "#fff9fb" : "#ffffff")};
+  color: ${({ $active }) => ($active ? "#d50045" : "#344054")};
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 13px 12px;
+  gap: 11px;
+  padding: 8px 9px;
   text-align: left;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-  transition: transform 150ms ease, border-color 150ms ease, color 150ms ease, background 150ms ease;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: color 150ms ease, background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 
   &:hover {
-    transform: translateY(-1px);
-    border-color: rgba(211, 17, 69, 0.30);
-    color: #d31145;
+    border-color: rgba(213, 0, 69, 0.24);
+    background: #fffafb;
+    color: #d50045;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.07);
+  }
+
+  &:hover > span:first-of-type {
+    background: #fff0f4;
+    color: #d50045;
   }
 
   > svg {
@@ -851,15 +906,16 @@ const ResultButton = styled.button<{ $active: boolean }>`
 `;
 
 const ResultIcon = styled.span<{ $active: boolean }>`
-  width: 42px;
-  height: 42px;
-  flex: 0 0 42px;
-  border-radius: 12px;
-  background: ${({ $active }) => ($active ? "#ffffff" : "#f2f4f7")};
-  color: ${({ $active }) => ($active ? "#d31145" : "#475467")};
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border-radius: 50%;
+  background: ${({ $active }) => ($active ? "#fff0f4" : "#f4f5f7")};
+  color: ${({ $active }) => ($active ? "#d50045" : "#475467")};
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: background 150ms ease, color 150ms ease;
 `;
 
 const ResultText = styled.span`
@@ -871,15 +927,15 @@ const ResultText = styled.span`
 
   strong {
     color: inherit;
-    font-size: 15px;
-    font-weight: 850;
+    font-size: 14px;
+    font-weight: 600;
     letter-spacing: -0.02em;
   }
 
   span {
-    color: #475467;
-    font-size: 13px;
-    font-weight: 750;
+    color: #697586;
+    font-size: 12px;
+    font-weight: 500;
     line-height: 1.35;
     letter-spacing: -0.01em;
     word-break: keep-all;
@@ -899,56 +955,13 @@ const EmptySearch = styled.div`
   strong {
     color: #344054;
     font-size: 15px;
-    font-weight: 850;
+    font-weight: 600;
   }
 
   span {
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 500;
   }
-`;
-
-const NotificationFab = styled.button<{ $active: boolean }>`
-  position: fixed;
-  top: 18px;
-  right: 20px;
-  z-index: 10030;
-  width: 46px;
-  height: 46px;
-  border-radius: 12px;
-  border: 1px solid ${({ $active }) => ($active ? "rgba(211, 17, 69, 0.34)" : "rgba(15, 23, 42, 0.10)")};
-  background: ${({ $active }) => ($active ? "#fff1f5" : "#ffffff")};
-  color: ${({ $active }) => ($active ? "#d31145" : "#475467")};
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
-  transition: transform 150ms ease, color 150ms ease, border-color 150ms ease, background 150ms ease;
-
-  &:hover {
-    transform: translateY(-2px);
-    color: #d31145;
-    border-color: rgba(211, 17, 69, 0.28);
-  }
-`;
-
-const NotificationBadge = styled.span`
-  position: absolute;
-  top: -4px;
-  right: -3px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 9px;
-  background: #ef4444;
-  color: #ffffff;
-  border: 2px solid #ffffff;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 900;
 `;
 
 const NotificationPanel = styled.aside`
