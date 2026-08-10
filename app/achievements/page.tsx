@@ -33,7 +33,7 @@ const GlobalStyle = createGlobalStyle`
     padding: 0;
     background-color: #050505;
     color: #fff;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     overflow: hidden; /* 스크롤 방지 */
   }
 `;

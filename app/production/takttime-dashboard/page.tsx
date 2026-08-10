@@ -98,39 +98,10 @@ interface LogData { time: string; msg: string; type: 'error' | 'success' | 'warn
 
 // --- [스타일] ---
 const GlobalStyle = createGlobalStyle`
-  @font-face {
-    font-family: 'Pretendard';
-    src: url('/fonts/Pretendard-Regular.woff2') format('woff2');
-    font-weight: 400;
-    font-style: normal;
-  }
-  @font-face {
-    font-family: 'Pretendard';
-    src: url('/fonts/Pretendard-Medium.woff2') format('woff2');
-    font-weight: 500;
-    font-style: normal;
-  }
-  @font-face {
-    font-family: 'Pretendard';
-    src: url('/fonts/Pretendard-SemiBold.woff2') format('woff2');
-    font-weight: 600;
-    font-style: normal;
-  }
-  @font-face {
-    font-family: 'Pretendard';
-    src: url('/fonts/Pretendard-Bold.woff2') format('woff2');
-    font-weight: 700;
-    font-style: normal;
-  }
-  @font-face {
-    font-family: 'Paperlogy';
-    src: url('/fonts/Paperlogy-Regular.woff2') format('woff2');
-    font-weight: 400;
-    font-style: normal;
-  }
-  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700;800&display=swap');
-  
-  body { 
+  /* 폰트 로딩(Pretendard·Rajdhani)은 globals.css에서 일괄 처리한다.
+     createGlobalStyle은 CSSOM insertRule로 주입되는데 @import는 그 방식으로
+     삽입할 수 없어 무시된다. 여기에 @font-face/@import를 두면 안 된다. */
+  body {
     background-color: ${COLORS.bgPage}; 
     margin: 0; 
     font-family: 'Pretendard', sans-serif; 

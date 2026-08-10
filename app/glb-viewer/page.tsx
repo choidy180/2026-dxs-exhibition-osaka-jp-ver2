@@ -23,7 +23,7 @@ const FIXED_MODEL_PATH = "/model.glb";
 const PageContainer = styled.div`
   display: flex; flex-direction: column; width: 100%; height: 100vh;
   background-color: #1a1a1a; color: #f5f5f5;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   overflow: hidden;
 `;
 

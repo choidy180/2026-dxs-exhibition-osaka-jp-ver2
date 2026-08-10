@@ -69,7 +69,7 @@ const Container = styled.div`
 
   background-color: ${COLORS.bgGray};
   padding: 2rem;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color: ${COLORS.textMain};
   box-sizing: border-box;
 

@@ -586,7 +586,9 @@ import { motion } from "framer-motion";
 
 // --- Global Styles ---
 export const GlobalStyle = createGlobalStyle`
-  @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
+  /* Pretendard는 globals.css에서 public/fonts로 로컬 호스팅한다.
+     createGlobalStyle은 CSSOM insertRule로 주입되는데 @import는 그 방식으로
+     삽입할 수 없어 무시된다(CDN 폰트가 실제로 로드되지 않았다). */
   body {
     margin: 0;
     padding: 0;

@@ -1,12 +1,21 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import styled, { createGlobalStyle, keyframes } from 'styled-components';
 import {
   FiAlertTriangle,
   FiSearch,
   FiActivity,
 } from 'react-icons/fi';
+import { useFoamingSensor } from '@/hooks/use-foaming-sensor';
+import {
+  CHART_POINT_LIMIT,
+  DEFAULT_PROCESS,
+  LIVE_LOG_LIMIT,
+  PROCESS_TABS,
+  WARN_MARGIN_RATIO,
+} from '@/constants/foamingInspection';
+import type { FoamingSensorSeries, FoamingStatus } from '@/types/foamingSensor';
 
 // ---------------------------------------------------------------------------
 // Theme
@@ -31,8 +40,8 @@ const T = {
 };
 
 const GlobalStyle = createGlobalStyle`
-  @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
-
+  /* Pretendard는 globals.css에서 로컬 호스팅한다. createGlobalStyle은 CSSOM
+     insertRule로 주입되어 @import가 무시되므로 여기에 두면 안 된다. */
   * { box-sizing: border-box; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
   body { margin: 0; background-color: ${T.bg}; color: ${T.textMain}; overflow: hidden; }
   ::-webkit-scrollbar { width: 8px; }
@@ -281,21 +290,22 @@ const LogTitle = styled.h2`
   color: ${T.textMain};
 `;
 
-const LiveBadge = styled.span`
+const LiveBadge = styled.span<{ $offline?: boolean }>`
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 12px;
   font-weight: 700;
-  color: ${T.primary};
+  color: ${({ $offline }) => ($offline ? T.textMuted : T.primary)};
 
   &::before {
     content: '';
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: ${T.primary};
-    animation: ${pulse} 1.4s ease-in-out infinite;
+    background: ${({ $offline }) => ($offline ? T.textMuted : T.primary)};
+    /* 연결이 끊겼으면 깜빡임을 멈춰 실시간이 아님을 드러낸다 */
+    animation: ${({ $offline }) => ($offline ? 'none' : pulse)} 1.4s ease-in-out infinite;
   }
 `;
 
@@ -303,6 +313,15 @@ const LogTable = styled.div`
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+`;
+
+const EmptyState = styled.div`
+  padding: 34px 8px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  color: ${T.textMuted};
 `;
 
 const LogRowGrid = styled.div`
@@ -595,14 +614,28 @@ const FooterValue = styled.span`
 interface ChartProps {
   axisMin: number;
   axisMax: number;
-  refMax: number;
-  refMin: number;
-  optimal: number;
+  /** 정상범위 상한 — 원본에 값이 없으면 null */
+  refMax: number | null;
+  /** 정상범위 하한 */
+  refMin: number | null;
+  /** best_value */
+  optimal: number | null;
   points: number[];
   active?: boolean;
+  /** x축 좌/중앙/우 라벨 (실제 TIMESTAMP) */
+  xLabels: [string, string, string];
 }
 
-const LineChart = ({ axisMin, axisMax, refMax, refMin, optimal, points, active }: ChartProps) => {
+const LineChart = ({
+  axisMin,
+  axisMax,
+  refMax,
+  refMin,
+  optimal,
+  points,
+  active,
+  xLabels,
+}: ChartProps) => {
   const W = 400;
   const H = 230;
   const padL = 46;
@@ -614,8 +647,13 @@ const LineChart = ({ axisMin, axisMax, refMax, refMin, optimal, points, active }
 
   const lineColor = active ? T.primary : T.dark;
 
-  const xAt = (i: number) => padL + (plotW * i) / (points.length - 1);
-  const yAt = (v: number) => padT + plotH - ((v - axisMin) / (axisMax - axisMin)) * plotH;
+  // 측정값이 1건뿐일 때 0으로 나누지 않도록 가운데에 찍는다
+  const xAt = (i: number) =>
+    points.length <= 1 ? padL + plotW / 2 : padL + (plotW * i) / (points.length - 1);
+  // 모든 값이 동일하면 축 폭이 0이 되므로 중앙 고정
+  const span = axisMax - axisMin;
+  const yAt = (v: number) =>
+    span === 0 ? padT + plotH / 2 : padT + plotH - ((v - axisMin) / span) * plotH;
 
   const path = points
     .map((p, i) => `${i === 0 ? 'M' : 'L'} ${xAt(i).toFixed(1)} ${yAt(p).toFixed(1)}`)
@@ -630,15 +668,27 @@ const LineChart = ({ axisMin, axisMax, refMax, refMin, optimal, points, active }
       <rect x={padL} y={padT} width={plotW} height={plotH} rx="6" fill={active ? 'rgba(193,18,79,0.05)' : '#F8FAFC'} />
 
       {/* Max / Min reference lines */}
-      <line x1={padL} y1={yAt(refMax)} x2={W - padR} y2={yAt(refMax)} stroke="#CBD5E1" strokeWidth="1.5" strokeDasharray="5 5" />
-      <text x={padL + 6} y={yAt(refMax) - 7} fontSize="12" fontWeight="600" fill="#94A3B8">Max ({refMax})</text>
+      {refMax !== null && (
+        <>
+          <line x1={padL} y1={yAt(refMax)} x2={W - padR} y2={yAt(refMax)} stroke="#CBD5E1" strokeWidth="1.5" strokeDasharray="5 5" />
+          <text x={padL + 6} y={yAt(refMax) - 7} fontSize="12" fontWeight="600" fill="#94A3B8">Max ({refMax})</text>
+        </>
+      )}
 
-      <line x1={padL} y1={yAt(refMin)} x2={W - padR} y2={yAt(refMin)} stroke="#CBD5E1" strokeWidth="1.5" strokeDasharray="5 5" />
-      <text x={padL + 6} y={yAt(refMin) + 16} fontSize="12" fontWeight="600" fill="#94A3B8">Min ({refMin})</text>
+      {refMin !== null && (
+        <>
+          <line x1={padL} y1={yAt(refMin)} x2={W - padR} y2={yAt(refMin)} stroke="#CBD5E1" strokeWidth="1.5" strokeDasharray="5 5" />
+          <text x={padL + 6} y={yAt(refMin) + 16} fontSize="12" fontWeight="600" fill="#94A3B8">Min ({refMin})</text>
+        </>
+      )}
 
       {/* optimal (green) */}
-      <line x1={padL} y1={yAt(optimal)} x2={W - padR} y2={yAt(optimal)} stroke={T.green} strokeWidth="2" strokeDasharray="2 5" strokeLinecap="round" />
-      <text x={W - padR} y={yAt(optimal) + 17} fontSize="12" fontWeight="700" fill={T.green} textAnchor="end">최적값</text>
+      {optimal !== null && (
+        <>
+          <line x1={padL} y1={yAt(optimal)} x2={W - padR} y2={yAt(optimal)} stroke={T.green} strokeWidth="2" strokeDasharray="2 5" strokeLinecap="round" />
+          <text x={W - padR} y={yAt(optimal) + 17} fontSize="12" fontWeight="700" fill={T.green} textAnchor="end">최적값</text>
+        </>
+      )}
 
       {/* measured series */}
       <path d={path} fill="none" stroke={lineColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
@@ -647,94 +697,261 @@ const LineChart = ({ axisMin, axisMax, refMax, refMin, optimal, points, active }
 
       {/* left axis labels */}
       <text x={padL - 10} y={yAt(axisMax) + 4} fontSize="12" fontWeight="600" fill="#64748B" textAnchor="end">{axisMax}</text>
-      <text x={padL - 10} y={yAt(optimal) + 4} fontSize="12" fontWeight="600" fill="#64748B" textAnchor="end">{optimal}</text>
+      {optimal !== null && (
+        <text x={padL - 10} y={yAt(optimal) + 4} fontSize="12" fontWeight="600" fill="#64748B" textAnchor="end">{optimal}</text>
+      )}
       <text x={padL - 10} y={yAt(axisMin) + 4} fontSize="12" fontWeight="600" fill="#64748B" textAnchor="end">{axisMin}</text>
 
-      {/* x axis labels */}
-      <text x={padL} y={H - 9} fontSize="12" fontWeight="600" fill="#94A3B8" textAnchor="start">10 : 00</text>
-      <text x={padL + plotW / 2} y={H - 9} fontSize="12" fontWeight="600" fill="#94A3B8" textAnchor="middle">10 : 20</text>
-      <text x={W - padR} y={H - 9} fontSize="12" fontWeight="600" fill="#94A3B8" textAnchor="end">10 : 40</text>
+      {/* x axis labels — 실제 TIMESTAMP 기준 */}
+      <text x={padL} y={H - 9} fontSize="12" fontWeight="600" fill="#94A3B8" textAnchor="start">{xLabels[0]}</text>
+      <text x={padL + plotW / 2} y={H - 9} fontSize="12" fontWeight="600" fill="#94A3B8" textAnchor="middle">{xLabels[1]}</text>
+      <text x={W - padR} y={H - 9} fontSize="12" fontWeight="600" fill="#94A3B8" textAnchor="end">{xLabels[2]}</text>
     </ChartSvg>
   );
 };
 
 // ---------------------------------------------------------------------------
-// Data
+// Derivation helpers — 원본 API 값에서 화면 표시값을 계산한다
 // ---------------------------------------------------------------------------
-const PROCESS_TABS = [
-  { id: 'GR2', label: 'GR2 공정' },
-  { id: 'GR3', label: 'GR3 공정' },
-  { id: 'GR5', label: 'GR5 공정', error: true },
-  { id: 'GR9', label: 'GR9 공정' },
-];
+const fmt = (value: number, digits = 1) => value.toFixed(digits);
 
-const CHARTS = [
-  {
-    index: 1,
-    name: 'R액 탱크온도',
-    unit: '℃',
-    value: '28.5',
-    active: true,
-    axisMin: 18,
-    axisMax: 35,
-    refMax: 30,
-    refMin: 20,
-    optimal: 22,
-    points: [19, 20.4, 22.4, 24.4, 26.4, 27.8, 28.5],
-  },
-  {
-    index: 2,
-    name: 'R액 압력',
-    unit: 'bar',
-    value: '150.5',
-    active: false,
-    axisMin: 0,
-    axisMax: 300,
-    refMax: 170,
-    refMin: 130,
-    optimal: 150,
-    points: [142, 146, 150, 158, 153, 149, 150.5],
-  },
-  {
-    index: 3,
-    name: '온조#1 리턴온도',
-    unit: '℃',
-    value: '28.0',
-    active: false,
-    axisMin: 0,
-    axisMax: 60,
-    refMax: 40,
-    refMin: 20,
-    optimal: 30,
-    points: [25, 25.5, 26, 26.5, 27, 27.6, 28],
-  },
-];
+/** 상태 심각도 순위 (정렬/최악 센서 선정용) */
+const STATUS_RANK: Record<FoamingStatus, number> = {
+  critical: 3,
+  warn: 2,
+  normal: 1,
+  unknown: 0,
+};
 
-const LOG_ROWS = [
-  {
-    time: '14:58:27',
-    sensor: '대차 01 - R액 탱크온도',
-    event: '임계점 접근',
-    tone: 'critical' as const,
-    value: '28.5 ℃',
-    delta: '+3.5 ℃ 초과',
-  },
-  {
-    time: '14:58:27',
-    sensor: '대차 01 - R액 압력',
-    event: '주의 구간',
-    tone: 'warn' as const,
-    value: '150.5 bar',
-    delta: '+0.5 bar 초과',
-  },
-];
+const STATUS_TEXT: Record<FoamingStatus, string> = {
+  critical: '주의 (임계)',
+  warn: '주의 (경계)',
+  normal: '정상',
+  unknown: '판정 불가',
+};
+
+/** 정상범위·최적값·실측값을 모두 담도록 y축 범위를 잡고 여유를 둔다 */
+function axisRange(series: FoamingSensorSeries, points: number[]) {
+  const candidates = [...points, series.lower, series.upper, series.optimal].filter(
+    (v): v is number => typeof v === 'number' && Number.isFinite(v)
+  );
+
+  if (!candidates.length) return { axisMin: 0, axisMax: 1 };
+
+  const lo = Math.min(...candidates);
+  const hi = Math.max(...candidates);
+  const pad = (hi - lo) * 0.12 || Math.max(Math.abs(hi) * 0.1, 1);
+
+  return {
+    axisMin: Math.floor(lo - pad),
+    axisMax: Math.ceil(hi + pad),
+  };
+}
+
+/** x축 좌/중앙/우 라벨을 실제 TIMESTAMP에서 뽑는다 */
+function xAxisLabels(timestamps: string[]): [string, string, string] {
+  if (!timestamps.length) return ['-', '-', '-'];
+
+  const first = timestamps[0];
+  const last = timestamps[timestamps.length - 1];
+  const mid = timestamps[Math.floor((timestamps.length - 1) / 2)];
+
+  // "08:07:16" → "08:07" (초는 라벨에서 생략)
+  const short = (t: string) => t.slice(0, 5);
+  return [short(first), short(mid), short(last)];
+}
+
+interface LogRowData {
+  time: string;
+  sensor: string;
+  event: string;
+  tone: 'critical' | 'warn';
+  value: string;
+  delta: string;
+}
+
+/** 최우선 조치 권고 문구 — 최신값이 기준을 어떻게 벗어났는지 서술한다 */
+function priorityHeadline(series: FoamingSensorSeries): string {
+  const { name, unit, status, breach, latest, upper, lower } = series;
+
+  if (!latest) return `${name} : 측정값 없음`;
+
+  if (status === 'critical') {
+    const direction = breach > 0 ? '상한 초과' : '하한 미달';
+    return `${name} : ${direction} (${breach > 0 ? '+' : ''}${fmt(breach)} ${unit})`;
+  }
+
+  if (status === 'warn') {
+    const toUpper = upper !== null ? upper - latest.value : Infinity;
+    const toLower = lower !== null ? latest.value - lower : Infinity;
+    const edge = toUpper <= toLower ? '상한' : '하한';
+    const gap = Math.min(toUpper, toLower);
+    return `${name} : ${edge} 임계점 접근 (여유 ${fmt(gap)} ${unit})`;
+  }
+
+  if (status === 'normal') return `${name} : 정상 범위 유지`;
+  return `${name} : 기준값 미설정으로 판정 불가`;
+}
+
+/** 원인 추론 박스의 첫 문장 — 관측된 사실만 서술한다 (추정 없음) */
+function observedFact(
+  series: FoamingSensorSeries | null,
+  isLoading: boolean
+): React.ReactNode {
+  if (!series || !series.latest) {
+    return isLoading ? '센서 데이터를 수신하는 중입니다.' : '판정할 센서 데이터가 없습니다.';
+  }
+
+  const { name, unit, latest, lower, upper, status } = series;
+  const current = `${fmt(latest.value)}${unit}`;
+
+  if (status === 'critical' && upper !== null && latest.value > upper) {
+    return (
+      <>
+        현재 <b>{name}가 상한 임계치({upper}{unit})를 초과</b>했습니다 (측정값 {current}, {latest.timestamp}).
+      </>
+    );
+  }
+
+  if (status === 'critical' && lower !== null && latest.value < lower) {
+    return (
+      <>
+        현재 <b>{name}가 하한 임계치({lower}{unit})를 밑돌고</b> 있습니다 (측정값 {current}, {latest.timestamp}).
+      </>
+    );
+  }
+
+  if (status === 'warn' && upper !== null && lower !== null) {
+    const nearUpper = upper - latest.value <= latest.value - lower;
+    const edge = nearUpper ? upper : lower;
+    const word = nearUpper ? '상한' : '하한';
+    return (
+      <>
+        현재 <b>{name}가 {word} 임계치({edge}{unit})에 근접</b>했습니다 (측정값 {current}, {latest.timestamp}).
+      </>
+    );
+  }
+
+  if (status === 'normal' && lower !== null && upper !== null) {
+    return (
+      <>
+        현재 <b>{name}는 정상범위({lower}~{upper}{unit}) 내</b>에 있습니다 (측정값 {current}, {latest.timestamp}).
+      </>
+    );
+  }
+
+  return (
+    <>
+      현재 <b>{name}</b> 측정값은 {current}이며, 기준값이 없어 판정할 수 없습니다.
+    </>
+  );
+}
+
+/** 정상범위를 벗어났거나 경계에 근접한 측정만 로그로 뽑는다 */
+function buildLogRows(allSeries: FoamingSensorSeries[]): LogRowData[] {
+  const rows: LogRowData[] = [];
+
+  for (const series of allSeries) {
+    const { lower, upper, unit, name } = series;
+    if (lower === null || upper === null) continue;
+
+    const margin = (upper - lower) * WARN_MARGIN_RATIO;
+
+    for (const reading of series.readings) {
+      const { value, timestamp } = reading;
+      let tone: 'critical' | 'warn';
+      let event: string;
+      let delta: string;
+
+      if (value > upper) {
+        tone = 'critical';
+        event = '상한 초과';
+        delta = `+${fmt(value - upper)} ${unit} 초과`;
+      } else if (value < lower) {
+        tone = 'critical';
+        event = '하한 미달';
+        delta = `${fmt(value - lower)} ${unit} 미달`;
+      } else if (margin > 0 && upper - value <= margin) {
+        tone = 'warn';
+        event = '상한 임계점 접근';
+        delta = `상한까지 ${fmt(upper - value)} ${unit}`;
+      } else if (margin > 0 && value - lower <= margin) {
+        tone = 'warn';
+        event = '하한 임계점 접근';
+        delta = `하한까지 ${fmt(value - lower)} ${unit}`;
+      } else {
+        continue;
+      }
+
+      rows.push({
+        time: timestamp,
+        sensor: name,
+        event,
+        tone,
+        value: `${fmt(value)} ${unit}`,
+        delta,
+      });
+    }
+  }
+
+  // 최신 발생순
+  return rows
+    .sort((a, b) => b.time.localeCompare(a.time))
+    .slice(0, LIVE_LOG_LIMIT);
+}
 
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 export default function FoamingInspectionDev() {
-  const [activeTab, setActiveTab] = useState('GR2');
-  const activeLabel = PROCESS_TABS.find((t) => t.id === activeTab)?.label ?? 'GR2 공정';
+  const [activeTab, setActiveTab] = useState<string>(DEFAULT_PROCESS);
+  const activeLabel = PROCESS_TABS.find((t) => t.id === activeTab)?.label ?? `${activeTab} 공정`;
+
+  const { data, isInitialLoading, error } = useFoamingSensor(activeTab);
+
+  // `?? []`를 인라인으로 두면 렌더마다 새 배열이 되어 아래 useMemo가 무력해진다
+  const series = useMemo(() => data?.series ?? [], [data]);
+
+  /** 차트 카드용 표시 데이터 */
+  const charts = useMemo(
+    () =>
+      series.map((s, idx) => {
+        const recent = s.readings.slice(-CHART_POINT_LIMIT);
+        const points = recent.map((r) => r.value);
+        const { axisMin, axisMax } = axisRange(s, points);
+
+        return {
+          key: s.seq,
+          index: idx + 1,
+          name: s.name,
+          unit: s.unit,
+          value: s.latest ? fmt(s.latest.value) : '-',
+          status: s.status,
+          axisMin,
+          axisMax,
+          refMax: s.upper,
+          refMin: s.lower,
+          optimal: s.optimal,
+          points,
+          xLabels: xAxisLabels(recent.map((r) => r.timestamp)),
+        };
+      }),
+    [series]
+  );
+
+  /** 가장 심각한 센서 — 차트 강조와 최우선 조치 권고에 사용 */
+  const worstSeries = useMemo(() => {
+    if (!series.length) return null;
+    return series.reduce(
+      (worst, s) => (STATUS_RANK[s.status] > STATUS_RANK[worst.status] ? s : worst),
+      series[0]
+    );
+  }, [series]);
+
+  const logRows = useMemo(() => buildLogRows(series), [series]);
+
+  const overallStatus: FoamingStatus = worstSeries?.status ?? 'unknown';
+  const isDanger = overallStatus === 'critical' || overallStatus === 'warn';
 
   return (
     <>
@@ -742,18 +959,23 @@ export default function FoamingInspectionDev() {
       <Page>
         <TabBar>
           <TabGroup>
-            {PROCESS_TABS.map((tab) => (
-              <Tab
-                key={tab.id}
-                type="button"
-                $active={activeTab === tab.id}
-                $error={tab.error}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                {tab.error && <TabDot />}
-                {tab.label}
-              </Tab>
-            ))}
+            {PROCESS_TABS.map((tab) => {
+              // 이상 표시는 조회 중인 공정에만 붙는다 (다른 공정은 폴링하지 않음)
+              const hasAlert = activeTab === tab.id && overallStatus === 'critical';
+
+              return (
+                <Tab
+                  key={tab.id}
+                  type="button"
+                  $active={activeTab === tab.id}
+                  $error={hasAlert}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  {hasAlert && <TabDot />}
+                  {tab.label}
+                </Tab>
+              );
+            })}
           </TabGroup>
         </TabBar>
 
@@ -771,41 +993,56 @@ export default function FoamingInspectionDev() {
                   </Stat>
                   <Stat>
                     <StatLabel>설비 이상징후 결과</StatLabel>
-                    <StatValue $danger>주의 (임계)</StatValue>
+                    <StatValue $danger={isDanger}>{STATUS_TEXT[overallStatus]}</StatValue>
                   </Stat>
                 </HeaderStats>
               </OverviewHeader>
 
-              <ChartRow>
-                {CHARTS.map((c) => (
-                  <ChartCard key={c.index} $active={c.active}>
-                    <ChartHead>
-                      <ChartTitleGroup>
-                        <ChartIndex $active={c.active}>{c.index}</ChartIndex>
-                        <ChartName $active={c.active}>{c.name}</ChartName>
-                      </ChartTitleGroup>
-                      <ChartValue $active={c.active}>
-                        {c.value} <small>{c.unit}</small>
-                      </ChartValue>
-                    </ChartHead>
-                    <LineChart
-                      axisMin={c.axisMin}
-                      axisMax={c.axisMax}
-                      refMax={c.refMax}
-                      refMin={c.refMin}
-                      optimal={c.optimal}
-                      points={c.points}
-                      active={c.active}
-                    />
-                  </ChartCard>
-                ))}
-              </ChartRow>
+              {charts.length === 0 ? (
+                <EmptyState>
+                  {isInitialLoading
+                    ? '센서 데이터를 불러오는 중입니다…'
+                    : error ?? '표시할 센서 데이터가 없습니다.'}
+                </EmptyState>
+              ) : (
+                <ChartRow>
+                  {charts.map((c) => {
+                    const active = worstSeries?.seq === c.key;
+
+                    return (
+                      <ChartCard key={c.key} $active={active}>
+                        <ChartHead>
+                          <ChartTitleGroup>
+                            <ChartIndex $active={active}>{c.index}</ChartIndex>
+                            <ChartName $active={active} title={c.name}>{c.name}</ChartName>
+                          </ChartTitleGroup>
+                          <ChartValue $active={active}>
+                            {c.value} <small>{c.unit}</small>
+                          </ChartValue>
+                        </ChartHead>
+                        <LineChart
+                          axisMin={c.axisMin}
+                          axisMax={c.axisMax}
+                          refMax={c.refMax}
+                          refMin={c.refMin}
+                          optimal={c.optimal}
+                          points={c.points}
+                          active={active}
+                          xLabels={c.xLabels}
+                        />
+                      </ChartCard>
+                    );
+                  })}
+                </ChartRow>
+              )}
             </OverviewCard>
 
             <LogCard>
               <LogHeader>
                 <LogTitle>실시간 안전 감지 로그</LogTitle>
-                <LiveBadge>LIVE</LiveBadge>
+                <LiveBadge $offline={Boolean(error)}>
+                  {error ? '연결 오류 — 마지막 수신 데이터' : 'LIVE'}
+                </LiveBadge>
               </LogHeader>
               <LogTable>
                 <LogHeadRow>
@@ -815,15 +1052,23 @@ export default function FoamingInspectionDev() {
                   <span>측정값</span>
                   <span>기준치 대비</span>
                 </LogHeadRow>
-                {LOG_ROWS.map((row, idx) => (
-                  <LogRow key={idx}>
-                    <LogCellTime>{row.time}</LogCellTime>
-                    <LogCellSensor>{row.sensor}</LogCellSensor>
-                    <EventPill $tone={row.tone}>{row.event}</EventPill>
-                    <LogValue $tone={row.tone === 'critical' ? 'critical' : undefined}>{row.value}</LogValue>
-                    <LogValue $tone={row.tone}>{row.delta}</LogValue>
-                  </LogRow>
-                ))}
+                {logRows.length === 0 ? (
+                  <EmptyState>
+                    {isInitialLoading
+                      ? '감지 로그를 불러오는 중입니다…'
+                      : '정상범위를 벗어난 측정이 없습니다.'}
+                  </EmptyState>
+                ) : (
+                  logRows.map((row, idx) => (
+                    <LogRow key={`${row.sensor}-${row.time}-${idx}`}>
+                      <LogCellTime>{row.time}</LogCellTime>
+                      <LogCellSensor>{row.sensor}</LogCellSensor>
+                      <EventPill $tone={row.tone}>{row.event}</EventPill>
+                      <LogValue $tone={row.tone === 'critical' ? 'critical' : undefined}>{row.value}</LogValue>
+                      <LogValue $tone={row.tone}>{row.delta}</LogValue>
+                    </LogRow>
+                  ))
+                )}
               </LogTable>
             </LogCard>
           </LeftColumn>
@@ -844,7 +1089,13 @@ export default function FoamingInspectionDev() {
                 </PriorityIcon>
                 <PriorityTextGroup>
                   <PriorityLabel>최우선 조치 권고</PriorityLabel>
-                  <PriorityMain>대차 01 : R액 탱크 과열</PriorityMain>
+                  <PriorityMain>
+                    {worstSeries
+                      ? priorityHeadline(worstSeries)
+                      : isInitialLoading
+                        ? '센서 데이터 수신 대기 중'
+                        : '감지된 센서가 없습니다'}
+                  </PriorityMain>
                 </PriorityTextGroup>
               </PriorityAlert>
 
@@ -853,9 +1104,10 @@ export default function FoamingInspectionDev() {
                   <FiSearch size={17} /> 원인 추론
                 </RiskSectionTitle>
                 <CauseBox>
-                  <p>
-                    현재 <b>R액 탱크온도가 상한 임계치(30°C)에 도달</b>하기 직전입니다.
-                  </p>
+                  {/* 관측 사실은 API 값에서 그대로 서술한다 */}
+                  <p>{observedFact(worstSeries, isInitialLoading)}</p>
+                  {/* 원인 가설은 현재 API가 제공하지 않는 정보다.
+                      추론 엔진이 붙기 전까지는 고정 문구를 유지한다. */}
                   <p>
                     패턴 매칭 결과, <b>온조기(Chiller) 냉각수 펌프 성능 저하 또는 필터 막힘</b>으로 열교환 효율이 떨어졌을 확률이 높습니다.
                   </p>

@@ -1,3 +1,8 @@
+/* @import는 스타일시트 최상단에서만 유효하다. 이전에는 페이지별
+   createGlobalStyle 안에 있어서 무시되고 Rajdhani가 로드되지 않았다.
+   (수치 표기용 보조 폰트 — takttime-dashboard, realtime-status에서 사용) */
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700;800&display=swap');
+
 * {
   margin: 0;
   padding: 0;
@@ -9,6 +14,143 @@
     font-family: 'A2z';
     src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/에이투지체-6SemiBold.woff2') format('woff2');
     font-weight: 600;
+    font-display: swap;
+}
+
+/* ───────── Pretendard (public/fonts 로컬 호스팅) ─────────
+   local()을 먼저 두어 OS에 설치된 사용자는 다운로드를 건너뛰고,
+   미설치 사용자는 woff2/woff를 내려받아 동일한 폰트로 렌더링한다. */
+@font-face {
+    font-family: 'Pretendard';
+    src: local('Pretendard Thin'),
+         url('/fonts/Pretendard-Thin.woff2') format('woff2'),
+         url('/fonts/Pretendard-Thin.woff') format('woff');
+    font-weight: 100;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Pretendard';
+    src: local('Pretendard ExtraLight'),
+         url('/fonts/Pretendard-ExtraLight.woff2') format('woff2'),
+         url('/fonts/Pretendard-ExtraLight.woff') format('woff');
+    font-weight: 200;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Pretendard';
+    src: local('Pretendard Light'),
+         url('/fonts/Pretendard-Light.woff2') format('woff2'),
+         url('/fonts/Pretendard-Light.woff') format('woff');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Pretendard';
+    src: local('Pretendard Regular'), local('Pretendard'),
+         url('/fonts/Pretendard-Regular.woff2') format('woff2'),
+         url('/fonts/Pretendard-Regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Pretendard';
+    src: local('Pretendard Medium'),
+         url('/fonts/Pretendard-Medium.woff2') format('woff2'),
+         url('/fonts/Pretendard-Medium.woff') format('woff');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Pretendard';
+    src: local('Pretendard SemiBold'),
+         url('/fonts/Pretendard-SemiBold.woff2') format('woff2'),
+         url('/fonts/Pretendard-SemiBold.woff') format('woff');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Pretendard';
+    src: local('Pretendard Bold'),
+         url('/fonts/Pretendard-Bold.woff2') format('woff2'),
+         url('/fonts/Pretendard-Bold.woff') format('woff');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Pretendard';
+    src: local('Pretendard ExtraBold'),
+         url('/fonts/Pretendard-ExtraBold.woff2') format('woff2'),
+         url('/fonts/Pretendard-ExtraBold.woff') format('woff');
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Pretendard';
+    src: local('Pretendard Black'),
+         url('/fonts/Pretendard-Black.woff2') format('woff2'),
+         url('/fonts/Pretendard-Black.woff') format('woff');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* 코드 곳곳에서 "Pretendard Variable"을 1순위로 참조하지만 가변 폰트 파일은
+   번들에 없다. 같은 static 파일로 별칭을 등록해 두어야 해당 선언들도
+   시스템 폰트로 흘러가지 않고 Pretendard로 렌더링된다. */
+@font-face {
+    font-family: 'Pretendard Variable';
+    src: local('Pretendard Variable'),
+         url('/fonts/Pretendard-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Pretendard Variable';
+    src: local('Pretendard Variable'),
+         url('/fonts/Pretendard-Medium.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Pretendard Variable';
+    src: local('Pretendard Variable'),
+         url('/fonts/Pretendard-SemiBold.woff2') format('woff2');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Pretendard Variable';
+    src: local('Pretendard Variable'),
+         url('/fonts/Pretendard-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Pretendard Variable';
+    src: local('Pretendard Variable'),
+         url('/fonts/Pretendard-ExtraBold.woff2') format('woff2');
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Pretendard Variable';
+    src: local('Pretendard Variable'),
+         url('/fonts/Pretendard-Black.woff2') format('woff2');
+    font-weight: 900;
+    font-style: normal;
     font-display: swap;
 }
 
@@ -236,8 +378,12 @@ h6 {
   --color-sidebar-text: #dddddd;
 
   /* Typography */
-  --font-family-primary: 'Pretendard', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-family-primary: 'Pretendard', 'Pretendard Variable', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-family: var(--font-family-primary);
+  /* 별칭: 컴포넌트 곳곳에서 참조하는 이름들. 정의되지 않으면 해당 선언 전체가
+     무효화(invalid at computed-value time)되어 브라우저 기본 폰트로 떨어진다. */
+  --font-base: var(--font-family-primary);
+  --font-pretendard: var(--font-family-primary);
   --font-size-4xl: 2.5rem;    /* 40px */
   --font-size-3xl: 1.875rem;  /* 30px */
   --font-size-2xl: 1.5625rem; /* 25px */
@@ -305,8 +451,10 @@ h6 {
     --color-text-neutral-medium: #7a7e92;
     --color-text-neutral-weak: #c3c6d4;
     --color-sidebar-text: #dddddd;
-    --font-family-primary: 'Pretendard', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-family-primary: 'Pretendard', 'Pretendard Variable', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     --font-family: var(--font-family-primary);
+    --font-base: var(--font-family-primary);
+    --font-pretendard: var(--font-family-primary);
     --font-size-xs: 0.75em;
     --font-size-sm: 0.875em;
     --font-size-base: 1em;
@@ -1193,7 +1341,7 @@ h6 {
 
 html,
 body {
-  font-family: var(--font-base);
+  font-family: var(--font-family-primary);
   font-weight: 400;
   font-size: 16px;
   color: #18181A;

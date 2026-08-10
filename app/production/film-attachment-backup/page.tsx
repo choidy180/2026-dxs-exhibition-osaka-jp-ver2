@@ -105,7 +105,7 @@ const GlobalStyles = () => (
         .custom-scroll::-webkit-scrollbar-thumb { background-color: #CBD5E1; border-radius: 3px; }
         .custom-scroll::-webkit-scrollbar-thumb:hover { background-color: #94A3B8; }
         
-        body { margin: 0; padding: 0; background-color: ${theme.bg}; font-family: "Inter", -apple-system, sans-serif; overflow: hidden; }
+        body { margin: 0; padding: 0; background-color: ${theme.bg}; font-family: 'Pretendard', "Inter", -apple-system, sans-serif; overflow: hidden; }
         * { box-sizing: border-box; }
     `}</style>
 );
