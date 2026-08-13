@@ -14,9 +14,16 @@ import * as THREE from 'three';
 import { FLOOR_MODEL_PATH, JIG_MODEL_PATH, PROCESS_CONFIG } from '@/constants/smartFactoryViewer';
 import type {
   ApiDataItem,
+  EquipmentPositionItem,
   UnitData,
   ViewerLayoutType,
 } from '@/types/smartFactoryViewer';
+import {
+  findGr2EquipmentPosition,
+  formatUnitName,
+  getGr2LineOffset,
+  isDefectResult,
+} from '@/utils/smartFactoryViewer';
 import {
   BubbleAction,
   BubbleText,
@@ -33,6 +40,7 @@ import {
 interface FactorySceneProps {
   layout: ViewerLayoutType;
   apiData: ApiDataItem[];
+  equipmentPositions: EquipmentPositionItem[];
   onHoverChange: (data: UnitData | null) => void;
   onInjectUnitChange: (unit: ApiDataItem | null) => void;
 }
@@ -41,6 +49,7 @@ interface JigModelProps {
   url: string;
   highContrast: boolean;
   apiData: ApiDataItem[];
+  equipmentPositions: EquipmentPositionItem[];
   onHoverChange: (data: UnitData | null) => void;
   onInjectUnitChange: (unit: ApiDataItem | null) => void;
 }
@@ -69,6 +78,13 @@ interface ProcessLabelLocation {
 interface SceneRuntimeState {
   meshLocations: MeshLocation[];
   processLabelLocations: ProcessLabelLocation[];
+}
+
+interface LineMotionState {
+  fromOffset: number;
+  toOffset: number;
+  startedAt: number;
+  duration: number;
 }
 
 type Vector3Tuple = [number, number, number];
@@ -125,8 +141,8 @@ const CART_LABEL_OFFSET: Vector3Tuple = [0.5, 0.35, 0];
 
 const CART_LABEL_OFFSETS: Partial<Record<string, Vector3Tuple>> = {
   // 개별 조정이 필요한 라벨만 여기에 추가
-  // 'M-01': [0.1, 1.1, 0],
-  // 'M-02': [-0.1, 1.05, 0],
+  // 'OP1': [0.1, 1.1, 0],
+  // 'OP2': [-0.1, 1.05, 0],
 };
 
 const JIG_FACING_OFFSETS: Readonly<Record<string, number>> = {
@@ -139,17 +155,14 @@ const JIG_FACING_OFFSETS: Readonly<Record<string, number>> = {
 };
 
 const PROCESS_COLORS = PROCESS_CONFIG.map((process) => new THREE.Color(process.color));
+const INSERTION_STATION_INDEX = PROCESS_CONFIG.findIndex((process) => process.name === '삽입');
+const LINE_MOVE_DURATION_MS = 1200;
 
-const isAiLabelError = (aiLabel?: string | null) => {
-  const normalizedAiLabel = aiLabel?.trim();
+const getMotionProgress = (motion: LineMotionState) => {
+  if (motion.duration <= 0) return 1;
 
-  if (!normalizedAiLabel) return false;
-
-  // ===== [임시 수정] AI_LABEL '불량'은 에러 상태에서 제외 =====
-  // 기존 코드:
-  // return normalizedAiLabel !== '정상';
-  return normalizedAiLabel !== '정상' && normalizedAiLabel !== '불량';
-  // ===== [임시 수정 끝] =====
+  const progress = Math.min(Math.max((performance.now() - motion.startedAt) / motion.duration, 0), 1);
+  return progress * progress * (3 - 2 * progress);
 };
 
 function SceneCameraController({ config }: { config: SceneViewConfig }) {
@@ -357,25 +370,22 @@ function FloorModel({ highContrast }: { highContrast: boolean }) {
 const MovingLabel = React.memo(({
   labelIndex,
   locations,
+  lineMotionRef,
   errorIndices,
   apiData,
 }: {
   labelIndex: number;
   locations: MeshLocation[];
+  lineMotionRef: React.RefObject<LineMotionState>;
   errorIndices: number[];
   apiData: ApiDataItem[];
 }) => {
   const groupRef = useRef<THREE.Group>(null);
   const currentLabelPositionRef = useRef(new THREE.Vector3());
   const nextLabelPositionRef = useRef(new THREE.Vector3());
-  const lastCycleIndexRef = useRef(-1);
-  const lastLocationsRef = useRef<MeshLocation[] | null>(null);
-  const cycleDuration = 15;
-  const waitDuration = 10;
-  const moveDuration = 5;
 
   const labelText = useMemo(() => {
-    return `M-${String(labelIndex + 1).padStart(2, '0')}`;
+    return formatUnitName(labelIndex + 1);
   }, [labelIndex]);
 
   const labelOffset = useMemo(() => {
@@ -384,36 +394,18 @@ const MovingLabel = React.memo(({
     return new THREE.Vector3(offset[0], offset[1], offset[2]);
   }, [labelText]);
 
-  useFrame((state) => {
+  useFrame(() => {
     if (!groupRef.current || locations.length === 0) return;
 
-    const time = state.clock.getElapsedTime();
-    const cycleIndex = Math.floor(time / cycleDuration);
-    const timeInCycle = time % cycleDuration;
-    const isMoving = timeInCycle >= waitDuration;
-
-    if (lastLocationsRef.current !== locations) {
-      lastLocationsRef.current = locations;
-      lastCycleIndexRef.current = -1;
-    }
-
-    if (!isMoving && lastCycleIndexRef.current === cycleIndex) return;
-
-    lastCycleIndexRef.current = cycleIndex;
-    const currentIndex = (labelIndex + cycleIndex) % locations.length;
-    const nextIndex = (currentIndex + 1) % locations.length;
+    const motion = lineMotionRef.current;
+    if (!motion) return;
+    const currentIndex = (labelIndex + motion.fromOffset) % locations.length;
+    const nextIndex = (labelIndex + motion.toOffset) % locations.length;
     const currentPos = locations[currentIndex].position;
     const nextPos = locations[nextIndex].position;
     const currentLabelPosition = currentLabelPositionRef.current.copy(currentPos).add(labelOffset);
-
-    if (!isMoving) {
-      groupRef.current.position.copy(currentLabelPosition);
-      return;
-    }
-
     const nextLabelPosition = nextLabelPositionRef.current.copy(nextPos).add(labelOffset);
-    const moveTime = timeInCycle - waitDuration;
-    const progress = Math.min(moveTime / moveDuration, 1);
+    const progress = getMotionProgress(motion);
 
     groupRef.current.position.lerpVectors(currentLabelPosition, nextLabelPosition, progress);
   });
@@ -429,18 +421,12 @@ const MovingLabel = React.memo(({
 
     const matched = apiData.find((item) => Number.parseInt(item.대차번호, 10) === labelIndex + 1);
 
-    // ===== [임시 수정] AI_LABEL '불량'은 에러 메시지 표시 대상에서 제외 =====
-    // 기존 코드:
-    // if (matched && matched.AI_LABEL === '정상') {
-    // 기존 에러 표시 코드:
-    // if (matched && matched.AI_LABEL !== '정상') {
-    if (matched && isAiLabelError(matched.AI_LABEL)) {
+    if (matched && isDefectResult(matched.RESULT002)) {
       return {
-        problem: matched.AI_LABEL,
+        problem: matched.RESULT002,
         solution: '관리자 점검 요망',
       };
     }
-    // ===== [임시 수정 끝] =====
 
     return {
       problem: '시스템 오류 감지',
@@ -508,6 +494,7 @@ function InteractiveJigModel({
   url,
   highContrast,
   apiData,
+  equipmentPositions,
   onHoverChange,
   onInjectUnitChange,
 }: JigModelProps) {
@@ -515,11 +502,17 @@ function InteractiveJigModel({
   const modelScene = useMemo(() => scene.clone(true), [scene]);
   const activeIdRef = useRef<string | null>(null);
   const lastInjectKeyRef = useRef<string | null>(null);
-  const lastMotionCycleRef = useRef(-1);
+  const hasAppliedEquipmentPositionRef = useRef(false);
+  const lineMotionRef = useRef<LineMotionState>({
+    fromOffset: 0,
+    toOffset: 0,
+    startedAt: 0,
+    duration: 0,
+  });
   const lineCenterRef = useRef(new THREE.Vector3());
   const facingStartRef = useRef(new THREE.Quaternion());
   const facingEndRef = useRef(new THREE.Quaternion());
-  const highlightColor = useMemo(() => new THREE.Color('#ef4444'), []);
+  const normalHighlightColor = useMemo(() => new THREE.Color('#10b981'), []);
   const errorColor = useMemo(() => new THREE.Color('#ff0000'), []);
   const contrastColor = useMemo(() => new THREE.Color('#70827e'), []);
   const [{ meshLocations, processLabelLocations }, setSceneRuntime] = useState<SceneRuntimeState>({
@@ -527,17 +520,10 @@ function InteractiveJigModel({
     processLabelLocations: [],
   });
   const offsetStartIndex = 6;
-  const cycleDuration = 15;
-  const waitDuration = 10;
-  const moveDuration = 5;
 
   const activeErrorIndices = useMemo(() => {
     return apiData
-      // ===== [임시 수정] AI_LABEL '불량'은 에러 라벨/깜빡임 대상에서 제외 =====
-      // 기존 코드:
-      // .filter((item) => item.AI_LABEL !== '정상')
-      .filter((item) => isAiLabelError(item.AI_LABEL))
-      // ===== [임시 수정 끝] =====
+      .filter((item) => isDefectResult(item.RESULT002))
       .map((item) => Number.parseInt(item.대차번호, 10) - 1);
   }, [apiData]);
   const activeErrorIndexSet = useMemo(() => new Set(activeErrorIndices), [activeErrorIndices]);
@@ -549,14 +535,61 @@ function InteractiveJigModel({
   }, [meshLocations]);
 
   useEffect(() => {
-    if (activeErrorIndices.length > 0) return;
+    const stationCount = meshLocations.length;
+    const targetOffset = getGr2LineOffset(
+      equipmentPositions,
+      stationCount,
+      INSERTION_STATION_INDEX,
+    );
 
-    meshLocations.forEach((location) => {
-      if (location.mesh.uuid !== activeIdRef.current) {
+    if (targetOffset === null) return;
+
+    const currentMotion = lineMotionRef.current;
+    if (hasAppliedEquipmentPositionRef.current && currentMotion.toOffset === targetOffset) return;
+
+    const isFirstEquipmentPosition = !hasAppliedEquipmentPositionRef.current;
+    const forwardDistance = (targetOffset - currentMotion.toOffset + stationCount) % stationCount;
+    const backwardDistance = (currentMotion.toOffset - targetOffset + stationCount) % stationCount;
+    const isSingleStep = forwardDistance === 1 || backwardDistance === 1;
+    const shouldAnimate = !isFirstEquipmentPosition && isSingleStep;
+
+    lineMotionRef.current = {
+      fromOffset: shouldAnimate ? currentMotion.toOffset : targetOffset,
+      toOffset: targetOffset,
+      startedAt: performance.now(),
+      duration: shouldAnimate ? LINE_MOVE_DURATION_MS : 0,
+    };
+    hasAppliedEquipmentPositionRef.current = true;
+  }, [equipmentPositions, meshLocations.length]);
+
+  useEffect(() => {
+    const injectionPosition = findGr2EquipmentPosition(equipmentPositions, 'OP3')
+      ?? findGr2EquipmentPosition(equipmentPositions, '주입');
+    const injectionCartNumber = Number.parseInt(injectionPosition?.CartNo ?? '', 10);
+
+    if (!Number.isInteger(injectionCartNumber) || injectionCartNumber < 1) return;
+
+    const matchedUnit = apiDataByCartNumber.get(injectionCartNumber) ?? null;
+    const nextKey = matchedUnit?.대차번호 ?? null;
+
+    if (nextKey !== lastInjectKeyRef.current) {
+      lastInjectKeyRef.current = nextKey;
+      onInjectUnitChange(matchedUnit);
+    }
+  }, [apiDataByCartNumber, equipmentPositions, onInjectUnitChange]);
+
+  useEffect(() => {
+    meshLocations.forEach((location, labelIndex) => {
+      if (location.mesh.uuid === activeIdRef.current) {
+        location.material.emissive.copy(
+          activeErrorIndexSet.has(labelIndex) ? errorColor : normalHighlightColor,
+        );
+        location.material.emissiveIntensity = 2;
+      } else if (!activeErrorIndexSet.has(labelIndex)) {
         location.material.emissiveIntensity = 0;
       }
     });
-  }, [activeErrorIndices.length, meshLocations]);
+  }, [activeErrorIndexSet, errorColor, meshLocations, normalHighlightColor]);
 
   useEffect(() => {
     let cancelled = false;
@@ -726,76 +759,71 @@ function InteractiveJigModel({
 
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
-    const cycleIndex = Math.floor(time / cycleDuration);
 
     if (meshLocations.length === 0) return;
 
     const total = meshLocations.length;
-    const timeInCycle = time % cycleDuration;
-    const isMoving = timeInCycle >= waitDuration;
-    const shouldUpdateMotion = isMoving || lastMotionCycleRef.current !== cycleIndex;
-    const moveProgress = timeInCycle < waitDuration
-      ? 0
-      : Math.min((timeInCycle - waitDuration) / moveDuration, 1);
-    const rotationProgress = moveProgress * moveProgress * (3 - 2 * moveProgress);
+    const motion = lineMotionRef.current;
+    const moveProgress = getMotionProgress(motion);
 
-    if (shouldUpdateMotion) {
-      lastMotionCycleRef.current = cycleIndex;
+    meshLocations.forEach((movingLocation, labelIndex) => {
+      const currentStationIndex = (labelIndex + motion.fromOffset) % total;
+      const nextStationIndex = (labelIndex + motion.toOffset) % total;
+      const currentLocation = meshLocations[currentStationIndex];
+      const nextLocation = meshLocations[nextStationIndex];
+      const movingMesh = movingLocation.mesh;
 
-      meshLocations.forEach((movingLocation, labelIndex) => {
-        const currentStationIndex = (labelIndex + cycleIndex) % total;
-        const nextStationIndex = (currentStationIndex + 1) % total;
-        const currentLocation = meshLocations[currentStationIndex];
-        const nextLocation = meshLocations[nextStationIndex];
-        const movingMesh = movingLocation.mesh;
+      movingMesh.position.lerpVectors(
+        currentLocation.localPosition,
+        nextLocation.localPosition,
+        moveProgress,
+      );
 
-        movingMesh.position.lerpVectors(
-          currentLocation.localPosition,
-          nextLocation.localPosition,
-          moveProgress,
-        );
+      facingStartRef.current.setFromAxisAngle(
+        THREE.Object3D.DEFAULT_UP,
+        currentLocation.inwardFacingYaw,
+      );
+      facingEndRef.current.setFromAxisAngle(
+        THREE.Object3D.DEFAULT_UP,
+        nextLocation.inwardFacingYaw,
+      );
+      movingMesh.quaternion.slerpQuaternions(
+        facingStartRef.current,
+        facingEndRef.current,
+        moveProgress,
+      );
+      movingMesh.rotateY(THREE.MathUtils.lerp(
+        currentLocation.facingOffset,
+        nextLocation.facingOffset,
+        moveProgress,
+      ));
 
-        facingStartRef.current.setFromAxisAngle(
-          THREE.Object3D.DEFAULT_UP,
-          currentLocation.inwardFacingYaw,
-        );
-        facingEndRef.current.setFromAxisAngle(
-          THREE.Object3D.DEFAULT_UP,
-          nextLocation.inwardFacingYaw,
-        );
-        movingMesh.quaternion.slerpQuaternions(
-          facingStartRef.current,
-          facingEndRef.current,
-          rotationProgress,
-        );
-        movingMesh.rotateY(currentLocation.facingOffset);
+      const appliedLocation = moveProgress < 1 ? currentLocation : nextLocation;
+      if (movingMesh.geometry !== appliedLocation.stationGeometry) {
+        movingMesh.geometry = appliedLocation.stationGeometry;
+      }
 
-        if (movingMesh.geometry !== currentLocation.stationGeometry) {
-          movingMesh.geometry = currentLocation.stationGeometry;
-        }
+      const edge = movingLocation.edge;
 
-        const edge = movingLocation.edge;
+      if (
+        edge &&
+        appliedLocation.stationEdgeGeometry &&
+        edge.geometry !== appliedLocation.stationEdgeGeometry
+      ) {
+        edge.geometry = appliedLocation.stationEdgeGeometry;
+      }
 
-        if (
-          edge &&
-          currentLocation.stationEdgeGeometry &&
-          edge.geometry !== currentLocation.stationEdgeGeometry
-        ) {
-          edge.geometry = currentLocation.stationEdgeGeometry;
-        }
+      const material = movingLocation.material;
+      const currentColor = PROCESS_COLORS[currentStationIndex] ?? movingLocation.neutralColor;
+      const nextColor = PROCESS_COLORS[nextStationIndex] ?? movingLocation.neutralColor;
 
-        const material = movingLocation.material;
-        const currentColor = PROCESS_COLORS[currentStationIndex] ?? movingLocation.neutralColor;
-        const nextColor = PROCESS_COLORS[nextStationIndex] ?? movingLocation.neutralColor;
-
-        material.color.lerpColors(currentColor, nextColor, rotationProgress);
-        material.opacity = 1;
-        material.depthWrite = true;
-        if (movingLocation.edgeMaterial) {
-          movingLocation.edgeMaterial.opacity = movingLocation.edgeOpacity;
-        }
-      });
-    }
+      material.color.lerpColors(currentColor, nextColor, moveProgress);
+      material.opacity = 1;
+      material.depthWrite = true;
+      if (movingLocation.edgeMaterial) {
+        movingLocation.edgeMaterial.opacity = movingLocation.edgeOpacity;
+      }
+    });
 
     const flashIntensity = 1.5 + Math.sin(time * 12) * 1.0;
 
@@ -812,17 +840,6 @@ function InteractiveJigModel({
       });
     }
 
-    const injectStationIndex = 4;
-    let targetCartIndex = (injectStationIndex - cycleIndex) % total;
-    if (targetCartIndex < 0) targetCartIndex += total;
-
-    const matchedUnit = apiDataByCartNumber.get(targetCartIndex + 1) ?? null;
-    const nextKey = matchedUnit?.대차번호 ?? null;
-
-    if (nextKey !== lastInjectKeyRef.current) {
-      lastInjectKeyRef.current = nextKey;
-      onInjectUnitChange(matchedUnit);
-    }
   });
 
   const handlePointerOver = useCallback((event: ThreeEvent<PointerEvent>) => {
@@ -836,32 +853,27 @@ function InteractiveJigModel({
     const meshIndex = meshIndexByUuid.get(mesh.uuid);
     if (meshIndex === undefined) return;
 
+    const foundLabelIndex = meshIndex;
+    const name = formatUnitName(foundLabelIndex + 1);
+    const matchedData = apiDataByCartNumber.get(foundLabelIndex + 1);
+
+    const isError = matchedData ? isDefectResult(matchedData.RESULT002) : false;
     const material = mesh.material as THREE.MeshPhysicalMaterial;
 
     if (material.emissive) {
-      material.emissive.copy(highlightColor);
+      material.emissive.copy(isError ? errorColor : normalHighlightColor);
       material.emissiveIntensity = 2;
     }
-
-    const foundLabelIndex = meshIndex;
-    const name = `M-${String(foundLabelIndex + 1).padStart(2, '0')}`;
-    const matchedData = apiDataByCartNumber.get(foundLabelIndex + 1);
-
-    // ===== [임시 수정] AI_LABEL '불량'은 hover 상태에서도 error로 처리하지 않음 =====
-    // 기존 코드:
-    // const isError = matchedData ? matchedData.AI_LABEL !== '정상' : false;
-    const isError = matchedData ? isAiLabelError(matchedData.AI_LABEL) : false;
-    // ===== [임시 수정 끝] =====
 
     onHoverChange({
       name,
       status: isError ? 'error' : 'normal',
       temp: matchedData ? Number.parseFloat(matchedData['가조립온도(℃)']) : 0,
       load: matchedData ? Number.parseFloat(matchedData['R액 압력(kg/㎥)']) : 0,
-      problem: matchedData?.AI_LABEL,
+      problem: matchedData?.RESULT002,
       uuid: mesh.uuid,
     });
-  }, [apiDataByCartNumber, highlightColor, meshIndexByUuid, onHoverChange]);
+  }, [apiDataByCartNumber, errorColor, meshIndexByUuid, normalHighlightColor, onHoverChange]);
 
   const handlePointerOut = useCallback((event: ThreeEvent<PointerEvent>) => {
     const mesh = event.object as THREE.Mesh;
@@ -885,6 +897,7 @@ function InteractiveJigModel({
           key={`cart-label-${index}`}
           labelIndex={index}
           locations={meshLocations}
+          lineMotionRef={lineMotionRef}
           errorIndices={activeErrorIndices}
           apiData={apiData}
         />
@@ -904,11 +917,13 @@ function InteractiveJigModel({
 function FactoryModelLayer({
   config,
   apiData,
+  equipmentPositions,
   onHoverChange,
   onInjectUnitChange,
 }: {
   config: SceneViewConfig;
   apiData: ApiDataItem[];
+  equipmentPositions: EquipmentPositionItem[];
   onHoverChange: (data: UnitData | null) => void;
   onInjectUnitChange: (unit: ApiDataItem | null) => void;
 }) {
@@ -922,6 +937,7 @@ function FactoryModelLayer({
           url={JIG_MODEL_PATH}
           highContrast={false}
           apiData={apiData}
+          equipmentPositions={equipmentPositions}
           onHoverChange={onHoverChange}
           onInjectUnitChange={onInjectUnitChange}
         />
@@ -935,6 +951,7 @@ function FactoryModelLayer({
 export function FactoryScene({
   layout,
   apiData,
+  equipmentPositions,
   onHoverChange,
   onInjectUnitChange,
 }: FactorySceneProps) {
@@ -972,6 +989,7 @@ export function FactoryScene({
           <FactoryModelLayer
             config={sceneConfig}
             apiData={apiData}
+            equipmentPositions={equipmentPositions}
             onHoverChange={onHoverChange}
             onInjectUnitChange={onInjectUnitChange}
           />

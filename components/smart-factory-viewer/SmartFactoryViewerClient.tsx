@@ -10,10 +10,15 @@ import { useSmartFactoryData } from '@/hooks/useSmartFactoryData';
 import type {
   ApiDataItem,
   UnitData,
+  ViewerLineTone,
   ViewerLayoutType,
   ViewerUiMode,
 } from '@/types/smartFactoryViewer';
-import { createErrorUnits } from '@/utils/smartFactoryViewer';
+import {
+  createErrorUnits,
+  findApiItemByUnitName,
+  isDefectResult,
+} from '@/utils/smartFactoryViewer';
 import {
   HighlightText,
   InstructionBadge,
@@ -54,12 +59,31 @@ export default function SmartFactoryViewerClient() {
   const [dismissedAlertUnit, setDismissedAlertUnit] = useState<string | null>(null);
   const [layout, setLayout] = useState<ViewerLayoutType>(getInitialLayout);
   const [mode, setMode] = useState<ViewerUiMode>(getInitialMode);
-  const { apiData, isFallback } = useSmartFactoryData();
+  const { apiData, equipmentPositions, isFallback } = useSmartFactoryData();
 
   const errorUnits = useMemo(() => createErrorUnits(apiData), [apiData]);
+  const lineTone: ViewerLineTone = errorUnits.length > 0
+    ? 'error'
+    : isFallback
+      ? 'offline'
+      : 'normal';
+  const currentHoveredInfo = useMemo(() => {
+    if (!hoveredInfo) return null;
+
+    const matchedData = findApiItemByUnitName(apiData, hoveredInfo.name);
+    if (!matchedData) return hoveredInfo;
+
+    return {
+      ...hoveredInfo,
+      status: isDefectResult(matchedData.RESULT002) ? 'error' as const : 'normal' as const,
+      temp: Number.parseFloat(matchedData['가조립온도(℃)']) || 0,
+      load: Number.parseFloat(matchedData['R액 압력(kg/㎥)']) || 0,
+      problem: matchedData.RESULT002,
+    };
+  }, [apiData, hoveredInfo]);
 
   const criticalUnit = useMemo(() => {
-    const criticalTargets = ['M-01', 'M-02', 'M-03', 'M-04'];
+    const criticalTargets = ['OP1', 'OP2', 'OP3', 'OP4'];
     return errorUnits.find((unit) => criticalTargets.includes(unit.name)) ?? null;
   }, [errorUnits]);
 
@@ -106,6 +130,7 @@ export default function SmartFactoryViewerClient() {
           activeTab={activeTab}
           layout={layout}
           mode={mode}
+          lineTone={lineTone}
           isNavigating={isNavigating}
           onTabClick={handleTabClick}
           onLayoutChange={setLayout}
@@ -117,6 +142,7 @@ export default function SmartFactoryViewerClient() {
             <FactoryScene
               layout={layout}
               apiData={apiData}
+              equipmentPositions={equipmentPositions}
               onHoverChange={setHoveredInfo}
               onInjectUnitChange={setInjectUnit}
             />
@@ -126,7 +152,7 @@ export default function SmartFactoryViewerClient() {
             activeTab={activeTab}
             layout={layout}
             mode={mode}
-            hoveredInfo={hoveredInfo}
+            hoveredInfo={currentHoveredInfo}
             errorUnits={errorUnits}
             apiData={apiData}
             injectUnit={injectUnit}

@@ -9,6 +9,7 @@ import {
   VIEW_LAYOUT_OPTIONS,
 } from '@/constants/smartFactoryViewer';
 import type {
+  ViewerLineTone,
   ViewerLayoutType,
   ViewerUiMode,
 } from '@/types/smartFactoryViewer';
@@ -23,6 +24,7 @@ interface ViewerToolbarProps {
   activeTab: string;
   layout: ViewerLayoutType;
   mode: ViewerUiMode;
+  lineTone: ViewerLineTone;
   isNavigating: boolean;
   onTabClick: (tab: string) => void;
   onLayoutChange: (layout: ViewerLayoutType) => void;
@@ -33,6 +35,7 @@ export function ViewerToolbar({
   activeTab,
   layout,
   mode,
+  lineTone,
   isNavigating,
   onTabClick,
   onLayoutChange,
@@ -69,7 +72,7 @@ export function ViewerToolbar({
 
   return (
     <Toolbar $mode={mode}>
-      <ToolbarSelect ref={lineSelectRef} $mode={mode} $open={isLineMenuOpen}>
+      <ToolbarSelect ref={lineSelectRef} $mode={mode} $tone={lineTone} $open={isLineMenuOpen}>
         <button
           type="button"
           className="line-select-trigger"

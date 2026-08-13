@@ -2,6 +2,8 @@ export type ViewerLayoutType = 'modelOnly' | 'balanced' | 'detailRight';
 
 export type ViewerUiMode = 'operator' | 'command';
 
+export type ViewerLineTone = 'normal' | 'error' | 'offline';
+
 export interface ApiDataItem {
   대차번호: string;
   INTCART: number;
@@ -33,8 +35,17 @@ export interface ApiDataItem {
   FILENAME1: string;
   AI_TIME_STR: string;
   AI_LABEL: string;
+  RESULT002: string;
   FILEPATH1: string;
   [key: string]: unknown;
+}
+
+export interface EquipmentPositionItem {
+  CdEquip: string;
+  NmEquip: string;
+  CartNo: string;
+  OP: string;
+  OPName: string;
 }
 
 export interface UnitData {

@@ -4,7 +4,11 @@ import React, { useMemo } from 'react';
 import { Activity, Bot, ChevronRight, Cpu, Droplets, Gauge, Thermometer } from 'lucide-react';
 import { AIAdvisor } from '@/components/smart-factory-viewer/AIAdvisor';
 import type { ApiDataItem, UnitData, ViewerLayoutType, ViewerUiMode } from '@/types/smartFactoryViewer';
-import { findApiItemByUnitName, formatUnitName } from '@/utils/smartFactoryViewer';
+import {
+  findApiItemByUnitName,
+  formatUnitName,
+  isDefectResult,
+} from '@/utils/smartFactoryViewer';
 import {
   AccentLine,
   ActionButton,
@@ -63,27 +67,39 @@ function BalancedOverview({
   mode,
   apiData,
   errorUnits,
-}: Pick<InfoPanelsProps, 'activeTab' | 'mode' | 'apiData' | 'errorUnits'>) {
-  const warningCount = apiData.filter((item) => item.AI_LABEL?.trim() === '불량').length;
-  const criticalErrors = errorUnits.filter((unit) => unit.problem?.trim() !== '불량');
-  const errorCount = criticalErrors.length;
-  const normalCount = Math.max(apiData.length - warningCount - errorCount, 0);
-  const focusUnit = criticalErrors[0] ?? errorUnits[0] ?? null;
-  const tone = errorCount > 0 ? 'error' : warningCount > 0 ? 'warning' : 'normal';
-  const statusTitle = tone === 'error' ? '주의 필요' : tone === 'warning' ? '확인 필요' : '정상 운전';
-  const statusDetail = focusUnit
-    ? `${focusUnit.name} ${focusUnit.problem ?? '이상 상태'} 감지`
-    : '현재 감지된 특이사항 없음';
-  const advisorTitle = focusUnit ? `${focusUnit.name} 우선 확인` : '라인 상태 정상';
-  const advisorMessage = focusUnit
-    ? `${focusUnit.problem ?? '설비 상태'} · ${focusUnit.solution ?? '현장 점검 권장'}`
-    : '모든 공정이 정상 범위에서 가동 중입니다.';
+  isFallback,
+}: Pick<InfoPanelsProps, 'activeTab' | 'mode' | 'apiData' | 'errorUnits' | 'isFallback'>) {
+  const warningCount = 0;
+  const errorCount = errorUnits.length;
+  const normalCount = Math.max(apiData.length - errorCount, 0);
+  const focusUnit = errorUnits[0] ?? null;
+  const tone = errorCount > 0 ? 'error' : isFallback ? 'offline' : 'normal';
+  const statusTitle = tone === 'error'
+    ? '주의 필요'
+    : tone === 'offline'
+      ? '데이터 연결 확인'
+      : '정상 운전';
+  const statusDetail = tone === 'offline'
+    ? apiData.length > 0 ? '최근 수신 데이터 표시 중' : '데이터 수신 대기 중'
+    : focusUnit
+      ? `${focusUnit.name} ${focusUnit.problem ?? '이상 상태'} 감지`
+      : '현재 감지된 특이사항 없음';
+  const advisorTitle = tone === 'offline'
+    ? '데이터 연결 대기'
+    : focusUnit
+      ? `${focusUnit.name} 우선 확인`
+      : '라인 상태 정상';
+  const advisorMessage = tone === 'offline'
+    ? '통신이 복구되면 최신 상태를 자동으로 반영합니다.'
+    : focusUnit
+      ? `${focusUnit.problem ?? '설비 상태'} · ${focusUnit.solution ?? '현장 점검 권장'}`
+      : '모든 공정이 정상 범위에서 가동 중입니다.';
 
   const stats = [
     { label: '전체 설비', value: apiData.length, tone: '' },
     { label: '정상', value: normalCount, tone: 'normal' },
-    { label: '주의', value: warningCount, tone: 'warning' },
-    { label: '오류', value: errorCount, tone: 'error' },
+    { label: '주의', value: warningCount, tone: warningCount > 0 ? 'warning' : '' },
+    { label: '오류', value: errorCount, tone: errorCount > 0 ? 'error' : '' },
   ];
 
   return (
@@ -107,12 +123,12 @@ function BalancedOverview({
         </div>
       </OverviewStatusCard>
 
-      <OverviewAdvisorCard $mode={mode}>
+      <OverviewAdvisorCard $mode={mode} $tone={tone}>
         <div className="advisor-icon"><Bot size={21} /></div>
         <div className="advisor-copy">
           <div className="advisor-header">
             <span>Factory AI</span>
-            <span className="live-badge">● LIVE</span>
+            <span className="live-badge">● {tone === 'offline' ? 'OFFLINE' : 'LIVE'}</span>
           </div>
           <div className="advisor-title">{advisorTitle}</div>
           <div className="advisor-message">{advisorMessage}</div>
@@ -125,7 +141,7 @@ function BalancedOverview({
 
 const getActiveUnit = (hoveredInfo: UnitData | null, errorUnits: UnitData[]): UnitData => {
   return hoveredInfo ?? errorUnits[0] ?? {
-    name: 'M-01',
+    name: 'OP1',
     status: 'normal',
     temp: 0,
     load: 0,
@@ -172,7 +188,7 @@ function OperatorStatusPanel({
           {hasError ? '확인 필요' : '정상 운전'}
         </CountBadge>
       </SectionHeader>
-      <OperatorHeroBody>
+      <OperatorHeroBody $mode={mode} $tone={hasError ? 'error' : 'normal'}>
         <OperatorHeroStatus $mode={mode} $tone={hasError ? 'error' : 'normal'}>
           {hasError ? `${errorUnits.length}건 이상 감지` : '라인 안정'}
         </OperatorHeroStatus>
@@ -195,7 +211,7 @@ function OperatorStatusPanel({
         </MetricCard>
         <MetricCard $mode={mode}>
           <MetricLabel $mode={mode}>데이터</MetricLabel>
-          <MetricValue $mode={mode}>{isFallback ? 'MOCK' : 'LIVE'}</MetricValue>
+          <MetricValue $mode={mode}>{isFallback ? 'OFFLINE' : 'LIVE'}</MetricValue>
         </MetricCard>
       </MetricGrid>
     </Panel>
@@ -283,7 +299,11 @@ function DefectPanel({ mode, errorUnits }: Pick<InfoPanelsProps, 'mode' | 'error
         </CountBadge>
       </SectionHeader>
       <AccentLine $mode={mode} $tone={errorUnits.length > 0 ? 'error' : 'normal'} />
-      <ListContainer $mode={mode} $uiMode={mode}>
+      <ListContainer
+        $mode={mode}
+        $uiMode={mode}
+        $tone={errorUnits.length > 0 ? 'error' : 'normal'}
+      >
         {errorUnits.length > 0 ? (
           errorUnits.map((unit) => (
             <ListItem key={unit.name} $mode={mode} $uiMode={mode}>
@@ -316,7 +336,7 @@ function InjectionPanel({ mode, injectUnit }: Pick<InfoPanelsProps, 'mode' | 'in
           전체보기 <ChevronRight size={13} />
         </ActionButton>
       </SectionHeader>
-      <AccentLine $mode={mode} />
+      <AccentLine $mode={mode} $tone="normal" />
       {injectUnit ? (
         <>
           <InfoRow $mode={mode} $uiMode={mode}>
@@ -360,7 +380,7 @@ function CommandKpiPanel({
     <Panel $mode={mode} $uiMode={mode}>
       <CommandHeader $mode={mode}>
         <span>LINE TELEMETRY</span>
-        <strong>{isFallback ? 'MOCK STREAM' : 'LIVE STREAM'}</strong>
+        <strong>{isFallback ? 'OFFLINE' : 'LIVE STREAM'}</strong>
       </CommandHeader>
       <CommandKpiGrid>
         <CommandKpiCard $mode={mode}>
@@ -396,19 +416,19 @@ function CommandTelemetryPanel({ mode, apiData }: Pick<InfoPanelsProps, 'mode' |
       <CommandTable $mode={mode}>
         <CommandTableHead $mode={mode}>
           <CommandCell>UNIT</CommandCell>
-          <CommandCell>AI</CommandCell>
+          <CommandCell>RESULT</CommandCell>
           <CommandCell>R-PRESS</CommandCell>
           <CommandCell>P-PRESS</CommandCell>
           <CommandCell>TEMP</CommandCell>
         </CommandTableHead>
         <CommandTableBody>
           {rows.map((item) => {
-            const isError = item.AI_LABEL !== '정상';
+            const isError = isDefectResult(item.RESULT002);
 
             return (
               <CommandRow key={`${item.대차번호}-${item.TIMEVALUE}`} $mode={mode} $tone={isError ? 'error' : 'normal'}>
                 <CommandCell>{formatUnitName(item.대차번호)}</CommandCell>
-                <CommandCell>{item.AI_LABEL}</CommandCell>
+                <CommandCell>{item.RESULT002}</CommandCell>
                 <CommandCell>{item['R액 압력(kg/㎥)']}</CommandCell>
                 <CommandCell>{item['P액 압력(kg/㎥)']}</CommandCell>
                 <CommandCell>{item['가조립온도(℃)']}</CommandCell>
@@ -422,7 +442,7 @@ function CommandTelemetryPanel({ mode, apiData }: Pick<InfoPanelsProps, 'mode' |
 }
 
 function CommandDefectPanel({ mode, apiData }: Pick<InfoPanelsProps, 'mode' | 'apiData'>) {
-  const rows = apiData.filter((item) => item.AI_LABEL !== '정상').slice(0, 7);
+  const rows = apiData.filter((item) => isDefectResult(item.RESULT002)).slice(0, 7);
 
   return (
     <Panel $mode={mode} $uiMode={mode}>
@@ -435,7 +455,7 @@ function CommandDefectPanel({ mode, apiData }: Pick<InfoPanelsProps, 'mode' | 'a
           {rows.map((item) => (
             <CommandRow key={`defect-${item.대차번호}-${item.TIMEVALUE}`} $mode={mode} $tone="error">
               <CommandCell>{formatUnitName(item.대차번호)}</CommandCell>
-              <CommandCell>{item.AI_LABEL}</CommandCell>
+              <CommandCell>{item.RESULT002}</CommandCell>
               <CommandCell>{getTimeLabel(item.AI_TIME_STR || item.TIMEVALUE)}</CommandCell>
             </CommandRow>
           ))}
@@ -511,7 +531,15 @@ export const InfoPanels = React.memo((props: InfoPanelsProps) => {
     );
   }
 
-  return <BalancedOverview activeTab={activeTab} mode={mode} apiData={apiData} errorUnits={errorUnits} />;
+  return (
+    <BalancedOverview
+      activeTab={activeTab}
+      mode={mode}
+      apiData={apiData}
+      errorUnits={errorUnits}
+      isFallback={isFallback}
+    />
+  );
 });
 
 InfoPanels.displayName = 'InfoPanels';

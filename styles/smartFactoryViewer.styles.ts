@@ -1,5 +1,9 @@
 import styled, { css, keyframes } from 'styled-components';
-import type { ViewerLayoutType, ViewerUiMode } from '@/types/smartFactoryViewer';
+import type {
+  ViewerLayoutType,
+  ViewerLineTone,
+  ViewerUiMode,
+} from '@/types/smartFactoryViewer';
 import { getSmartFactoryTheme } from '@/styles/smartFactoryViewer.theme';
 
 const slideInRight = keyframes`
@@ -85,6 +89,26 @@ const modalPop = keyframes`
 `;
 
 const modeTheme = (mode: ViewerUiMode) => getSmartFactoryTheme(mode);
+
+type OverviewTone = ViewerLineTone | 'warning';
+
+const statusColor = (mode: ViewerUiMode, tone: OverviewTone) => {
+  const theme = modeTheme(mode);
+
+  if (tone === 'normal') return theme.success;
+  if (tone === 'warning') return theme.warning;
+  if (tone === 'error') return theme.danger;
+  return theme.textMuted;
+};
+
+const statusSoftColor = (mode: ViewerUiMode, tone: OverviewTone) => {
+  const theme = modeTheme(mode);
+
+  if (tone === 'normal') return theme.successSoft;
+  if (tone === 'warning') return theme.warningSoft;
+  if (tone === 'error') return theme.dangerSoft;
+  return theme.panelStrongBg;
+};
 
 const activeBorder = (mode: ViewerUiMode) => {
   return mode === 'command' ? 'rgba(220, 38, 38, 0.34)' : 'rgba(239, 68, 68, 0.32)';
@@ -301,13 +325,13 @@ export const AccentLine = styled.div<{ $mode: ViewerUiMode; $tone?: 'normal' | '
   box-shadow: 0 0 16px ${({ $mode, $tone }) => ($tone === 'normal' ? modeTheme($mode).successSoft : modeTheme($mode).dangerSoft)};
 `;
 
-export const OperatorHeroBody = styled.div`
+export const OperatorHeroBody = styled.div<{ $mode: ViewerUiMode; $tone: 'normal' | 'error' }>`
   display: grid;
   gap: 8px;
   padding: 16px;
   margin-bottom: 14px;
-  background: #fff8f8;
-  border: 1px solid rgba(239, 68, 68, 0.14);
+  background: ${({ $mode, $tone }) => statusSoftColor($mode, $tone)};
+  border: 1px solid ${({ $mode, $tone }) => statusColor($mode, $tone)}33;
   border-radius: 18px;
 `;
 
@@ -401,14 +425,20 @@ export const UnitText = styled.span<{ $mode: ViewerUiMode }>`
   font-weight: 650;
 `;
 
-export const ListContainer = styled.div<{ $mode: ViewerUiMode; $uiMode?: ViewerUiMode }>`
+export const ListContainer = styled.div<{
+  $mode: ViewerUiMode;
+  $uiMode?: ViewerUiMode;
+  $tone?: 'normal' | 'error';
+}>`
   display: flex;
   flex-direction: column;
   gap: ${({ $uiMode }) => ($uiMode === 'command' ? '6px' : '8px')};
   max-height: ${({ $uiMode }) => ($uiMode === 'command' ? '250px' : '216px')};
   padding: ${({ $uiMode }) => ($uiMode === 'command' ? '6px' : '8px')};
   overflow-y: auto;
-  background: ${({ $mode }) => modeTheme($mode).accentSoft};
+  background: ${({ $mode, $tone }) => (
+    $tone ? statusSoftColor($mode, $tone) : modeTheme($mode).accentSoft
+  )};
   border: 1px solid ${({ $mode }) => modeTheme($mode).panelBorder};
   border-radius: 16px;
 `;
@@ -637,7 +667,7 @@ export const OverviewDock = styled.div`
 
 export const OverviewStatusCard = styled.section<{
   $mode: ViewerUiMode;
-  $tone: 'normal' | 'warning' | 'error';
+  $tone: OverviewTone;
 }>`
   display: flex;
   align-items: stretch;
@@ -666,16 +696,8 @@ export const OverviewStatusCard = styled.section<{
     justify-content: center;
     width: 42px;
     height: 42px;
-    background: ${({ $mode, $tone }) => {
-      if ($tone === 'normal') return modeTheme($mode).successSoft;
-      if ($tone === 'warning') return modeTheme($mode).warningSoft;
-      return modeTheme($mode).dangerSoft;
-    }};
-    border: 1px solid ${({ $mode, $tone }) => {
-      if ($tone === 'normal') return modeTheme($mode).success;
-      if ($tone === 'warning') return modeTheme($mode).warning;
-      return modeTheme($mode).danger;
-    }}33;
+    background: ${({ $mode, $tone }) => statusSoftColor($mode, $tone)};
+    border: 1px solid ${({ $mode, $tone }) => statusColor($mode, $tone)}33;
     border-radius: 50%;
   }
 
@@ -683,13 +705,9 @@ export const OverviewStatusCard = styled.section<{
     width: 12px;
     height: 12px;
     content: '';
-    background: ${({ $mode, $tone }) => {
-      if ($tone === 'normal') return modeTheme($mode).success;
-      if ($tone === 'warning') return modeTheme($mode).warning;
-      return modeTheme($mode).danger;
-    }};
+    background: ${({ $mode, $tone }) => statusColor($mode, $tone)};
     border-radius: 50%;
-    box-shadow: 0 0 0 6px rgba(239, 51, 64, 0.08);
+    box-shadow: 0 0 0 6px ${({ $mode, $tone }) => statusSoftColor($mode, $tone)};
   }
 
   .status-copy {
@@ -698,17 +716,13 @@ export const OverviewStatusCard = styled.section<{
 
   .eyebrow {
     margin-bottom: 4px;
-    color: ${({ $mode }) => modeTheme($mode).danger};
+    color: ${({ $mode, $tone }) => statusColor($mode, $tone)};
     font-size: 11px;
     font-weight: 600;
   }
 
   .title {
-    color: ${({ $mode, $tone }) => {
-      if ($tone === 'normal') return modeTheme($mode).success;
-      if ($tone === 'warning') return modeTheme($mode).warning;
-      return modeTheme($mode).danger;
-    }};
+    color: ${({ $mode, $tone }) => statusColor($mode, $tone)};
     font-size: clamp(20px, 1.5vw, 28px);
     font-weight: 600;
     letter-spacing: -0.05em;
@@ -789,7 +803,10 @@ export const OverviewStatusCard = styled.section<{
   }
 `;
 
-export const OverviewAdvisorCard = styled.section<{ $mode: ViewerUiMode }>`
+export const OverviewAdvisorCard = styled.section<{
+  $mode: ViewerUiMode;
+  $tone: ViewerLineTone;
+}>`
   display: flex;
   gap: 14px;
   align-items: center;
@@ -808,8 +825,8 @@ export const OverviewAdvisorCard = styled.section<{ $mode: ViewerUiMode }>`
     justify-content: center;
     width: 42px;
     height: 42px;
-    color: ${({ $mode }) => modeTheme($mode).danger};
-    background: ${({ $mode }) => modeTheme($mode).dangerSoft};
+    color: ${({ $mode, $tone }) => statusColor($mode, $tone)};
+    background: ${({ $mode, $tone }) => statusSoftColor($mode, $tone)};
     border-radius: 50%;
   }
 
@@ -831,16 +848,16 @@ export const OverviewAdvisorCard = styled.section<{ $mode: ViewerUiMode }>`
 
   .live-badge {
     padding: 4px 8px;
-    color: ${({ $mode }) => modeTheme($mode).danger};
+    color: ${({ $mode, $tone }) => statusColor($mode, $tone)};
     font-size: 9px;
     font-weight: 600;
-    background: ${({ $mode }) => modeTheme($mode).dangerSoft};
+    background: ${({ $mode, $tone }) => statusSoftColor($mode, $tone)};
     border-radius: 999px;
   }
 
   .advisor-title {
     overflow: hidden;
-    color: ${({ $mode }) => modeTheme($mode).danger};
+    color: ${({ $mode, $tone }) => statusColor($mode, $tone)};
     font-size: clamp(16px, 1.1vw, 20px);
     font-weight: 600;
     text-overflow: ellipsis;
@@ -867,7 +884,7 @@ export const OverviewAdvisorCard = styled.section<{ $mode: ViewerUiMode }>`
 
   .signal span {
     width: 3px;
-    background: ${({ $mode }) => modeTheme($mode).danger};
+    background: ${({ $mode, $tone }) => statusColor($mode, $tone)};
     border-radius: 999px;
   }
 
@@ -887,13 +904,17 @@ export const OverviewAdvisorCard = styled.section<{ $mode: ViewerUiMode }>`
   }
 `;
 
-export const ToolbarSelect = styled.div<{ $mode: ViewerUiMode; $open: boolean }>`
+export const ToolbarSelect = styled.div<{
+  $mode: ViewerUiMode;
+  $open: boolean;
+  $tone: ViewerLineTone;
+}>`
   position: relative;
   display: flex;
   flex: 0 0 118px;
   align-items: center;
   height: 48px;
-  color: ${({ $mode }) => modeTheme($mode).danger};
+  color: ${({ $mode, $tone }) => statusColor($mode, $tone)};
 
   .line-select-trigger {
     display: flex;
@@ -907,11 +928,17 @@ export const ToolbarSelect = styled.div<{ $mode: ViewerUiMode; $open: boolean }>
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    background: ${({ $open }) => ($open ? '#fff8f8' : '#ffffff')};
-    border: 1px solid ${({ $open }) => ($open ? '#ef4444' : '#dfe3e8')};
+    background: ${({ $mode, $open, $tone }) => (
+      $open ? statusSoftColor($mode, $tone) : '#ffffff'
+    )};
+    border: 1px solid ${({ $mode, $open, $tone }) => (
+      $open ? statusColor($mode, $tone) : '#dfe3e8'
+    )};
     border-radius: 10px;
     outline: 0;
-    box-shadow: ${({ $open }) => ($open ? '0 0 0 3px rgba(239, 68, 68, 0.08)' : 'none')};
+    box-shadow: ${({ $mode, $open, $tone }) => (
+      $open ? `0 0 0 3px ${statusSoftColor($mode, $tone)}` : 'none'
+    )};
     transition: 150ms ease;
   }
 
@@ -923,9 +950,9 @@ export const ToolbarSelect = styled.div<{ $mode: ViewerUiMode; $open: boolean }>
   .line-status-dot {
     width: 7px;
     height: 7px;
-    background: #ef4444;
+    background: ${({ $mode, $tone }) => statusColor($mode, $tone)};
     border-radius: 50%;
-    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.09);
+    box-shadow: 0 0 0 4px ${({ $mode, $tone }) => statusSoftColor($mode, $tone)};
   }
 
   .line-select-chevron {
@@ -970,8 +997,8 @@ export const ToolbarSelect = styled.div<{ $mode: ViewerUiMode; $open: boolean }>
 
   .line-select-option:hover,
   .line-select-option[aria-selected='true'] {
-    color: #dc2626;
-    background: #fff1f2;
+    color: ${({ $mode, $tone }) => statusColor($mode, $tone)};
+    background: ${({ $mode, $tone }) => statusSoftColor($mode, $tone)};
   }
 
   .option-dot {
@@ -984,7 +1011,7 @@ export const ToolbarSelect = styled.div<{ $mode: ViewerUiMode; $open: boolean }>
 
   .selected-label {
     margin-left: auto;
-    color: #ef4444;
+    color: ${({ $mode, $tone }) => statusColor($mode, $tone)};
     font-size: 9px;
     font-weight: 600;
   }
@@ -1104,16 +1131,19 @@ export const AdvisorHeader = styled.div<{ $mode: ViewerUiMode }>`
   border-bottom: 1px solid ${({ $mode }) => modeTheme($mode).panelBorder};
 `;
 
-export const AdvisorIcon = styled.div<{ $mode: ViewerUiMode }>`
+export const AdvisorIcon = styled.div<{
+  $mode: ViewerUiMode;
+  $tone: 'normal' | 'error';
+}>`
   display: flex;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   width: ${({ $mode }) => ($mode === 'command' ? '34px' : '40px')};
   height: ${({ $mode }) => ($mode === 'command' ? '34px' : '40px')};
-  color: ${({ $mode }) => modeTheme($mode).controlActiveText};
-  background: ${({ $mode }) => modeTheme($mode).controlActiveBg};
-  border: 1px solid ${({ $mode }) => activeBorder($mode)};
+  color: ${({ $mode, $tone }) => statusColor($mode, $tone)};
+  background: ${({ $mode, $tone }) => statusSoftColor($mode, $tone)};
+  border: 1px solid ${({ $mode, $tone }) => statusColor($mode, $tone)}33;
   border-radius: 50%;
 `;
 
@@ -1141,10 +1171,14 @@ export const WaveStack = styled.div`
   height: 20px;
 `;
 
-export const WaveBar = styled.div<{ $mode: ViewerUiMode; $delay: number }>`
+export const WaveBar = styled.div<{
+  $mode: ViewerUiMode;
+  $delay: number;
+  $tone: 'normal' | 'error';
+}>`
   width: 4px;
   height: 100%;
-  background: ${({ $mode }) => modeTheme($mode).danger};
+  background: ${({ $mode, $tone }) => statusColor($mode, $tone)};
   border-radius: 2px;
   animation: ${soundWave} 1s ease-in-out infinite;
   animation-delay: ${({ $delay }) => $delay}s;
@@ -1163,13 +1197,16 @@ export const AdvisorMessage = styled.div<{ $mode: ViewerUiMode }>`
   line-height: 1.6;
 `;
 
-export const BlinkingCursor = styled.span<{ $mode: ViewerUiMode }>`
+export const BlinkingCursor = styled.span<{
+  $mode: ViewerUiMode;
+  $tone: 'normal' | 'error';
+}>`
   display: inline-block;
   width: 2px;
   height: 14px;
   margin-left: 4px;
   vertical-align: middle;
-  background-color: ${({ $mode }) => modeTheme($mode).danger};
+  background-color: ${({ $mode, $tone }) => statusColor($mode, $tone)};
   animation: ${blink} 1s step-end infinite;
 `;
 

@@ -47,6 +47,7 @@ export const createMockApiData = (): ApiDataItem[] => {
       FILENAME1: '',
       AI_TIME_STR: '',
       AI_LABEL: isDemoError ? '온도 상한 초과' : '정상',
+      RESULT002: isDemoError ? '불량' : '정상',
       FILEPATH1: '',
     };
   });

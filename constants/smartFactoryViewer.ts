@@ -7,15 +7,7 @@ import type {
 
 export const JIG_MODEL_PATH = '/models/final_final_final.glb';
 export const FLOOR_MODEL_PATH = '/models/final_final_final_final.glb';
-export const INSPECTION_API_URL =
-  typeof window !== 'undefined' &&
-  (
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1' ||
-    window.location.pathname.includes('-dev')
-  )
-    ? 'https://gapi.dxsplatform.com/api/DX_API000024'
-    : 'http://192.168.2.147:24828/api/DX_API000024';
+export const INSPECTION_API_URL = 'https://gapi.dxsplatform.com/api/DX_API000035';
 
 export const PROCESS_CONFIG: ProcessStepConfig[] = [
   { name: '오픈', color: '#6ab04c' },
