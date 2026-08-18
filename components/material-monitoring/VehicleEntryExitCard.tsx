@@ -106,6 +106,8 @@ const TableHeader = styled.div`
     font-weight: 600;
     white-space: nowrap;
   }
+
+  > div:first-child { padding-left: 20px; }
 `;
 
 const TableBody = styled.div<{ $rowCount: number }>`
@@ -138,6 +140,8 @@ const VehicleRow = styled.div<{ $missingCustomer: boolean }>`
     color: #334155;
     font-size: .82rem;
   }
+
+  .cell:first-child { padding-left: 20px; }
 
   .vehicle,
   .entry-time {
