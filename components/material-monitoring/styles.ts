@@ -61,9 +61,11 @@ export const VideoHeader = styled.div`
 
 export const MonitorShell = styled.div`
   display: grid;
+  grid-template-rows: minmax(0, 1fr);
   gap: 12px;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
   padding: 12px;
   background: #fff;
   border-radius: 0 0 12px 12px;
@@ -75,25 +77,37 @@ export const MonitorShell = styled.div`
 `;
 
 export const CameraStage = styled.div`
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
-  padding: 10px;
+  overflow: hidden;
+  padding: 8px;
   background: #f8fafc;
   border: 1px solid #e8edf4;
   border-radius: 12px;
 `;
 
+export const VideoGridViewport = styled.div`
+  flex: 1 1 0;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+`;
+
 export const VideoGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-rows: repeat(2, auto);
+  gap: 8px;
 
-  @media (max-width: 900px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
-  }
+  /* 3 x 2 프레임이 좌우 여백 없이 카메라 영역의 전체 너비를 사용 */
+  width: 100%;
+  max-width: 100%;
+  max-height: 100%;
 `;
 
 export const CamBox = styled.div`
@@ -103,7 +117,12 @@ export const CamBox = styled.div`
   align-items: center;
   justify-content: center;
   width: 100%;
-  aspect-ratio: 16 / 10;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  min-height: 0;
+  aspect-ratio: 8 / 5;
+  box-sizing: border-box;
   background: #fff;
   border: 1px solid #e5eaf1;
   border-radius: 12px;

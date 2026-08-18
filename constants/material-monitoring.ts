@@ -9,6 +9,7 @@ const INTERNAL_API_BASE_URL = 'http://192.168.2.147:24828/api';
 
 export const API_ENDPOINTS = {
   VEHICLE: '/DX_API000020',
+  VEHICLE_ENTRY_EXIT: '/DX_API000052',
   INVOICE: '/V_PurchaseIn',
   MATERIAL_LIST: '/DX_API000034',
 } as const;
@@ -49,5 +50,7 @@ export const buildApiUrl = (
 };
 
 export const API_URL_VEHICLE = buildApiUrl(API_ENDPOINTS.VEHICLE);
+// This endpoint is available only on the internal network and is not mirrored by the dev API host.
+export const API_URL_VEHICLE_ENTRY_EXIT = `${INTERNAL_API_BASE_URL}${API_ENDPOINTS.VEHICLE_ENTRY_EXIT}`;
 export const API_URL_INVOICE = buildApiUrl(API_ENDPOINTS.INVOICE);
 export const API_URL_MATERIAL_LIST = buildApiUrl(API_ENDPOINTS.MATERIAL_LIST);

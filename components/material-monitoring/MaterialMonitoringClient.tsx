@@ -7,12 +7,14 @@ import { Column, DashboardContainer, VideoCard } from '@/styles/styles';
 import WarehouseBoard from '@/components/wearable-warehouse-board';
 import { useCameraHosts } from '@/hooks/use-camera-hosts';
 import { useMaterialData } from '@/hooks/use-material-data';
+import { useVehicleEntryExitData } from '@/hooks/use-vehicle-entry-exit-data';
 import { useVehicleData } from '@/hooks/use-vehicle-data';
 import { useVuzixLog } from '@/hooks/use-vuzix-log';
 import CameraFullscreen from './CameraFullscreen';
 import MaterialListModal from './MaterialListModal';
 import MonitoringSection from './MonitoringSection';
 import PendingListCard from './PendingListCard';
+import VehicleEntryExitCard from './VehicleEntryExitCard';
 import VehicleInfoCard from './VehicleInfoCard';
 
 const MATERIAL_PAGE_FONT =
@@ -30,9 +32,26 @@ const MaterialPageFontScope = styled.div`
   }
 `;
 
+const MaterialDashboardContainer = styled(DashboardContainer)`
+  grid-template-columns:
+    clamp(280px, 17vw, 320px)
+    clamp(320px, 20vw, 380px)
+    minmax(0, 1fr);
+
+  @media (max-width: 1200px) {
+    grid-template-columns: 260px 290px minmax(0, 1fr);
+  }
+`;
+
 export default function MaterialMonitoringClient() {
   const { hosts, isScanning, scanMessage, retry } = useCameraHosts();
   const { vehicleInfo, isVehicleDataLoaded, isVehicleLoading, dwellString, fetchVehicleData } = useVehicleData();
+  const {
+    vehicles: entryExitVehicles,
+    isVehicleEntryExitLoading,
+    vehicleEntryExitError,
+    fetchVehicleEntryExitData
+  } = useVehicleEntryExitData();
   const {
     materialList,
     pendingList,
@@ -50,8 +69,9 @@ export default function MaterialMonitoringClient() {
   // 차량/자재 데이터 새로고침
   const refreshData = useCallback(() => {
     fetchVehicleData();
+    fetchVehicleEntryExitData();
     fetchMaterialData();
-  }, [fetchMaterialData, fetchVehicleData]);
+  }, [fetchMaterialData, fetchVehicleData, fetchVehicleEntryExitData]);
 
   useVuzixLog({ onDetected: refreshData });
   const maximizedHost = maximizedCam ? hosts[maximizedCam - 1] ?? undefined : undefined;
@@ -59,7 +79,10 @@ export default function MaterialMonitoringClient() {
   // 최초 진입 데이터 조회
   useEffect(() => {
     refreshData();
-  }, [refreshData]);
+
+    const timer = window.setInterval(fetchVehicleEntryExitData, 30_000);
+    return () => window.clearInterval(timer);
+  }, [fetchVehicleEntryExitData, refreshData]);
 
   // 전체화면 중 배경 스크롤 잠금
   useEffect(() => {
@@ -90,7 +113,7 @@ export default function MaterialMonitoringClient() {
   return (
     <MaterialPageFontScope>
       <LayoutGroup>
-        <DashboardContainer $show style={{ padding: 12, background: '#f8fafc', gap: 12, gridTemplateColumns: '320px 1fr' }}>
+        <MaterialDashboardContainer $show style={{ padding: 12, background: '#f8fafc', gap: 12 }}>
           <Column style={{ flex: '0 0 340px', gap: 12 }}>
             <VehicleInfoCard
               vehicleInfo={vehicleInfo}
@@ -105,6 +128,15 @@ export default function MaterialMonitoringClient() {
               error={materialError}
               onRetry={fetchMaterialData}
               onOpenList={() => window.open('/material/inbound-inspection/status', '_blank', 'noopener,noreferrer')}
+            />
+          </Column>
+
+          <Column>
+            <VehicleEntryExitCard
+              vehicles={entryExitVehicles}
+              isLoading={isVehicleEntryExitLoading}
+              error={vehicleEntryExitError}
+              onRetry={fetchVehicleEntryExitData}
             />
           </Column>
 
@@ -124,7 +156,7 @@ export default function MaterialMonitoringClient() {
               <AnimatePresence />
             </VideoCard>
           </Column>
-        </DashboardContainer>
+        </MaterialDashboardContainer>
 
         <AnimatePresence>
           {maximizedCam !== null && (

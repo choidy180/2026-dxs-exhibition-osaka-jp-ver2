@@ -14,6 +14,14 @@ export interface VehicleApiResponse {
   };
 }
 
+export interface VehicleEntryExitItem {
+  INOUTCARID: string;
+  CARNO: string;
+  INDT: string;
+  CUSTNM: string | null;
+  STAYTIME: string;
+}
+
 export interface MaterialListItem {
   PrjGubun: string;
   PrjCode: string;

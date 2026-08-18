@@ -6,6 +6,8 @@ import {
   FiAlertTriangle,
   FiSearch,
   FiActivity,
+  FiCheckCircle,
+  FiRefreshCw,
 } from 'react-icons/fi';
 import { useFoamingSensor } from '@/hooks/use-foaming-sensor';
 import {
@@ -39,6 +41,44 @@ const T = {
   dark: '#1E293B',
 };
 
+type StateTone = 'loading' | 'error' | 'success' | 'warning' | 'neutral';
+
+const STATE_COLORS: Record<
+  StateTone,
+  { background: string; border: string; iconBackground: string; icon: string }
+> = {
+  loading: {
+    background: '#F8FAFC',
+    border: '#CBD5E1',
+    iconBackground: '#E2E8F0',
+    icon: '#475569',
+  },
+  error: {
+    background: '#FFF7F7',
+    border: '#FECACA',
+    iconBackground: '#FEE2E2',
+    icon: T.redText,
+  },
+  success: {
+    background: '#F3FCF8',
+    border: '#A7F3D0',
+    iconBackground: '#D1FAE5',
+    icon: '#059669',
+  },
+  warning: {
+    background: '#FFFBEB',
+    border: '#FDE68A',
+    iconBackground: '#FEF3C7',
+    icon: T.amberText,
+  },
+  neutral: {
+    background: '#F8FAFC',
+    border: '#CBD5E1',
+    iconBackground: '#E2E8F0',
+    icon: T.textSub,
+  },
+};
+
 const GlobalStyle = createGlobalStyle`
   /* Pretendard는 globals.css에서 로컬 호스팅한다. createGlobalStyle은 CSSOM
      insertRule로 주입되어 @import가 무시되므로 여기에 두면 안 된다. */
@@ -52,6 +92,10 @@ const GlobalStyle = createGlobalStyle`
 const pulse = keyframes`
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.35; transform: scale(0.8); }
+`;
+
+const spin = keyframes`
+  to { transform: rotate(360deg); }
 `;
 
 // ---------------------------------------------------------------------------
@@ -290,22 +334,36 @@ const LogTitle = styled.h2`
   color: ${T.textMain};
 `;
 
-const LiveBadge = styled.span<{ $offline?: boolean }>`
+type LiveStatus = 'live' | 'loading' | 'failed' | 'stale' | 'partial';
+
+const LIVE_STATUS_COLORS: Record<LiveStatus, string> = {
+  live: T.primary,
+  loading: T.textMuted,
+  failed: T.redText,
+  stale: T.amberText,
+  partial: T.amberText,
+};
+
+const LiveBadge = styled.span<{ $status: LiveStatus }>`
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 12px;
   font-weight: 700;
-  color: ${({ $offline }) => ($offline ? T.textMuted : T.primary)};
+  color: ${({ $status }) => LIVE_STATUS_COLORS[$status]};
 
   &::before {
     content: '';
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: ${({ $offline }) => ($offline ? T.textMuted : T.primary)};
-    /* 연결이 끊겼으면 깜빡임을 멈춰 실시간이 아님을 드러낸다 */
-    animation: ${({ $offline }) => ($offline ? 'none' : pulse)} 1.4s ease-in-out infinite;
+    background: ${({ $status }) => LIVE_STATUS_COLORS[$status]};
+    /* 실제 실시간 수신 상태일 때만 점이 움직인다. */
+    animation: ${({ $status }) => ($status === 'live' ? pulse : 'none')} 1.4s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &::before { animation: none; }
   }
 `;
 
@@ -313,15 +371,163 @@ const LogTable = styled.div`
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 `;
 
-const EmptyState = styled.div`
-  padding: 34px 8px;
+const StatePanel = styled.div<{ $tone: StateTone; $large?: boolean }>`
+  flex: 1;
+  min-height: ${({ $large }) => ($large ? '238px' : '150px')};
+  margin-top: ${({ $large }) => ($large ? '0' : '16px')};
+  padding: ${({ $large }) => ($large ? '28px 24px' : '22px 20px')};
+  border: 1px dashed ${({ $tone }) => STATE_COLORS[$tone].border};
+  border-radius: 12px;
+  background: ${({ $tone }) => STATE_COLORS[$tone].background};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
   text-align: center;
-  font-size: 14px;
-  font-weight: 600;
+`;
+
+const StateIcon = styled.div<{ $tone: StateTone; $spinning?: boolean }>`
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: ${({ $tone }) => STATE_COLORS[$tone].icon};
+  background: ${({ $tone }) => STATE_COLORS[$tone].iconBackground};
+
+  svg {
+    animation: ${({ $spinning }) => ($spinning ? spin : 'none')} 1s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    svg { animation: none; }
+  }
+`;
+
+const StateCopy = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+`;
+
+const StateTitle = styled.strong`
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.35px;
+  color: ${T.textMain};
+`;
+
+const StateDescription = styled.span`
+  max-width: 520px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.55;
   letter-spacing: -0.2px;
-  color: ${T.textMuted};
+  color: ${T.textSub};
+`;
+
+const StateActions = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+`;
+
+const StateMeta = styled.span`
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid ${T.border};
+  background: rgba(255, 255, 255, 0.82);
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: ${T.textSub};
+`;
+
+const RetryButton = styled.button`
+  min-height: 32px;
+  padding: 0 13px;
+  border: 1px solid ${T.textMain};
+  border-radius: 8px;
+  background: ${T.textMain};
+  color: #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    background: #334155;
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 3px solid rgba(193, 18, 79, 0.2);
+    outline-offset: 2px;
+  }
+`;
+
+const ConnectionNotice = styled.div`
+  min-height: 44px;
+  margin: -8px 0 14px;
+  padding: 9px 12px;
+  border: 1px solid #FDE68A;
+  border-radius: 10px;
+  background: ${T.amberBg};
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: ${T.amberText};
+
+  > svg {
+    flex-shrink: 0;
+  }
+`;
+
+const NoticeCopy = styled.div`
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  strong {
+    font-size: 13px;
+    line-height: 1.3;
+  }
+
+  span {
+    font-size: 12px;
+    font-weight: 500;
+    color: #92400E;
+  }
+`;
+
+const NoticeRetryButton = styled(RetryButton)`
+  flex-shrink: 0;
+  min-height: 30px;
+  border-color: #F59E0B;
+  background: #FFFFFF;
+  color: ${T.amberText};
+
+  &:hover {
+    background: #FEF3C7;
+  }
 `;
 
 const LogRowGrid = styled.div`
@@ -382,6 +588,58 @@ const LogValue = styled.span<{ $tone?: 'critical' | 'warn' }>`
   color: ${({ $tone }) => ($tone === 'critical' ? T.redText : $tone === 'warn' ? T.amberText : T.textMain)};
 `;
 
+interface StateViewProps {
+  tone: StateTone;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  meta?: string;
+  large?: boolean;
+  spinning?: boolean;
+  onRetry?: () => void;
+  /** 중복 상태 패널 중 대표 패널 하나만 보조기기에 상태 변경을 알린다. */
+  announce?: boolean;
+}
+
+function StateView({
+  tone,
+  icon,
+  title,
+  description,
+  meta,
+  large,
+  spinning,
+  onRetry,
+  announce = false,
+}: StateViewProps) {
+  return (
+    <StatePanel
+      $tone={tone}
+      $large={large}
+      role={announce ? (tone === 'error' ? 'alert' : 'status') : undefined}
+      aria-live={announce ? (tone === 'error' ? 'assertive' : 'polite') : undefined}
+    >
+      <StateIcon $tone={tone} $spinning={spinning}>
+        {icon}
+      </StateIcon>
+      <StateCopy>
+        <StateTitle>{title}</StateTitle>
+        <StateDescription>{description}</StateDescription>
+      </StateCopy>
+      {(meta || onRetry) && (
+        <StateActions>
+          {meta && <StateMeta>{meta}</StateMeta>}
+          {onRetry && (
+            <RetryButton type="button" onClick={onRetry}>
+              <FiRefreshCw size={14} /> 다시 조회
+            </RetryButton>
+          )}
+        </StateActions>
+      )}
+    </StatePanel>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // AI Risk Diagnosis panel (자재관리 > 공정재고 와 동일)
 // ---------------------------------------------------------------------------
@@ -410,26 +668,42 @@ const RiskHeaderTitle = styled.h2`
   letter-spacing: -0.6px;
 `;
 
-const AnalyzingBadge = styled.div`
+type AnalysisBadgeTone = 'active' | 'waiting' | 'success' | 'warning';
+
+const ANALYSIS_BADGE_COLORS: Record<
+  AnalysisBadgeTone,
+  { background: string; color: string }
+> = {
+  active: { background: T.lightPink, color: T.primary },
+  waiting: { background: '#F1F5F9', color: T.textSub },
+  success: { background: '#D1FAE5', color: '#047857' },
+  warning: { background: '#FEF3C7', color: T.amberText },
+};
+
+const AnalyzingBadge = styled.div<{ $tone: AnalysisBadgeTone }>`
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 24px;
   padding: 0 10px;
   border-radius: 6px;
-  background: ${T.lightPink};
-  color: ${T.primary};
+  background: ${({ $tone }) => ANALYSIS_BADGE_COLORS[$tone].background};
+  color: ${({ $tone }) => ANALYSIS_BADGE_COLORS[$tone].color};
   font-size: 12px;
   font-weight: 700;
   letter-spacing: -0.2px;
 `;
 
-const PulseDot = styled.span`
+const PulseDot = styled.span<{ $tone: AnalysisBadgeTone }>`
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: ${T.primary};
-  animation: ${pulse} 1.4s ease-in-out infinite;
+  background: ${({ $tone }) => ANALYSIS_BADGE_COLORS[$tone].color};
+  animation: ${({ $tone }) => ($tone === 'active' ? pulse : 'none')} 1.4s ease-in-out infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 `;
 
 const RiskBody = styled.div`
@@ -719,8 +993,9 @@ const fmt = (value: number, digits = 1) => value.toFixed(digits);
 const STATUS_RANK: Record<FoamingStatus, number> = {
   critical: 3,
   warn: 2,
-  normal: 1,
-  unknown: 0,
+  // 정상 센서와 판정 불가 센서가 섞이면 전체를 정상으로 단정하지 않는다.
+  unknown: 1,
+  normal: 0,
 };
 
 const STATUS_TEXT: Record<FoamingStatus, string> = {
@@ -796,7 +1071,8 @@ function priorityHeadline(series: FoamingSensorSeries): string {
 /** 원인 추론 박스의 첫 문장 — 관측된 사실만 서술한다 (추정 없음) */
 function observedFact(
   series: FoamingSensorSeries | null,
-  isLoading: boolean
+  isLoading: boolean,
+  isStale = false
 ): React.ReactNode {
   if (!series || !series.latest) {
     return isLoading ? '센서 데이터를 수신하는 중입니다.' : '판정할 센서 데이터가 없습니다.';
@@ -804,11 +1080,12 @@ function observedFact(
 
   const { name, unit, latest, lower, upper, status } = series;
   const current = `${fmt(latest.value)}${unit}`;
+  const timing = isStale ? '마지막 수신 기준' : '현재';
 
   if (status === 'critical' && upper !== null && latest.value > upper) {
     return (
       <>
-        현재 <b>{name}가 상한 임계치({upper}{unit})를 초과</b>했습니다 (측정값 {current}, {latest.timestamp}).
+        {timing} <b>{name}가 상한 임계치({upper}{unit})를 초과</b>했습니다 (측정값 {current}, {latest.timestamp}).
       </>
     );
   }
@@ -816,7 +1093,7 @@ function observedFact(
   if (status === 'critical' && lower !== null && latest.value < lower) {
     return (
       <>
-        현재 <b>{name}가 하한 임계치({lower}{unit})를 밑돌고</b> 있습니다 (측정값 {current}, {latest.timestamp}).
+        {timing} <b>{name}가 하한 임계치({lower}{unit})를 밑돌고</b> 있습니다 (측정값 {current}, {latest.timestamp}).
       </>
     );
   }
@@ -827,7 +1104,7 @@ function observedFact(
     const word = nearUpper ? '상한' : '하한';
     return (
       <>
-        현재 <b>{name}가 {word} 임계치({edge}{unit})에 근접</b>했습니다 (측정값 {current}, {latest.timestamp}).
+        {timing} <b>{name}가 {word} 임계치({edge}{unit})에 근접</b>했습니다 (측정값 {current}, {latest.timestamp}).
       </>
     );
   }
@@ -835,14 +1112,14 @@ function observedFact(
   if (status === 'normal' && lower !== null && upper !== null) {
     return (
       <>
-        현재 <b>{name}는 정상범위({lower}~{upper}{unit}) 내</b>에 있습니다 (측정값 {current}, {latest.timestamp}).
+        {timing} <b>{name}는 정상범위({lower}~{upper}{unit}) 내</b>에 있습니다 (측정값 {current}, {latest.timestamp}).
       </>
     );
   }
 
   return (
     <>
-      현재 <b>{name}</b> 측정값은 {current}이며, 기준값이 없어 판정할 수 없습니다.
+      {timing} <b>{name}</b> 측정값은 {current}이며, 기준값이 없어 판정할 수 없습니다.
     </>
   );
 }
@@ -907,10 +1184,19 @@ export default function FoamingInspectionDev() {
   const [activeTab, setActiveTab] = useState<string>(DEFAULT_PROCESS);
   const activeLabel = PROCESS_TABS.find((t) => t.id === activeTab)?.label ?? `${activeTab} 공정`;
 
-  const { data, isInitialLoading, error } = useFoamingSensor(activeTab);
+  const { data, isInitialLoading, error, refetch } = useFoamingSensor(activeTab);
 
+  // hook에서도 공정별 state를 가리지만, 렌더 파생값도 한 번 더 소속을 확인한다.
+  const activeData = data?.process === activeTab ? data : null;
   // `?? []`를 인라인으로 두면 렌더마다 새 배열이 되어 아래 useMemo가 무력해진다
-  const series = useMemo(() => data?.series ?? [], [data]);
+  const series = useMemo(() => activeData?.series ?? [], [activeData]);
+  const hasSeries = series.length > 0;
+  const hasUnknownSeries = series.some((item) => item.status === 'unknown');
+  const hasPartialFailure = Boolean(activeData?.errors.length);
+  const isStale = Boolean(error && hasSeries);
+  const hasDataWarning = isStale || hasPartialFailure;
+  const hasDiagnosticLimitation = hasDataWarning || hasUnknownSeries;
+  const hasHardError = Boolean(error) && !hasSeries && !isInitialLoading;
 
   /** 차트 카드용 표시 데이터 */
   const charts = useMemo(
@@ -952,6 +1238,50 @@ export default function FoamingInspectionDev() {
 
   const overallStatus: FoamingStatus = worstSeries?.status ?? 'unknown';
   const isDanger = overallStatus === 'critical' || overallStatus === 'warn';
+  const liveStatus: LiveStatus =
+    isInitialLoading && !hasSeries
+      ? 'loading'
+      : hasHardError
+        ? 'failed'
+        : isStale
+          ? 'stale'
+          : hasPartialFailure
+            ? 'partial'
+            : 'live';
+  const liveStatusText: Record<LiveStatus, string> = {
+    live: 'LIVE',
+    loading: '데이터 수신 중',
+    failed: '데이터 확인 필요',
+    stale: '갱신 재시도 중 · 마지막 수신',
+    partial: '일부 센서 조회 실패',
+  };
+
+  const analysisBadgeTone: AnalysisBadgeTone =
+    !hasSeries
+      ? 'waiting'
+      : hasDiagnosticLimitation
+        ? 'warning'
+        : isDanger
+          ? 'active'
+          : overallStatus === 'normal'
+            ? 'success'
+            : 'waiting';
+  const analysisBadgeText =
+    isInitialLoading && !hasSeries
+      ? '데이터 수신 중'
+      : hasHardError
+        ? '분석 대기'
+        : isStale
+          ? '마지막 데이터'
+          : hasPartialFailure
+            ? '부분 데이터'
+            : hasUnknownSeries
+              ? '기준값 확인 필요'
+            : isDanger
+              ? '분석 중'
+              : overallStatus === 'normal'
+                ? '정상 모니터링'
+                : '판정 대기';
 
   return (
     <>
@@ -999,49 +1329,100 @@ export default function FoamingInspectionDev() {
               </OverviewHeader>
 
               {charts.length === 0 ? (
-                <EmptyState>
-                  {isInitialLoading
-                    ? '센서 데이터를 불러오는 중입니다…'
-                    : error ?? '표시할 센서 데이터가 없습니다.'}
-                </EmptyState>
+                isInitialLoading ? (
+                  <StateView
+                    tone="loading"
+                    icon={<FiRefreshCw size={23} />}
+                    title={`${activeLabel} 센서 데이터 수신 중`}
+                    description="실시간 측정값과 관리 기준을 안전하게 동기화하고 있습니다."
+                    meta={activeLabel}
+                    large
+                    spinning
+                    announce
+                  />
+                ) : hasHardError ? (
+                  <StateView
+                    tone="error"
+                    icon={<FiAlertTriangle size={23} />}
+                    title="센서 데이터를 표시할 수 없습니다"
+                    description={`${activeLabel}의 최신 측정값을 확인하지 못했습니다. 데이터 상태를 자동으로 다시 확인하고 있습니다.`}
+                    meta={`${activeLabel} · 데이터 확인 필요`}
+                    large
+                    onRetry={refetch}
+                    announce
+                  />
+                ) : (
+                  <StateView
+                    tone="neutral"
+                    icon={<FiAlertTriangle size={23} />}
+                    title="표시할 센서 데이터가 없습니다"
+                    description="센서 응답은 도착했지만 화면에 표시할 수 있는 측정값이 없습니다."
+                    meta={activeLabel}
+                    large
+                    onRetry={refetch}
+                    announce
+                  />
+                )
               ) : (
-                <ChartRow>
-                  {charts.map((c) => {
-                    const active = worstSeries?.seq === c.key;
+                <>
+                  {hasDataWarning && (
+                    <ConnectionNotice role="status" aria-live="polite">
+                      <FiAlertTriangle size={18} />
+                      <NoticeCopy>
+                        <strong>
+                          {isStale
+                            ? '센서 데이터 갱신을 다시 시도하고 있습니다'
+                            : '일부 센서 데이터를 가져오지 못했습니다'}
+                        </strong>
+                        <span>
+                          {isStale
+                            ? '마지막 수신 데이터를 유지해 표시합니다. 다음 조회 성공 시 자동으로 갱신됩니다.'
+                            : '현재 수신된 센서 데이터를 기준으로 화면을 표시합니다.'}
+                        </span>
+                      </NoticeCopy>
+                      <NoticeRetryButton type="button" onClick={refetch}>
+                        <FiRefreshCw size={13} /> 다시 조회
+                      </NoticeRetryButton>
+                    </ConnectionNotice>
+                  )}
+                  <ChartRow>
+                    {charts.map((c) => {
+                      const active = worstSeries?.seq === c.key;
 
-                    return (
-                      <ChartCard key={c.key} $active={active}>
-                        <ChartHead>
-                          <ChartTitleGroup>
-                            <ChartIndex $active={active}>{c.index}</ChartIndex>
-                            <ChartName $active={active} title={c.name}>{c.name}</ChartName>
-                          </ChartTitleGroup>
-                          <ChartValue $active={active}>
-                            {c.value} <small>{c.unit}</small>
-                          </ChartValue>
-                        </ChartHead>
-                        <LineChart
-                          axisMin={c.axisMin}
-                          axisMax={c.axisMax}
-                          refMax={c.refMax}
-                          refMin={c.refMin}
-                          optimal={c.optimal}
-                          points={c.points}
-                          active={active}
-                          xLabels={c.xLabels}
-                        />
-                      </ChartCard>
-                    );
-                  })}
-                </ChartRow>
+                      return (
+                        <ChartCard key={c.key} $active={active}>
+                          <ChartHead>
+                            <ChartTitleGroup>
+                              <ChartIndex $active={active}>{c.index}</ChartIndex>
+                              <ChartName $active={active} title={c.name}>{c.name}</ChartName>
+                            </ChartTitleGroup>
+                            <ChartValue $active={active}>
+                              {c.value} <small>{c.unit}</small>
+                            </ChartValue>
+                          </ChartHead>
+                          <LineChart
+                            axisMin={c.axisMin}
+                            axisMax={c.axisMax}
+                            refMax={c.refMax}
+                            refMin={c.refMin}
+                            optimal={c.optimal}
+                            points={c.points}
+                            active={active}
+                            xLabels={c.xLabels}
+                          />
+                        </ChartCard>
+                      );
+                    })}
+                  </ChartRow>
+                </>
               )}
             </OverviewCard>
 
             <LogCard>
               <LogHeader>
                 <LogTitle>실시간 안전 감지 로그</LogTitle>
-                <LiveBadge $offline={Boolean(error)}>
-                  {error ? '연결 오류 — 마지막 수신 데이터' : 'LIVE'}
+                <LiveBadge $status={liveStatus}>
+                  {liveStatusText[liveStatus]}
                 </LiveBadge>
               </LogHeader>
               <LogTable>
@@ -1053,11 +1434,84 @@ export default function FoamingInspectionDev() {
                   <span>기준치 대비</span>
                 </LogHeadRow>
                 {logRows.length === 0 ? (
-                  <EmptyState>
-                    {isInitialLoading
-                      ? '감지 로그를 불러오는 중입니다…'
-                      : '정상범위를 벗어난 측정이 없습니다.'}
-                  </EmptyState>
+                  isInitialLoading && !hasSeries ? (
+                    <StateView
+                      tone="loading"
+                      icon={<FiRefreshCw size={22} />}
+                      title="안전 감지 로그 수신 중"
+                      description="센서 이벤트를 실시간으로 불러오고 있습니다."
+                      meta={activeLabel}
+                      spinning
+                    />
+                  ) : hasHardError ? (
+                    <StateView
+                      tone="error"
+                      icon={<FiAlertTriangle size={22} />}
+                      title="안전 상태를 확인할 수 없습니다"
+                      description="최신 센서 데이터를 표시할 수 없어 이상 여부를 판정할 수 없습니다. 다음 조회 성공 시 로그가 자동으로 갱신됩니다."
+                      meta={`${activeLabel} · 데이터 확인 필요`}
+                      onRetry={refetch}
+                    />
+                  ) : isStale ? (
+                    <StateView
+                      tone="warning"
+                      icon={<FiAlertTriangle size={22} />}
+                      title={
+                        hasUnknownSeries
+                          ? '마지막 수신 데이터의 일부는 판정할 수 없습니다'
+                          : '마지막 수신 데이터 기준 이상 없음'
+                      }
+                      description={
+                        hasUnknownSeries
+                          ? '일부 센서의 판정 기준이 없어 안전 상태를 단정할 수 없으며, 최신 데이터 갱신을 다시 시도하고 있습니다.'
+                          : '마지막 데이터에는 이상 이벤트가 없지만, 최신 상태 확인을 위해 데이터 갱신을 다시 시도하고 있습니다.'
+                      }
+                      meta="마지막 수신 데이터"
+                      onRetry={refetch}
+                    />
+                  ) : hasPartialFailure ? (
+                    <StateView
+                      tone="warning"
+                      icon={<FiAlertTriangle size={22} />}
+                      title={
+                        hasUnknownSeries
+                          ? '일부 센서는 상태를 판정할 수 없습니다'
+                          : '수신된 센서 기준 이상 없음'
+                      }
+                      description={
+                        hasUnknownSeries
+                          ? '수신된 데이터 중 판정 기준이 없는 센서가 있으며, 가져오지 못한 센서 데이터도 다시 확인하고 있습니다.'
+                          : '수신된 센서에서는 이상 이벤트가 없지만, 가져오지 못한 센서 데이터가 있어 전체 안전 상태를 단정하지 않습니다.'
+                      }
+                      meta="일부 센서 조회 실패"
+                      onRetry={refetch}
+                    />
+                  ) : hasUnknownSeries ? (
+                    <StateView
+                      tone="warning"
+                      icon={<FiAlertTriangle size={22} />}
+                      title="일부 센서는 상태를 판정할 수 없습니다"
+                      description="측정값은 수신했지만 정상 범위 기준이 없는 센서가 있습니다. 기준값을 확인하기 전까지 전체 안전 상태를 단정하지 않습니다."
+                      meta={`${activeLabel} · 기준값 확인 필요`}
+                    />
+                  ) : hasSeries ? (
+                    <StateView
+                      tone="success"
+                      icon={<FiCheckCircle size={23} />}
+                      title="현재 감지된 이상이 없습니다"
+                      description="정상 범위 이탈 또는 임계치 접근 이벤트가 발견되지 않았습니다."
+                      meta={`${activeLabel} · 실시간 모니터링`}
+                    />
+                  ) : (
+                    <StateView
+                      tone="neutral"
+                      icon={<FiAlertTriangle size={22} />}
+                      title="감지 로그를 준비할 수 없습니다"
+                      description="표시할 센서 정보가 없습니다. 잠시 후 다시 조회해 주세요."
+                      meta={activeLabel}
+                      onRetry={refetch}
+                    />
+                  )
                 ) : (
                   logRows.map((row, idx) => (
                     <LogRow key={`${row.sensor}-${row.time}-${idx}`}>
@@ -1077,78 +1531,148 @@ export default function FoamingInspectionDev() {
           <RiskPanel>
             <RiskHeader>
               <RiskHeaderTitle>AI 실시간 위험 진단</RiskHeaderTitle>
-              <AnalyzingBadge>
-                <PulseDot /> 분석 중
+              <AnalyzingBadge $tone={analysisBadgeTone}>
+                <PulseDot $tone={analysisBadgeTone} /> {analysisBadgeText}
               </AnalyzingBadge>
             </RiskHeader>
 
             <RiskBody>
-              <PriorityAlert>
-                <PriorityIcon>
-                  <FiAlertTriangle size={22} />
-                </PriorityIcon>
-                <PriorityTextGroup>
-                  <PriorityLabel>최우선 조치 권고</PriorityLabel>
-                  <PriorityMain>
-                    {worstSeries
-                      ? priorityHeadline(worstSeries)
-                      : isInitialLoading
-                        ? '센서 데이터 수신 대기 중'
-                        : '감지된 센서가 없습니다'}
-                  </PriorityMain>
-                </PriorityTextGroup>
-              </PriorityAlert>
+              {!hasSeries ? (
+                isInitialLoading ? (
+                  <StateView
+                    tone="loading"
+                    icon={<FiRefreshCw size={23} />}
+                    title="AI 분석을 준비하고 있습니다"
+                    description="센서 데이터가 수신되면 실시간 위험 진단을 시작합니다."
+                    meta={activeLabel}
+                    large
+                    spinning
+                  />
+                ) : (
+                  <StateView
+                    tone={hasHardError ? 'error' : 'neutral'}
+                    icon={<FiAlertTriangle size={23} />}
+                    title={hasHardError ? 'AI 분석을 시작할 수 없습니다' : '분석할 센서 데이터가 없습니다'}
+                    description={
+                      hasHardError
+                        ? '최신 센서 데이터를 확인하면 위험 진단이 자동으로 다시 시작됩니다.'
+                        : '측정값이 수신되면 위험 진단을 자동으로 시작합니다.'
+                    }
+                    meta={hasHardError ? '센서 데이터 확인 필요' : activeLabel}
+                    large
+                    onRetry={refetch}
+                  />
+                )
+              ) : overallStatus === 'normal' ? (
+                <StateView
+                  tone={hasDiagnosticLimitation ? 'warning' : 'success'}
+                  icon={
+                    hasDiagnosticLimitation
+                      ? <FiAlertTriangle size={23} />
+                      : <FiCheckCircle size={24} />
+                  }
+                  title={
+                    isStale
+                      ? '마지막 분석 결과는 정상입니다'
+                      : hasPartialFailure
+                        ? '수신된 데이터 기준 공정이 안정적입니다'
+                        : hasUnknownSeries
+                          ? '일부 센서는 위험도를 판정할 수 없습니다'
+                        : '공정 상태가 안정적입니다'
+                  }
+                  description={
+                    isStale
+                      ? '마지막으로 수신한 센서 값은 정상 범위에 있습니다. 최신 상태 확인을 위해 데이터 갱신을 다시 시도하고 있습니다.'
+                      : hasPartialFailure
+                        ? '현재 수신된 센서 값은 정상 범위에 있지만 가져오지 못한 센서 데이터가 있어 전체 상태를 단정하지 않습니다.'
+                        : hasUnknownSeries
+                          ? '일부 센서에 정상 범위 기준이 없어 전체 상태를 정상으로 단정하지 않습니다.'
+                        : '모든 수신 센서가 정상 범위에 있어 우선 조치가 필요하지 않습니다.'
+                  }
+                  meta={hasDiagnosticLimitation ? analysisBadgeText : '실시간 정상 모니터링'}
+                  large
+                  onRetry={hasDataWarning ? refetch : undefined}
+                />
+              ) : overallStatus === 'unknown' ? (
+                <StateView
+                  tone="warning"
+                  icon={<FiAlertTriangle size={23} />}
+                  title="센서 판정 기준을 확인해 주세요"
+                  description="측정값은 수신했지만 정상 범위 기준이 설정되지 않아 위험도를 판정할 수 없습니다."
+                  meta={activeLabel}
+                  large
+                  onRetry={hasDataWarning ? refetch : undefined}
+                />
+              ) : (
+                <>
+                  <PriorityAlert>
+                    <PriorityIcon>
+                      <FiAlertTriangle size={22} />
+                    </PriorityIcon>
+                    <PriorityTextGroup>
+                      <PriorityLabel>최우선 조치 권고</PriorityLabel>
+                      <PriorityMain>
+                        {worstSeries ? priorityHeadline(worstSeries) : '센서 데이터 확인 필요'}
+                      </PriorityMain>
+                    </PriorityTextGroup>
+                  </PriorityAlert>
 
-              <RiskSection>
-                <RiskSectionTitle>
-                  <FiSearch size={17} /> 원인 추론
-                </RiskSectionTitle>
-                <CauseBox>
-                  {/* 관측 사실은 API 값에서 그대로 서술한다 */}
-                  <p>{observedFact(worstSeries, isInitialLoading)}</p>
-                  {/* 원인 가설은 현재 API가 제공하지 않는 정보다.
-                      추론 엔진이 붙기 전까지는 고정 문구를 유지한다. */}
-                  <p>
-                    패턴 매칭 결과, <b>온조기(Chiller) 냉각수 펌프 성능 저하 또는 필터 막힘</b>으로 열교환 효율이 떨어졌을 확률이 높습니다.
-                  </p>
-                </CauseBox>
-              </RiskSection>
+                  <RiskSection>
+                    <RiskSectionTitle>
+                      <FiSearch size={17} /> 원인 추론
+                    </RiskSectionTitle>
+                    <CauseBox>
+                      {/* 관측 사실은 API 값에서 그대로 서술한다 */}
+                      <p>{observedFact(worstSeries, isInitialLoading, isStale)}</p>
+                      {/* 원인 가설은 현재 API가 제공하지 않는 정보다.
+                          추론 엔진이 붙기 전까지는 고정 문구를 유지한다. */}
+                      {!hasDiagnosticLimitation && (
+                        <p>
+                          패턴 매칭 결과, <b>온조기(Chiller) 냉각수 펌프 성능 저하 또는 필터 막힘</b>으로 열교환 효율이 떨어졌을 확률이 높습니다.
+                        </p>
+                      )}
+                    </CauseBox>
+                  </RiskSection>
 
-              <RiskSection>
-                <RiskSectionTitle>
-                  <FiActivity size={17} /> 권장 조치 가이드
-                </RiskSectionTitle>
-                <GuideList>
-                  <GuideItem>
-                    <GuideNumber>1</GuideNumber>
-                    <GuideText>
-                      <GuideTitle>온조 #1 공급수압력 점검</GuideTitle>
-                      <GuideDesc>냉각수 유량이 충분한지 칠러 압력을 확인하십시오.</GuideDesc>
-                    </GuideText>
-                  </GuideItem>
-                  <GuideItem>
-                    <GuideNumber>2</GuideNumber>
-                    <GuideText>
-                      <GuideTitle>R액 탱크 자켓 세척</GuideTitle>
-                      <GuideDesc>냉각수 라인 이상이 없다면 자켓 내부 스케일을 점검하십시오.</GuideDesc>
-                    </GuideText>
-                  </GuideItem>
-                </GuideList>
-              </RiskSection>
+                  <RiskSection>
+                    <RiskSectionTitle>
+                      <FiActivity size={17} /> 권장 조치 가이드
+                    </RiskSectionTitle>
+                    <GuideList>
+                      <GuideItem>
+                        <GuideNumber>1</GuideNumber>
+                        <GuideText>
+                          <GuideTitle>온조 #1 공급수압력 점검</GuideTitle>
+                          <GuideDesc>냉각수 유량이 충분한지 칠러 압력을 확인하십시오.</GuideDesc>
+                        </GuideText>
+                      </GuideItem>
+                      <GuideItem>
+                        <GuideNumber>2</GuideNumber>
+                        <GuideText>
+                          <GuideTitle>R액 탱크 자켓 세척</GuideTitle>
+                          <GuideDesc>냉각수 라인 이상이 없다면 자켓 내부 스케일을 점검하십시오.</GuideDesc>
+                        </GuideText>
+                      </GuideItem>
+                    </GuideList>
+                  </RiskSection>
+                </>
+              )}
             </RiskBody>
 
-            <RiskFooter>
-              <FooterStat>
-                <FooterLabel>AI 추론 신뢰도</FooterLabel>
-                <FooterValue>96.8%</FooterValue>
-              </FooterStat>
-              <FooterStat>
-                <FooterLabel>유사 패턴 발생 이력</FooterLabel>
-                <FooterValue>
-                  <small>최근 30일</small> 2건
-                </FooterValue>
-              </FooterStat>
-            </RiskFooter>
+            {hasSeries && isDanger && !hasDiagnosticLimitation && (
+              <RiskFooter>
+                <FooterStat>
+                  <FooterLabel>AI 추론 신뢰도</FooterLabel>
+                  <FooterValue>96.8%</FooterValue>
+                </FooterStat>
+                <FooterStat>
+                  <FooterLabel>유사 패턴 발생 이력</FooterLabel>
+                  <FooterValue>
+                    <small>최근 30일</small> 2건
+                  </FooterValue>
+                </FooterStat>
+              </RiskFooter>
+            )}
           </RiskPanel>
         </Body>
       </Page>

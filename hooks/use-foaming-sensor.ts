@@ -22,6 +22,8 @@ export function useFoamingSensor(processId: string): UseFoamingSensorResult {
   const [data, setData] = useState<FoamingSensorPayload | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /** 현재 state가 어느 공정 요청에서 만들어졌는지 추적해 탭 전환 시 이전 값을 숨긴다. */
+  const [stateProcessId, setStateProcessId] = useState(processId);
 
   /** 진행 중 요청 여부 — 3초보다 응답이 느릴 때 중복 발사를 막는다 */
   const inFlightRef = useRef(false);
@@ -48,11 +50,13 @@ export function useFoamingSensor(processId: string): UseFoamingSensorResult {
 
       if (!res.ok || !payload.ok) {
         const detail = payload?.errors?.[0]?.message;
+        setStateProcessId(processId);
         setError(detail ? `센서 조회 실패: ${detail}` : '센서 조회 실패');
         // data는 갱신하지 않고 직전 값 유지
         return;
       }
 
+      setStateProcessId(processId);
       setData(payload);
       setError(null);
     } catch (err) {
@@ -60,6 +64,7 @@ export function useFoamingSensor(processId: string): UseFoamingSensorResult {
       // 언마운트/공정 변경으로 인한 취소는 오류가 아니다
       if (err instanceof DOMException && err.name === 'AbortError') return;
 
+      setStateProcessId(processId);
       setError(err instanceof Error ? err.message : '센서 조회 실패');
     } finally {
       inFlightRef.current = false;
@@ -70,6 +75,7 @@ export function useFoamingSensor(processId: string): UseFoamingSensorResult {
   useEffect(() => {
     mountedRef.current = true;
     // 공정이 바뀌면 이전 공정 데이터를 그대로 두지 않는다
+    setStateProcessId(processId);
     setIsInitialLoading(true);
     setData(null);
     setError(null);
@@ -107,11 +113,19 @@ export function useFoamingSensor(processId: string): UseFoamingSensorResult {
       abortRef.current?.abort();
       inFlightRef.current = false;
     };
-  }, [fetchOnce]);
+  }, [fetchOnce, processId]);
 
   const refetch = useCallback(() => {
     void fetchOnce();
   }, [fetchOnce]);
 
-  return { data, isInitialLoading, error, refetch };
+  // effect가 실행되기 전 첫 렌더에서도 이전 공정 state가 노출되지 않도록 반환값을 가린다.
+  const isCurrentProcess = stateProcessId === processId;
+
+  return {
+    data: isCurrentProcess ? data : null,
+    isInitialLoading: isCurrentProcess ? isInitialLoading : true,
+    error: isCurrentProcess ? error : null,
+    refetch,
+  };
 }

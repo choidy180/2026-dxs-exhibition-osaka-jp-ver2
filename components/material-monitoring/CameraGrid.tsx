@@ -1,6 +1,6 @@
 import { MAX_CAMERA_COUNT } from '@/constants/material-monitoring';
 import type { CameraHost } from '@/hooks/use-camera-hosts';
-import { VideoGrid } from './styles';
+import { VideoGrid, VideoGridViewport } from './styles';
 import CameraFrame from './CameraFrame';
 
 type Props = {
@@ -11,16 +11,18 @@ type Props = {
 
 export default function CameraGrid({ hosts, isScanning, onExpand }: Props) {
   return (
-    <VideoGrid>
-      {Array.from({ length: MAX_CAMERA_COUNT }, (_, index) => index + 1).map(num => (
-        <CameraFrame
-          key={num}
-          num={num}
-          host={hosts[num - 1] ?? undefined}
-          isScanning={isScanning}
-          onExpand={() => onExpand(num)}
-        />
-      ))}
-    </VideoGrid>
+    <VideoGridViewport>
+      <VideoGrid>
+        {Array.from({ length: MAX_CAMERA_COUNT }, (_, index) => index + 1).map(num => (
+          <CameraFrame
+            key={num}
+            num={num}
+            host={hosts[num - 1] ?? undefined}
+            isScanning={isScanning}
+            onExpand={() => onExpand(num)}
+          />
+        ))}
+      </VideoGrid>
+    </VideoGridViewport>
   );
 }

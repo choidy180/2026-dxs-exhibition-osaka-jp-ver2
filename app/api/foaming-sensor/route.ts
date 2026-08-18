@@ -68,7 +68,8 @@ async function fetchSeq(
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
 
-  const requested = searchParams.get('process') ?? DEFAULT_PROCESS;
+  // URL을 직접 입력할 때 붙기 쉬운 공백은 제거하되 허용 공정만 조회한다.
+  const requested = (searchParams.get('process') ?? DEFAULT_PROCESS).trim().toUpperCase();
   // 화이트리스트 검증: 값이 PHP 파일 경로에 들어가므로 경로 조작을 막는다.
   const processCode = ALLOWED_PROCESSES.includes(requested)
     ? requested

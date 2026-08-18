@@ -78,10 +78,11 @@ export default function CameraRpaStepList({ hosts, isScanning }: Props) {
 }
 
 const RpaStepGrid = styled.div`
+  flex: 0 0 auto;
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   font-family: 'Pretendard', system-ui, -apple-system, sans-serif;
 
   @media (max-width: 900px) {
