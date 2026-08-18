@@ -1,4 +1,4 @@
-import { AlertCircle, Loader2, RefreshCw, Truck } from 'lucide-react';
+import { AlertCircle, Loader2, RefreshCw, TriangleAlert, Truck } from 'lucide-react';
 import styled, { keyframes } from 'styled-components';
 import { CardTitle, FullHeightCard } from '@/styles/styles';
 import type { VehicleEntryExitItem } from '@/types/material-monitoring';
@@ -77,49 +77,64 @@ const RefreshButton = styled.button`
 const TableViewport = styled.div`
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   background: #fff;
-
-  &::-webkit-scrollbar { width: 5px; }
-  &::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 5px;
-  }
 `;
 
-const VehicleTable = styled.table`
-  width: 100%;
-  table-layout: fixed;
-  border-collapse: collapse;
+const VehicleTable = styled.div`
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+`;
 
-  thead {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: #f8fafc;
-  }
+const TableHeader = styled.div`
+  flex: 0 0 40px;
+  display: grid;
+  grid-template-columns: 40% 31% 29%;
+  align-items: center;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
 
-  th,
-  td {
-    padding: 10px 9px;
-    text-align: left;
-    border-bottom: 1px solid #f1f5f9;
-    vertical-align: middle;
-  }
-
-  th {
+  > div {
+    min-width: 0;
+    padding: 0 9px;
     color: #64748b;
     font-size: .76rem;
     font-weight: 600;
     white-space: nowrap;
   }
+`;
 
-  tbody tr:last-child td { border-bottom: 0; }
-  tbody tr:hover { background: #fafbfc; }
+const TableBody = styled.div<{ $rowCount: number }>`
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: repeat(${props => Math.max(props.$rowCount, 1)}, minmax(0, 1fr));
+`;
 
-  td {
+const VehicleRow = styled.div<{ $missingCustomer: boolean }>`
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 40% 31% 29%;
+  align-items: stretch;
+  background: ${props => (props.$missingCustomer ? '#fffdf5' : '#fff')};
+  border-bottom: 1px solid #f1f5f9;
+  box-shadow: ${props => (props.$missingCustomer ? 'inset 3px 0 #f59e0b' : 'none')};
+  transition: background .16s ease;
+
+  &:last-child { border-bottom: 0; }
+  &:hover { background: ${props => (props.$missingCustomer ? '#fffbeb' : '#fafbfc')}; }
+
+  .cell {
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    padding: 6px 9px;
     color: #334155;
     font-size: .82rem;
   }
@@ -129,11 +144,14 @@ const VehicleTable = styled.table`
     min-width: 0;
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: 3px;
   }
 
+  .vehicle { width: 100%; }
+
   .vehicle strong,
-  .vehicle span {
+  .vendor-name {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -145,12 +163,30 @@ const VehicleTable = styled.table`
     font-weight: 600;
   }
 
-  .vehicle span,
+  .vendor-name,
   .entry-time span {
     color: #94a3b8;
     font-size: .7rem;
     font-weight: 500;
   }
+
+  .vendor-warning {
+    align-self: flex-start;
+    max-width: 100%;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 5px;
+    color: #b45309;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 6px;
+    font-size: .66rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .vendor-warning svg { flex-shrink: 0; }
 
   .entry-time strong {
     color: #475569;
@@ -171,6 +207,7 @@ const VehicleTable = styled.table`
     font-weight: 600;
     white-space: nowrap;
   }
+
 `;
 
 const StatePanel = styled.div`
@@ -294,42 +331,57 @@ export default function VehicleEntryExitCard({ vehicles, isLoading, error, onRet
         </StatePanel>
       ) : (
         <TableViewport>
-          <VehicleTable aria-label="차량입출차정보 목록">
-            <colgroup>
-              <col style={{ width: '40%' }} />
-              <col style={{ width: '31%' }} />
-              <col style={{ width: '29%' }} />
-            </colgroup>
-            <thead>
-              <tr>
-                <th scope="col">차량 정보</th>
-                <th scope="col">입차시간</th>
-                <th scope="col">체류시간</th>
-              </tr>
-            </thead>
-            <tbody>
+          <VehicleTable role="table" aria-label="차량입출차정보 목록">
+            <TableHeader role="row">
+              <div role="columnheader">차량 정보</div>
+              <div role="columnheader">입차시간</div>
+              <div role="columnheader">체류시간</div>
+            </TableHeader>
+            <TableBody role="rowgroup" $rowCount={vehicles.length}>
               {vehicles.map(vehicle => {
                 const entryTime = getEntryTimeParts(vehicle.INDT);
+                const customerName = vehicle.CUSTNM?.trim();
+                const isCustomerMissing = !customerName;
 
                 return (
-                  <tr key={vehicle.INOUTCARID}>
-                    <td title={`${vehicle.CARNO} / ${vehicle.CUSTNM || '업체 미지정'}`}>
+                  <VehicleRow
+                    key={vehicle.INOUTCARID}
+                    role="row"
+                    $missingCustomer={isCustomerMissing}
+                  >
+                    <div
+                      className="cell"
+                      role="cell"
+                      title={`${vehicle.CARNO} / ${customerName || '업체 미지정'}`}
+                    >
                       <div className="vehicle">
                         <strong>{vehicle.CARNO || '-'}</strong>
-                        <span>{vehicle.CUSTNM || '업체 미지정'}</span>
+                        {isCustomerMissing ? (
+                          <span
+                            className="vendor-warning"
+                            title="업체 정보가 등록되지 않았습니다."
+                          >
+                            <TriangleAlert size={11} aria-hidden="true" />
+                            업체 미지정
+                          </span>
+                        ) : (
+                          <span className="vendor-name">{customerName}</span>
+                        )}
                       </div>
-                    </td>
-                    <td title={vehicle.INDT}>
+                    </div>
+                    <div className="cell" role="cell" title={vehicle.INDT}>
                       <div className="entry-time">
                         <span>{entryTime.date}</span>
                         <strong>{entryTime.time}</strong>
                       </div>
-                    </td>
-                    <td><span className="stay-time">{vehicle.STAYTIME || '-'}</span></td>
-                  </tr>
+                    </div>
+                    <div className="cell" role="cell">
+                      <span className="stay-time">{vehicle.STAYTIME || '-'}</span>
+                    </div>
+                  </VehicleRow>
                 );
               })}
-            </tbody>
+            </TableBody>
           </VehicleTable>
         </TableViewport>
       )}

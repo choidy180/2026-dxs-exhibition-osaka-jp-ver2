@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { API_URL_VEHICLE_ENTRY_EXIT } from '@/constants/material-monitoring';
+import { getVehicleEntryExitApiUrl } from '@/constants/material-monitoring';
 import type { VehicleEntryExitItem } from '@/types/material-monitoring';
 import { sortByLongestStayTime } from '@/utils/vehicle-entry-exit';
 
@@ -31,7 +31,7 @@ export function useVehicleEntryExitData() {
     setError(null);
 
     try {
-      const response = await fetch(API_URL_VEHICLE_ENTRY_EXIT, {
+      const response = await fetch(getVehicleEntryExitApiUrl(), {
         cache: 'no-store',
         signal: controller.signal
       });
