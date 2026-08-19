@@ -158,6 +158,16 @@ const PROCESS_COLORS = PROCESS_CONFIG.map((process) => new THREE.Color(process.c
 const INSERTION_STATION_INDEX = PROCESS_CONFIG.findIndex((process) => process.name === '삽입');
 const LINE_MOVE_DURATION_MS = 1200;
 
+const getReversedLineStationIndex = (
+  cartIndex: number,
+  lineOffset: number,
+  stationCount: number,
+) => {
+  // 삽입 공정의 대차 매핑은 유지하면서 라인 진행 방향만 반전한다.
+  const mirroredIndex = (INSERTION_STATION_INDEX * 2) - cartIndex - lineOffset;
+  return ((mirroredIndex % stationCount) + stationCount) % stationCount;
+};
+
 const getMotionProgress = (motion: LineMotionState) => {
   if (motion.duration <= 0) return 1;
 
@@ -399,8 +409,16 @@ const MovingLabel = React.memo(({
 
     const motion = lineMotionRef.current;
     if (!motion) return;
-    const currentIndex = (labelIndex + motion.fromOffset) % locations.length;
-    const nextIndex = (labelIndex + motion.toOffset) % locations.length;
+    const currentIndex = getReversedLineStationIndex(
+      labelIndex,
+      motion.fromOffset,
+      locations.length,
+    );
+    const nextIndex = getReversedLineStationIndex(
+      labelIndex,
+      motion.toOffset,
+      locations.length,
+    );
     const currentPos = locations[currentIndex].position;
     const nextPos = locations[nextIndex].position;
     const currentLabelPosition = currentLabelPositionRef.current.copy(currentPos).add(labelOffset);
@@ -767,8 +785,16 @@ function InteractiveJigModel({
     const moveProgress = getMotionProgress(motion);
 
     meshLocations.forEach((movingLocation, labelIndex) => {
-      const currentStationIndex = (labelIndex + motion.fromOffset) % total;
-      const nextStationIndex = (labelIndex + motion.toOffset) % total;
+      const currentStationIndex = getReversedLineStationIndex(
+        labelIndex,
+        motion.fromOffset,
+        total,
+      );
+      const nextStationIndex = getReversedLineStationIndex(
+        labelIndex,
+        motion.toOffset,
+        total,
+      );
       const currentLocation = meshLocations[currentStationIndex];
       const nextLocation = meshLocations[nextStationIndex];
       const movingMesh = movingLocation.mesh;
