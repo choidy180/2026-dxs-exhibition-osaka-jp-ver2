@@ -10,15 +10,18 @@ import {
   Bot,
   Box,
   Boxes,
+  CalendarRange,
   CheckCircle2,
   ChartNoAxesColumnIncreasing,
   CircleDotDashed,
   ClipboardCheck,
   Cog,
   Droplets,
+  FlaskConical,
   LayoutGrid,
   Layers,
   PackageCheck,
+  PackageSearch,
   PanelLeftClose,
   QrCode,
   Route,
@@ -28,6 +31,7 @@ import {
   ShieldCheck,
   Truck,
   Warehouse,
+  Wrench,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -40,7 +44,8 @@ type NavKey =
   | "equipment"
   | "production"
   | "work"
-  | "shipping";
+  | "shipping"
+  | "lab";
 type PanelKey = Exclude<NavKey, "dashboard"> | "search";
 type NoticeTone = "danger" | "warning" | "success" | "info";
 
@@ -122,6 +127,7 @@ const NAV_ITEMS: NavEntry[] = [
     description: "생산 시간과 목표 관리",
     icon: ChartNoAxesColumnIncreasing,
     children: [
+      { label: "생산계획", href: "/production/production-plan", detail: "생산계획 업로드와 리비전 관리", icon: CalendarRange },
       { label: "작업시간관리", href: "/production/takttime-dashboard", detail: "택타임과 생산 흐름 분석", icon: CheckCircle2 },
     ],
   },
@@ -143,6 +149,17 @@ const NAV_ITEMS: NavEntry[] = [
       { label: "운송관리", href: "/transport/realtime-status", detail: "차량 및 이동 현황", icon: Route },
       { label: "제품창고", href: "/transport/warehouse-management", detail: "완제품 재고 관리", icon: PackageCheck },
       { label: "출하처리", href: "/transport/shipment", detail: "출하 지시와 처리 현황", icon: Send },
+    ],
+  },
+  {
+    // 개발 진행 중 화면의 UI 만 확인하는 공간 — 실제 데이터는 연결되지 않는다
+    key: "lab",
+    label: "실험실",
+    description: "개발 진행 중 화면 UI 확인",
+    icon: FlaskConical,
+    children: [
+      { label: "MES BOM LIST", href: "/lab/mes-bom-list", detail: "개발 중 · BOM 정전개 전체 리스트", icon: Wrench },
+      { label: "발주대상리스트", href: "/lab/order-plan", detail: "개발 중 · 발주 소요량 산출", icon: PackageSearch },
     ],
   },
 ];
@@ -210,6 +227,7 @@ const getActiveKey = (pathname: string | null): NavKey => {
   if (pathname?.includes("/material")) return "material";
   if (pathname?.includes("/transport")) return "shipping";
   if (pathname?.includes("/production")) return "quality";
+  if (pathname?.includes("/lab")) return "lab";
   return "dashboard";
 };
 

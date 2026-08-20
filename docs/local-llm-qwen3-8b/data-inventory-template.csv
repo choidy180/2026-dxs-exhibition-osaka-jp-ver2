@@ -1,0 +1,3 @@
+data_id,data_type,title,owner_department,plant,line,equipment,security_class,permission_group,revision,effective_date,current_version,source_path_or_system,file_sha256,contains_personal_data,approved_for_poc,index_status,last_indexed_at,notes
+DOC-001,문서,"예시 작업표준서",생산기술,A공장,L1,설비-001,사내,생산기술,Rev.1,2026-08-01,Y,"승인된 내부 경로",,N,N,미색인,,예시 행은 삭제 후 사용
+KPI-001,MES_VIEW,"시간별 생산 실적",생산관리,A공장,L1,,사내,생산관리,,,Y,"llm_ro.v_production_hourly",,N,N,미연결,,예시 행은 삭제 후 사용
