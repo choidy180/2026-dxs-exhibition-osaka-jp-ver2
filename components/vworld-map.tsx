@@ -295,7 +295,7 @@ export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: V
           const yOffset = -60 - (sIndex * POPUP_HEIGHT);
 
           const iconOverlayId = `icon-${carId}`;
-          let iconOverlay = map.getOverlayById(iconOverlayId);
+          const iconOverlay = map.getOverlayById(iconOverlayId);
           
           // [수정3] 방향에 따라 트럭 SVG 좌우 반전 처리
           // LG(서쪽) -> GMT(동쪽): 기본 방향(오른쪽) / GMT(동쪽) -> LG(서쪽): 반전(왼쪽)
@@ -323,7 +323,7 @@ export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: V
           }
 
           const popupOverlayId = `popup-${carId}`;
-          let popupOverlay = map.getOverlayById(popupOverlayId);
+          const popupOverlay = map.getOverlayById(popupOverlayId);
 
           const tailHtml = sIndex > 0 
               ? `<div style="position: absolute; bottom: -${(sIndex * POPUP_HEIGHT)-12}px; left: calc(50% - 1px); width: 0; height: ${(sIndex * POPUP_HEIGHT)-20}px; border-left: 2px dashed rgba(${themeRgba}, 0.4); z-index: -1;"></div>` 

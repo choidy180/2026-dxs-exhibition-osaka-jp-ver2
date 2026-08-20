@@ -2,11 +2,25 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-    Layers, ZoomIn, X, RefreshCw, Monitor, Clock, 
-    CheckCircle2, XCircle, Volume2, VolumeX, Siren,
-    FileText, ChevronRight, Info, ScanLine, AlertTriangle,
-    ClipboardX, Home, Calendar, ChevronDown, ChevronLeft
+import {
+  ZoomIn,
+  X,
+  RefreshCw,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Volume2,
+  VolumeX,
+  Siren,
+  FileText,
+  ChevronRight,
+  Info,
+  ScanLine,
+  ClipboardX,
+  Home,
+  Calendar,
+  ChevronDown,
+  ChevronLeft,
 } from 'lucide-react';
 
 // ─── [CONFIG] 설정 및 테마 ───

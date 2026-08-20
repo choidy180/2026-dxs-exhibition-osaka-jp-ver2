@@ -49,7 +49,8 @@ z     sticky 1 · popover 100 · backdrop 2000 · modal 2001 · fullscreen 5000
 그라디언트 배경 · 다크 표면 배경 · weight 700 이상 · 새 hex 색상 · Tailwind 클래스로 신규 UI ·
 react-icons · 확대/회전 hover · 색만으로 상태 표시 · `outline: none` 만 주고 포커스 링 미제공 ·
 로딩/오류/빈 상태 누락 · cleanup 없는 `setInterval` ·
-**한쪽 변만 강조하는 패턴** (`box-shadow: inset 3px 0 …`, 굵은 `border-left`, 한쪽 변만 다른 색)
+**한쪽 변만 강조하는 패턴** (`box-shadow: inset 3px 0 …`, 굵은 `border-left`, 한쪽 변만 다른 색) ·
+**네이티브 `<select>`** (공용 커스텀 셀렉트 `components/common/select/SelectField.tsx` 사용)
 
 선택·강조는 예외 없이 **옅은 톤 배경 + 사방 1px 테두리**로만 표현한다. 필요하면 상태 배지를 덧붙인다.
 

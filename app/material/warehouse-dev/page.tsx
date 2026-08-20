@@ -1,22 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import styled, { createGlobalStyle, keyframes, css } from 'styled-components';
+import styled, { createGlobalStyle, css } from 'styled-components';
 import { motion, AnimatePresence } from "framer-motion";
 import Papa from 'papaparse';
-import { 
-  ArrowRight, 
-  Box, 
-  Truck, 
-  MapPin, 
-  Calendar, 
-  Hash, 
-  User, 
-  CheckCircle2, 
+import {
+  ArrowRight,
+  Box,
+  Truck,
+  MapPin,
+  Hash,
+  User,
   AlertCircle,
   Search,
   Package,
-  Clock
+  Clock,
 } from "lucide-react";
 
 // ─── [CONFIG] ─────────────────────────────────────────

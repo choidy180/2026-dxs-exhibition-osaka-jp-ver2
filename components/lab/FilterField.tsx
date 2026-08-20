@@ -1,7 +1,7 @@
 'use client';
 
-import { ChevronDown } from 'lucide-react';
-import { Field, SelectWrap } from './styles';
+import SelectField from '@/components/common/select/SelectField';
+import { Field } from './styles';
 
 type TextProps = {
   label: string;
@@ -38,21 +38,7 @@ type SelectProps = {
   onChange: (value: string) => void;
 };
 
-/** 필터용 셀렉트 — 기본 화살표를 숨기고 lucide 아이콘을 얹는다 */
+/** 필터용 셀렉트 — 공용 커스텀 셀렉트를 사용한다 (네이티브 select 미사용) */
 export function FilterSelectField({ label, value, options, width, onChange }: SelectProps) {
-  return (
-    <Field $width={width}>
-      <span>{label}</span>
-      <SelectWrap>
-        <select value={value} onChange={event => onChange(event.target.value)} aria-label={label}>
-          {options.map(option => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-        <ChevronDown size={15} />
-      </SelectWrap>
-    </Field>
-  );
+  return <SelectField label={label} value={value} options={options} width={width} onChange={onChange} />;
 }

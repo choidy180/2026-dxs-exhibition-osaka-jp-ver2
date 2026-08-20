@@ -306,8 +306,8 @@ export const Field = styled.label<{ $width?: number }>`
     font-weight: 600;
   }
 
-  input,
-  select {
+  /* 셀렉트는 공용 커스텀 컴포넌트를 쓰므로 여기서는 텍스트 입력만 다룬다 */
+  input {
     width: 100%;
     height: 42px;
     padding: 0 12px;
@@ -331,28 +331,6 @@ export const Field = styled.label<{ $width?: number }>`
       outline: ${focusRing};
       outline-offset: 2px;
     }
-  }
-
-  select {
-    cursor: pointer;
-    appearance: none;
-    /* 화살표는 배경 그라디언트 없이 문자로 표시한다 */
-    padding-right: 28px;
-    background-image: none;
-  }
-`;
-
-export const SelectWrap = styled.div`
-  position: relative;
-  width: 100%;
-
-  svg {
-    position: absolute;
-    top: 50%;
-    right: 10px;
-    transform: translateY(-50%);
-    pointer-events: none;
-    color: ${color.ink4};
   }
 `;
 

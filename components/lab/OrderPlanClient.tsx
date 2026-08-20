@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import DatePickerField from '@/components/common/date-picker/DatePickerField';
+import SelectField from '@/components/common/select/SelectField';
 import {
   ENABLE_MES_TRANSFER,
   ORDER_FIXED_COLUMNS,
@@ -50,7 +51,6 @@ import {
   CountPill,
   DataCard,
   DayHeadCell,
-  Field,
   FilterActions,
   FilterCard,
   GridBody,
@@ -70,7 +70,6 @@ import {
   OrderNeedBadge,
   PageFontScope,
   RetryButton,
-  SelectWrap,
   StateBox,
   StatsGrid,
   StickyCell,
@@ -211,27 +210,15 @@ export default function OrderPlanClient() {
             산출 조건
           </div>
 
-          <Field $width={252}>
-            <span>적용 생산계획 (REVISION)</span>
-            <SelectWrap>
-              <select
-                value={revisionId}
-                onChange={event => setRevisionId(event.target.value)}
-                disabled={isOptionsLoading || !revisionOptions.length}
-                aria-label="적용 생산계획 선택"
-              >
-                {revisionOptions.length ? (
-                  revisionOptions.map(option => (
-                    <option key={option.id} value={option.id}>
-                      {option.label}
-                    </option>
-                  ))
-                ) : (
-                  <option value="">{isOptionsLoading ? '불러오는 중...' : '선택 가능한 계획 없음'}</option>
-                )}
-              </select>
-            </SelectWrap>
-          </Field>
+          <SelectField
+            label="적용 생산계획 (REVISION)"
+            value={revisionId}
+            options={revisionOptions.map(option => ({ value: option.id, label: option.label }))}
+            onChange={setRevisionId}
+            disabled={isOptionsLoading || !revisionOptions.length}
+            placeholder={isOptionsLoading ? '불러오는 중...' : '선택 가능한 계획 없음'}
+            width={252}
+          />
 
           <DatePickerField
             label="발주 요구일자 (PLAN DATE)"

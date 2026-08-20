@@ -4,22 +4,34 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import { ref, onValue, query, limitToLast } from "firebase/database";
 import { db } from '@/lib/firebase';
-import styled from 'styled-components'; 
-import { 
-  DashboardContainer, Column, TopCard, CardTitle, 
-  VehicleImagePlaceholder, PlateContainer, InfoRow, DwellTimeBadge, 
-  MiniEmptyState, FullHeightCard, 
-  HistoryListContainer, HistoryItem as BaseHistoryItem, VideoCard, 
-  IpInputWrapper, PinkButton, StyledErrorState, Backdrop, SlidePanel 
+import styled from 'styled-components';
+import {
+  DashboardContainer,
+  Column,
+  TopCard,
+  CardTitle,
+  VehicleImagePlaceholder,
+  InfoRow,
+  MiniEmptyState,
+  FullHeightCard,
+  HistoryListContainer,
+  HistoryItem as BaseHistoryItem,
+  VideoCard,
+  PinkButton,
 } from '@/styles/styles';
 import { WearableApiEntry } from '@/types/types';
 import AIDashboardModal from '@/components/ai-dashboard-modal';
 import WarehouseBoard from '@/components/wearable-warehouse-board';
-import { 
-  Loader2, RefreshCw, Signal, AlertTriangle, Search, ListChecks, FileWarning, 
-  Maximize2, Minimize2, X, Video
+import {
+  Loader2,
+  Search,
+  ListChecks,
+  FileWarning,
+  Maximize2,
+  Minimize2,
+  X,
+  Video,
 } from "lucide-react";
-import { LuMaximize, LuMinimize } from "react-icons/lu";
 
 // --- Constants ---
 const PORT = 8080;

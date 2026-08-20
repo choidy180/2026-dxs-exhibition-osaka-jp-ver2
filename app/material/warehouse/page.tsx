@@ -9,14 +9,11 @@ import {
   Search,
   Box,
   MapPin,
-  RefreshCw,
-  Bell,
-  Menu,
   User,
   LogOut,
   Settings,
   ChevronRight,
-  History
+  History,
 } from "lucide-react";
 
 // ─── [1. INTERFACES & DATA] ────────────────────────

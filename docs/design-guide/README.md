@@ -402,6 +402,30 @@ border: 1px solid #cfd6e2; background: #f9fafb;
 placeholder: #94a3b8
 ```
 
+### 5-6-1. 셀렉트 (네이티브 `<select>` 사용 금지)
+
+네이티브 `<select>` 는 OS·브라우저마다 목록 모양이 달라 가이드를 지킬 수 없다.
+**모든 선택 입력은 공용 커스텀 셀렉트**([components/common/select/SelectField.tsx](../../components/common/select/SelectField.tsx))를 사용한다.
+
+```
+트리거: height 42; padding 0 10px 0 12px; radius 10; border 1px border;
+        background surfaceSubtle → hover surface + borderStrong
+        열림 상태: border brand, chevron 180도 회전 + brand 색
+목록  : radius 12; padding 6; max-height 292px; overflow-y auto; shadow.popover
+        min-width 100% (트리거 폭 이상), 화면 아래 공간이 부족하면 위로 펼친다
+항목  : min-height 34; radius 8; 선택된 항목은 배경 brandSoft + 글자 brand +
+        사방 1px brand 테두리 + 체크 아이콘 / 키보드 활성 항목은 배경 fill
+```
+
+**필수 동작**
+
+- 마우스: 트리거 클릭으로 열고 닫기, 항목 클릭으로 선택, 바깥 클릭으로 닫기.
+- 키보드: `Enter`·`Space`·`↑`·`↓` 로 열기, `↑`·`↓` 이동, `Home`·`End` 양 끝 이동,
+  `Enter`·`Space` 선택, `Esc` 닫기(전파를 막아 상위 오버레이는 닫지 않는다), `Tab` 이탈 시 닫기.
+- 접근성: 트리거에 `aria-haspopup="listbox"` + `aria-expanded`, 목록에 `role="listbox"`,
+  항목에 `role="option"` + `aria-selected`.
+- 옵션은 문자열 배열과 `{ value, label }` 배열을 모두 받는다.
+
 ### 5-7. 데이터 그리드 (CSS Grid 기반 — `<table>` 보다 우선)
 
 ```tsx
@@ -600,3 +624,4 @@ overflow-y: auto;
 | 2026-08-19 | v1.1 | 생산계획 화면 구현 중 확정: `color.surfaceZebra`·`gridLayer` 토큰 추가, 피벗 그리드(월 그룹 헤더 + 좌측 고정 컬럼) 규칙 명시, Soft 버튼 색을 토큰 참조로 교체, `utils/<feature>-api.ts` 폴더 규칙 추가 |
 | 2026-08-20 | v1.2 | 데이터 그리드 세로 채움 규칙 추가. **한쪽 변만 강조하는 패턴(좌측 인셋 바 등)을 금지**하고, 기존 v1 의 인셋 바 권장 문구를 철회. 강조는 옅은 톤 배경 + 사방 테두리로 통일 |
 | 2026-08-20 | v1.3 | 실험실(개발 진행 중) 화면 규칙 추가(1-3-1). 공용 컴포넌트 위치 `components/common/<component>/` 와 공용 날짜 유틸 `utils/date.ts` 규칙 추가. 일자 선택 팝오버를 생산계획 전용에서 공용으로 승격 |
+| 2026-08-20 | v1.4 | 셀렉트 레시피 추가(5-6-1). **네이티브 `<select>` 사용을 금지**하고 공용 커스텀 셀렉트로 통일 |

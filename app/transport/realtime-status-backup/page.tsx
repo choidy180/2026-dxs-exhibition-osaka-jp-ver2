@@ -3,14 +3,23 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import styled from "styled-components";
 import axios from "axios";
-import { 
-  Sun, Cloud, CloudRain, CloudSnow, CloudLightning, Truck, 
-  MapPin, AlertCircle, RefreshCw, CheckCircle, Navigation, 
-  Clock, CheckCircle2, Info, AlertTriangle, PieChart
+import {
+  Sun,
+  Cloud,
+  CloudRain,
+  CloudSnow,
+  CloudLightning,
+  Truck,
+  RefreshCw,
+  Navigation,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  PieChart,
 } from "lucide-react";
 import { format } from "date-fns";
 import dynamic from "next/dynamic";
-import type { VWorldMarker } from "@/components/vworld-map"; 
+import type { VWorldMarker } from "@/components/vworld-map";
 
 const VWorldMap = dynamic(
   () => import("@/components/vworld-map"),

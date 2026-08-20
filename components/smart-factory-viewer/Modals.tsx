@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Octagon, Siren, XCircle } from 'lucide-react';
+import { Octagon, XCircle } from 'lucide-react';
 import type { UnitData } from '@/types/smartFactoryViewer';
 import {
   AlertBox,

@@ -1,11 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { usePathname, useRouter, notFound } from "next/navigation";
-import LoadingGate from "@/components/loading/loading-spinner";
-import ProcessMonitorPage from "@/components/bar-graph";
-import LocalMapPage from "@/components/local-map";
-import AiMaterialPlaceholder from "@/components/ai-material-placeholder";
+import { usePathname, useRouter } from "next/navigation";
 
 const ScctDevPage = () => {
   const pathname = usePathname();

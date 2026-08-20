@@ -23,6 +23,8 @@ UI 코드를 제안하거나 수정하기 전에 다음 파일을 읽고 그대�
 8. 브랜드 `#D31145` 는 accent 전용. 중립색은 slate 계열(`#f8fafc`, `#0f172a`, `#64748b`, `#e2e8f0`).
    선택·강조는 옅은 톤 배경 + 사방 1px 테두리로만 표현한다.
    **한쪽 변만 강조하는 패턴(`box-shadow: inset 3px 0 …`, 굵은 `border-left`, 한쪽 변만 다른 색)은 절대 사용하지 않는다.**
+9. **네이티브 `<select>` 를 쓰지 않는다.** 선택 입력은 공용 커스텀 셀렉트
+   `components/common/select/SelectField.tsx` 를 사용한다(가이드 5-6-1).
 9. UI 문안은 한국어. 숫자는 `toLocaleString('ko-KR')`, 값 없음은 `-`.
 
 ## 2. 작업 로그 (필수)

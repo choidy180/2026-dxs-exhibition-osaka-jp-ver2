@@ -315,14 +315,16 @@ const PRODUCT_NAMES = [
   'DOOR ASSEMBLY, HOME BAR',
 ];
 
-const pickBy = <T>(list: readonly T[], key: string) => {
-  // 품번 문자열을 안정적인 인덱스로 바꿔 같은 품번은 항상 같은 값을 갖게 한다
+/** 문자열을 안정적인 정수로 바꾼다 (같은 문자열은 항상 같은 값) */
+const hashString = (key: string) => {
   let hash = 0;
   for (let index = 0; index < key.length; index += 1) {
     hash = (hash * 31 + key.charCodeAt(index)) % 1_000_003;
   }
-  return list[hash % list.length];
+  return hash;
 };
+
+const pickBy = <T>(list: readonly T[], key: string) => list[hashString(key) % list.length];
 
 /** 제품 순번을 붙여 제품 전용 품번을 만든다 */
 const withProductSuffix = (code: string, productIndex: number) =>
@@ -419,9 +421,9 @@ const TARGET_ORDER_ITEMS = 145;
  * 목업에서는 품번별로 안정적인 수치를 생성한다.
  */
 export const buildOrderPlanDataset = (revisionId: string, planDate: string): OrderPlanDataset => {
+  // 리비전 id 는 길이가 같은 경우가 많으므로 문자열 내용을 해시해 시드를 만든다
   const random = createSeededRandom(
-    // 리비전과 요구일자가 바뀌면 산출 결과도 달라진다
-    9_001 + revisionId.length * 733 + Number(planDate.replace(/-/g, '')) % 100_003,
+    9_001 + hashString(revisionId) * 31 + (Number(planDate.replace(/-/g, '')) % 100_003),
   );
 
   const days = buildDayRange(planDate, ORDER_SCHEDULE_DAY_COUNT);

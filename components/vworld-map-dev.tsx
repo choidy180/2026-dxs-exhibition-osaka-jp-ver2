@@ -452,7 +452,7 @@ export default function VWorldMap({
       if (remainingMinutesTotal <= 1) computedRemainingTimeStr = "도착 임박";
 
       const iconOverlayId = `icon-${carId}`;
-      let iconOverlay = map.getOverlayById(iconOverlayId);
+      const iconOverlay = map.getOverlayById(iconOverlayId);
       const iconSize = showPopup ? 62 : 52;
       const innerSize = showPopup ? 40 : 34;
       const iconHtml = `
@@ -549,7 +549,7 @@ export default function VWorldMap({
       }
 
       const popupOverlayId = `popup-${carId}`;
-      let popupOverlay = map.getOverlayById(popupOverlayId);
+      const popupOverlay = map.getOverlayById(popupOverlayId);
       if (showPopup) {
         const sIndex = stackIndexes[carId] || 0;
         const popupHeight = 172;

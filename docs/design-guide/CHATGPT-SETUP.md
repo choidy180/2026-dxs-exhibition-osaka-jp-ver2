@@ -112,7 +112,13 @@ Esc = 최상위 오버레이 1개만 닫기, Enter = 현재 화면 새로고침.
 [금지]
 그라디언트 배경 · 다크 표면 배경 · weight 700 이상 · 새 hex 색상 · Tailwind 클래스로 신규 UI ·
 react-icons · 확대·회전 hover · 색만으로 상태 표시 · 로딩/오류/빈 상태 누락 · cleanup 없는 setInterval ·
-한쪽 변만 강조하는 패턴(box-shadow: inset 3px 0 …, 굵은 border-left, 한쪽 변만 다른 색)
+한쪽 변만 강조하는 패턴(box-shadow: inset 3px 0 …, 굵은 border-left, 한쪽 변만 다른 색) ·
+네이티브 <select>
+
+선택 입력은 네이티브 select 대신 커스텀 팝오버 셀렉트로 만든다.
+트리거(height 42, radius 10)를 누르면 role="listbox" 목록이 열리고, 선택된 항목은
+옅은 브랜드 배경 + 사방 1px 브랜드 테두리 + 체크 아이콘으로 표시한다.
+키보드(위/아래·Home/End·Enter·Esc)와 바깥 클릭 닫기를 반드시 지원한다.
 
 선택된 항목이나 주의가 필요한 행은 예외 없이 옅은 톤 배경 + 사방 1px 테두리로 표현하고,
 필요하면 상태 배지를 덧붙인다. 어떤 경우에도 한쪽 변만 강조하지 않는다.

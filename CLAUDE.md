@@ -17,6 +17,8 @@ Every UI change in this repository must follow the single canonical design guide
 - Korean UI copy, `toLocaleString('ko-KR')` numbers, `-` for missing values.
 - Express selection and emphasis with a soft tone background plus a 1px border on all sides. **Never highlight a single
   edge** (`box-shadow: inset 3px 0 …`, a thick `border-left`, or one differently-coloured side).
+- **Never use a native `<select>`.** Use the shared custom select at
+  `components/common/select/SelectField.tsx` (design guide 5-6-1).
 - Before finishing, run the checklist in section 9 of the design guide, plus `npx tsc --noEmit` and `npm run lint`.
 - If a requirement genuinely conflicts with the guide, ask the user first, then record the exception in section 10 of
   the guide with its rationale. Never silently deviate.

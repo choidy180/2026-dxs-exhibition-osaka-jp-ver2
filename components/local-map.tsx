@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useLayoutEffect } from "react";
-import styled, { keyframes, css } from "styled-components";
+import styled, { keyframes } from "styled-components";
 import axios from "axios";
 import { Cloud, Sun, CloudRain, Navigation, Truck, Activity, Bell, AlertTriangle, CheckCircle, Radio, Server, Zap, BarChart2, Siren } from "lucide-react";
 import { format } from "date-fns";
@@ -126,7 +126,7 @@ export default function LocalMapPage() {
   }, []);
 
   const mapMarkers = useMemo(() => {
-    let markers: VWorldMarker[] = [...FACILITY_MARKERS];
+    const markers: VWorldMarker[] = [...FACILITY_MARKERS];
     if (!currentTime) return markers;
 
     if (isSimulationOn) {

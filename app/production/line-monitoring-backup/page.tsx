@@ -9,39 +9,26 @@ import {
   OrbitControls,
   Html,
   Center,
-  Environment
+  Environment,
 } from "@react-three/drei";
 import {
-  AlertTriangle,
   LayoutDashboard,
   Settings,
   XCircle,
   Activity,
-  Zap,
   Cpu,
   Thermometer,
   Gauge,
   Bot,
-  CheckCircle,
-  Database,
-  BarChart3,
-  ScanLine,
   Droplets,
-  Siren, 
+  Siren,
   Octagon,
   Wrench,
   AlertOctagon,
-  Pipette,
   Layers,
-  ChevronRight
+  ChevronRight,
 } from "lucide-react";
 import * as THREE from "three";
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  Tooltip,
-} from 'recharts';
 
 // -----------------------------------------------------------------------------
 // [설정 및 목업 데이터]

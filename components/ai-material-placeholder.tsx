@@ -2,7 +2,7 @@
 
 import React from "react";
 import styled, { keyframes } from "styled-components";
-import { Box, Lock, RefreshCw } from "lucide-react"; // 아이콘 라이브러리 (없으면 제외 가능)
+import { Box, RefreshCw } from "lucide-react"; // 아이콘 라이브러리 (없으면 제외 가능)
 
 // --- 애니메이션 정의 ---
 const rotate = keyframes`
