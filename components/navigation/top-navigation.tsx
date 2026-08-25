@@ -16,6 +16,7 @@ import {
   CircleDotDashed,
   ClipboardCheck,
   Cog,
+  Cctv,
   Droplets,
   FlaskConical,
   LayoutGrid,
@@ -160,6 +161,7 @@ const NAV_ITEMS: NavEntry[] = [
     children: [
       { label: "MES BOM LIST", href: "/lab/mes-bom-list", detail: "개발 중 · BOM 정전개 전체 리스트", icon: Wrench },
       { label: "발주대상리스트", href: "/lab/order-plan", detail: "개발 중 · 발주 소요량 산출", icon: PackageSearch },
+      { label: "상황 모니터링", href: "/lab/cctv-monitoring", detail: "개발 중 · 동별 CCTV 현황 확인", icon: Cctv },
     ],
   },
 ];

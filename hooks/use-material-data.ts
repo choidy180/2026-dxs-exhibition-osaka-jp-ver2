@@ -1,69 +1,72 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API_URL_MATERIAL_LIST } from '@/constants/material-monitoring';
-import { DUMMY_INSPECTION_LOGS } from '@/data/dummy-inspection-logs';
 import type { MaterialListItem } from '@/types/material-monitoring';
-import { createLiveDummyLog, getMaterialStats, makeMaterialKey } from '@/utils/material-monitoring';
+import { getMaterialStats } from '@/utils/material-monitoring';
+
+const isMaterialListItem = (value: unknown): value is MaterialListItem => {
+  return value !== null && typeof value === 'object';
+};
+
+const isPendingMaterial = (item: MaterialListItem) => {
+  return item.InspConf !== 'Y' && item.QmConf !== 'Y';
+};
 
 export function useMaterialData() {
-  const [materialList, setMaterialList] = useState<MaterialListItem[]>(DUMMY_INSPECTION_LOGS);
-  const [inspectionLogs, setInspectionLogs] = useState<MaterialListItem[]>(DUMMY_INSPECTION_LOGS);
-  const [pendingList, setPendingList] = useState<MaterialListItem[]>(DUMMY_INSPECTION_LOGS.filter(item => item.InspConf !== 'Y' && item.QmConf !== 'Y'));
-  const [materialStats, setMaterialStats] = useState(getMaterialStats(DUMMY_INSPECTION_LOGS));
-  const [isMaterialLoading, setIsMaterialLoading] = useState(false);
+  const [materialList, setMaterialList] = useState<MaterialListItem[]>([]);
+  const [inspectionLogs, setInspectionLogs] = useState<MaterialListItem[]>([]);
+  const [isMaterialLoading, setIsMaterialLoading] = useState(true);
   const [materialError, setMaterialError] = useState<string | null>(null);
-  const dummyLogIndexRef = useRef(DUMMY_INSPECTION_LOGS.length);
-
-  // 테스트 로그 5초 누적
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      const nextLog = createLiveDummyLog(dummyLogIndexRef.current);
-      dummyLogIndexRef.current += 1;
-      setInspectionLogs(prev => [nextLog, ...prev].slice(0, 40));
-      setMaterialList(prev => [nextLog, ...prev].slice(0, 80));
-    }, 5000);
-
-    return () => window.clearInterval(timer);
-  }, []);
-
-  // 리스트/통계 동기화
-  useEffect(() => {
-    setPendingList(materialList.filter(item => item.InspConf !== 'Y' && item.QmConf !== 'Y'));
-    setMaterialStats(getMaterialStats(materialList));
-  }, [materialList]);
+  const requestControllerRef = useRef<AbortController | null>(null);
+  const pendingList = useMemo(() => materialList.filter(isPendingMaterial), [materialList]);
+  const materialStats = useMemo(() => getMaterialStats(materialList), [materialList]);
 
   // 자재 API 조회
   const fetchMaterialData = useCallback(async () => {
+    requestControllerRef.current?.abort();
+
+    const controller = new AbortController();
+    requestControllerRef.current = controller;
     setMaterialError(null);
     setIsMaterialLoading(true);
 
     try {
-      const res = await fetch(API_URL_MATERIAL_LIST);
+      const res = await fetch(API_URL_MATERIAL_LIST, {
+        cache: 'no-store',
+        signal: controller.signal
+      });
       if (!res.ok) throw new Error(`API Error: ${res.status}`);
 
-      const json = await res.json();
-      const data = (Array.isArray(json) ? json : []).filter((item: MaterialListItem) => !item.NmCustm?.includes('대일화학'));
-      const displayData = data.length ? data : DUMMY_INSPECTION_LOGS;
-
-      setMaterialList(displayData);
-
-      if (data.length) {
-        setInspectionLogs(prev => {
-          const seen = new Set<string>();
-          return [...data, ...prev].filter((item, index) => {
-            const key = makeMaterialKey(item, index);
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-          }).slice(0, 40);
-        });
+      const json: unknown = await res.json();
+      if (!Array.isArray(json)) {
+        throw new Error('Material API returned an invalid response.');
       }
-    } catch (error) {
-      console.error(error);
-      setMaterialError(null);
-      setMaterialList(DUMMY_INSPECTION_LOGS);
+
+      const data = json
+        .filter(isMaterialListItem)
+        .filter(item => !item.NmCustm?.includes('대일화학'));
+
+      setMaterialList(data);
+      setInspectionLogs(data.slice(0, 40));
+    } catch (caughtError) {
+      if (controller.signal.aborted) return;
+
+      console.error(caughtError);
+      setMaterialError('입고 대기 정보를 불러오지 못했습니다.');
+      setMaterialList([]);
+      setInspectionLogs([]);
     } finally {
-      setIsMaterialLoading(false);
+      if (requestControllerRef.current === controller) {
+        requestControllerRef.current = null;
+        setIsMaterialLoading(false);
+      }
     }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      requestControllerRef.current?.abort();
+      requestControllerRef.current = null;
+    };
   }, []);
 
   return {

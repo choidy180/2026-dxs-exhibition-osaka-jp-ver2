@@ -1,7 +1,21 @@
-import { AlertCircle, Loader2, RefreshCw, TriangleAlert, Truck } from 'lucide-react';
+import { AlertCircle, Clock3, Loader2, RefreshCw, TriangleAlert, Truck } from 'lucide-react';
 import styled, { keyframes } from 'styled-components';
+import {
+  color,
+  controlHeight,
+  focusRing,
+  fontSize,
+  fontWeight,
+  motion,
+  radius,
+  scrollbar,
+  shadow,
+  space,
+  tone
+} from '@/styles/design-tokens';
 import { CardTitle, FullHeightCard } from '@/styles/styles';
 import type { VehicleEntryExitItem } from '@/types/material-monitoring';
+import { formatStayTimeMinutes, getAverageStayTimeMinutes } from '@/utils/vehicle-entry-exit';
 
 type Props = {
   vehicles: VehicleEntryExitItem[];
@@ -14,14 +28,16 @@ const spin = keyframes`
   to { transform: rotate(360deg); }
 `;
 
+const vehicleTableColumns = '38% 27% 35%';
+
 const Card = styled(FullHeightCard)`
   height: 100%;
   min-height: 0;
   margin-bottom: 0;
-  padding: 14px;
-  border: 1px solid #edf2f7;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, .05);
+  padding: ${space.xxl}px;
+  border: 1px solid ${color.borderSoft};
+  border-radius: ${radius.card}px;
+  box-shadow: ${shadow.card};
 `;
 
 const Header = styled.div`
@@ -29,48 +45,94 @@ const Header = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: ${space.lg}px;
+  margin-bottom: ${space.md}px;
 
   .title-group {
     min-width: 0;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: ${space.md}px;
+  }
+`;
+
+const Title = styled(CardTitle)`
+  margin: 0;
+  padding: 0;
+  color: ${color.ink};
+  font-size: ${fontSize.cardTitle};
+  font-weight: ${fontWeight.semibold};
+`;
+
+const AverageStayMetric = styled.div`
+  flex-shrink: 0;
+  min-height: ${controlHeight.lg}px;
+  margin-bottom: ${space.xl}px;
+  padding: ${space.sm}px ${space.lg}px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${space.lg}px;
+  border: 1px solid ${color.brandBorder};
+  border-radius: ${radius.control}px;
+  background: ${color.brandSoft};
+
+  .metric-label {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: ${space.sm}px;
+    color: ${color.ink2};
+    font-size: ${fontSize.meta};
+    font-weight: ${fontWeight.semibold};
+    white-space: nowrap;
   }
 
-  .count {
+  .metric-label svg {
     flex-shrink: 0;
-    padding: 3px 9px;
-    color: #d31145;
-    background: #fff0f3;
-    border-radius: 10px;
-    font-size: .76rem;
-    font-weight: 600;
+    color: ${color.brand};
+  }
+
+  strong {
+    min-width: 0;
+    overflow: hidden;
+    color: ${color.brand};
+    font-size: ${fontSize.sectionTitle};
+    font-weight: ${fontWeight.semibold};
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
 `;
 
 const RefreshButton = styled.button`
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+  width: ${controlHeight.md}px;
+  height: ${controlHeight.md}px;
   display: inline-grid;
   place-items: center;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  background: #fff;
-  color: #64748b;
+  border: 1px solid ${color.border};
+  border-radius: ${radius.control}px;
+  background: ${color.surface};
+  color: ${color.ink3};
   cursor: pointer;
-  transition: color .16s ease, border-color .16s ease, background .16s ease;
+  transition: color ${motion.hover}, border-color ${motion.hover}, background ${motion.hover};
 
   &:hover:not(:disabled) {
-    color: #0f172a;
-    border-color: #cbd5e1;
-    background: #f8fafc;
+    color: ${color.ink};
+    border-color: ${color.borderStrong};
+    background: ${color.surfaceSubtle};
   }
 
-  &:disabled { cursor: default; }
+  &:focus-visible {
+    outline: ${focusRing};
+    outline-offset: 3px;
+  }
+
+  &:disabled {
+    opacity: .58;
+    cursor: wait;
+  }
+
   .spin { animation: ${spin} .9s linear infinite; }
 `;
 
@@ -78,9 +140,14 @@ const TableViewport = styled.div`
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #fff;
+  border: 1px solid ${color.border};
+  border-radius: ${radius.card}px;
+  background: ${color.surface};
+
+  &:focus-within {
+    outline: ${focusRing};
+    outline-offset: 3px;
+  }
 `;
 
 const VehicleTable = styled.div`
@@ -92,43 +159,62 @@ const VehicleTable = styled.div`
 
 const TableHeader = styled.div`
   flex: 0 0 40px;
+  box-sizing: border-box;
+  padding-right: ${space.sm}px;
   display: grid;
-  grid-template-columns: 40% 31% 29%;
+  grid-template-columns: ${vehicleTableColumns};
   align-items: center;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  background: ${color.surfaceSubtle};
+  border-bottom: 1px solid ${color.border};
 
   > div {
     min-width: 0;
-    padding: 0 9px;
-    color: #64748b;
-    font-size: .76rem;
-    font-weight: 600;
+    padding: 0 ${space.lg}px;
+    color: ${color.ink3};
+    font-size: ${fontSize.micro};
+    font-weight: ${fontWeight.semibold};
     white-space: nowrap;
   }
 
-  > div:first-child { padding-left: 20px; }
+  > div:first-child { padding-left: ${space.huge}px; }
+
+  > div:last-child {
+    padding-right: ${space.xs}px;
+    padding-left: ${space.xs}px;
+    text-align: center;
+  }
 `;
 
-const TableBody = styled.div<{ $rowCount: number }>`
+const TableBody = styled.div`
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
   display: grid;
-  grid-template-rows: repeat(${props => Math.max(props.$rowCount, 1)}, minmax(0, 1fr));
+  grid-auto-rows: minmax(64px, 72px);
+  align-content: start;
+  ${scrollbar}
 `;
 
 const VehicleRow = styled.div<{ $missingCustomer: boolean }>`
-  min-height: 0;
+  min-height: 64px;
+  box-sizing: border-box;
   display: grid;
-  grid-template-columns: 40% 31% 29%;
+  grid-template-columns: ${vehicleTableColumns};
   align-items: stretch;
-  background: ${props => (props.$missingCustomer ? '#fffdf5' : '#fff')};
-  border-bottom: 1px solid #f1f5f9;
-  box-shadow: ${props => (props.$missingCustomer ? 'inset 3px 0 #f59e0b' : 'none')};
-  transition: background .16s ease;
+  background: ${props => (props.$missingCustomer ? tone.warning.bg : color.surface)};
+  border: 1px solid ${props => (props.$missingCustomer ? tone.warning.border : 'transparent')};
+  border-bottom-color: ${props => (props.$missingCustomer ? tone.warning.border : color.divider)};
+  transition: background ${motion.hover}, border-color ${motion.hover};
 
-  &:last-child { border-bottom: 0; }
-  &:hover { background: ${props => (props.$missingCustomer ? '#fffbeb' : '#fafbfc')}; }
+  &:last-child {
+    border-bottom-color: ${props => (props.$missingCustomer ? tone.warning.border : 'transparent')};
+  }
+
+  &:hover {
+    background: ${props => (props.$missingCustomer ? tone.warning.bg : color.brandSoft)};
+  }
 
   .cell {
     min-width: 0;
@@ -136,12 +222,18 @@ const VehicleRow = styled.div<{ $missingCustomer: boolean }>`
     overflow: hidden;
     display: flex;
     align-items: center;
-    padding: 6px 9px;
-    color: #334155;
-    font-size: .82rem;
+    padding: ${space.sm}px ${space.lg}px;
+    color: ${color.ink2};
+    font-size: ${fontSize.bodySm};
   }
 
-  .cell:first-child { padding-left: 20px; }
+  .cell:first-child { padding-left: ${space.huge}px; }
+
+  .cell:last-child {
+    justify-content: center;
+    padding-right: ${space.xs}px;
+    padding-left: ${space.xs}px;
+  }
 
   .vehicle,
   .entry-time {
@@ -149,7 +241,7 @@ const VehicleRow = styled.div<{ $missingCustomer: boolean }>`
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 3px;
+    gap: ${space.xs}px;
   }
 
   .vehicle { width: 100%; }
@@ -162,16 +254,16 @@ const VehicleRow = styled.div<{ $missingCustomer: boolean }>`
   }
 
   .vehicle strong {
-    color: #0f172a;
-    font-size: .86rem;
-    font-weight: 600;
+    color: ${color.ink};
+    font-size: ${fontSize.body};
+    font-weight: ${fontWeight.semibold};
   }
 
   .vendor-name,
   .entry-time span {
-    color: #94a3b8;
-    font-size: .7rem;
-    font-weight: 500;
+    color: ${color.ink4};
+    font-size: ${fontSize.caption};
+    font-weight: ${fontWeight.medium};
   }
 
   .vendor-warning {
@@ -179,58 +271,65 @@ const VehicleRow = styled.div<{ $missingCustomer: boolean }>`
     max-width: 100%;
     display: inline-flex;
     align-items: center;
-    gap: 3px;
-    padding: 2px 5px;
-    color: #b45309;
-    background: #fffbeb;
-    border: 1px solid #fde68a;
-    border-radius: 6px;
-    font-size: .66rem;
-    font-weight: 700;
+    gap: ${space.xs}px;
+    padding: ${space.xs}px ${space.sm}px;
+    color: ${tone.warning.fg};
+    background: ${tone.warning.bg};
+    border: 1px solid ${tone.warning.border};
+    border-radius: ${radius.bar}px;
+    font-size: ${fontSize.caption};
+    font-weight: ${fontWeight.semibold};
     white-space: nowrap;
   }
 
   .vendor-warning svg { flex-shrink: 0; }
 
   .entry-time strong {
-    color: #475569;
-    font-size: .78rem;
-    font-weight: 600;
+    color: ${color.ink2};
+    font-size: ${fontSize.meta};
+    font-weight: ${fontWeight.semibold};
     white-space: nowrap;
   }
 
   .stay-time {
+    width: 100%;
+    min-width: 0;
     display: inline-flex;
     justify-content: center;
     max-width: 100%;
-    padding: 4px 7px;
-    color: #d31145;
-    background: #fff0f3;
-    border-radius: 8px;
-    font-size: .76rem;
-    font-weight: 600;
+    box-sizing: border-box;
+    overflow: hidden;
+    padding: ${space.xs}px ${space.md}px;
+    color: ${color.brand};
+    background: ${color.brandSoft};
+    border: 1px solid ${color.brandBorder};
+    border-radius: ${radius.row}px;
+    font-size: ${fontSize.caption};
+    font-weight: ${fontWeight.semibold};
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
 
 `;
 
-const StatePanel = styled.div`
+const StatePanel = styled.div<{ $empty?: boolean }>`
   flex: 1;
-  min-height: 260px;
+  min-height: 200px;
   display: grid;
   place-items: center;
-  padding: 24px;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #f8fafc;
+  padding: ${space.huge}px;
+  border: 1px ${props => (props.$empty ? 'dashed' : 'solid')}
+    ${props => (props.$empty ? color.borderStrong : color.border)};
+  border-radius: ${radius.card}px;
+  background: ${color.surfaceSubtle};
   text-align: center;
 
   .state-content {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 9px;
-    color: #64748b;
+    gap: ${space.lg}px;
+    color: ${color.ink3};
   }
 
   .icon-circle {
@@ -238,21 +337,21 @@ const StatePanel = styled.div`
     height: 48px;
     display: grid;
     place-items: center;
-    color: #d31145;
-    background: #fff0f3;
-    border-radius: 12px;
+    color: ${color.brand};
+    background: ${color.brandSoft};
+    border-radius: ${radius.card}px;
   }
 
   strong {
-    color: #334155;
-    font-size: .9rem;
-    font-weight: 600;
+    color: ${color.ink2};
+    font-size: ${fontSize.body};
+    font-weight: ${fontWeight.semibold};
   }
 
   p {
     margin: 0;
-    color: #94a3b8;
-    font-size: .78rem;
+    color: ${color.ink4};
+    font-size: ${fontSize.meta};
     line-height: 1.5;
   }
 
@@ -260,19 +359,30 @@ const StatePanel = styled.div`
 `;
 
 const RetryButton = styled.button`
-  height: 32px;
-  margin-top: 3px;
-  padding: 0 12px;
+  height: ${controlHeight.sm}px;
+  margin-top: ${space.xs}px;
+  padding: 0 ${space.xl}px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  background: #fff;
-  color: #475569;
-  font-size: .78rem;
-  font-weight: 600;
+  gap: ${space.sm}px;
+  border: 1px solid ${color.border};
+  border-radius: ${radius.control}px;
+  background: ${color.surface};
+  color: ${color.ink2};
+  font-size: ${fontSize.meta};
+  font-weight: ${fontWeight.semibold};
   cursor: pointer;
+  transition: background ${motion.hover}, border-color ${motion.hover};
+
+  &:hover {
+    background: ${color.surfaceSubtle};
+    border-color: ${color.borderStrong};
+  }
+
+  &:focus-visible {
+    outline: ${focusRing};
+    outline-offset: 3px;
+  }
 `;
 
 const getEntryTimeParts = (entryTime: string) => {
@@ -288,14 +398,13 @@ const getEntryTimeParts = (entryTime: string) => {
 };
 
 export default function VehicleEntryExitCard({ vehicles, isLoading, error, onRetry }: Props) {
+  const averageStayTime = formatStayTimeMinutes(getAverageStayTimeMinutes(vehicles));
+
   return (
     <Card>
       <Header>
         <div className="title-group">
-          <CardTitle style={{ margin: 0, padding: 0, fontSize: '1.05rem', fontWeight: 600 }}>
-            차량입출차정보
-          </CardTitle>
-          <span className="count">총 {vehicles.length}대</span>
+          <Title>차량입출차정보</Title>
         </div>
         <RefreshButton
           type="button"
@@ -307,6 +416,18 @@ export default function VehicleEntryExitCard({ vehicles, isLoading, error, onRet
           <RefreshCw className={isLoading ? 'spin' : undefined} size={15} />
         </RefreshButton>
       </Header>
+
+      <AverageStayMetric
+        role="status"
+        aria-live="polite"
+        aria-label={`평균 체류시간 ${averageStayTime}`}
+      >
+        <span className="metric-label">
+          <Clock3 size={16} aria-hidden="true" />
+          평균 체류시간
+        </span>
+        <strong title={averageStayTime}>{averageStayTime}</strong>
+      </AverageStayMetric>
 
       {isLoading && vehicles.length === 0 ? (
         <StatePanel role="status" aria-live="polite">
@@ -327,7 +448,7 @@ export default function VehicleEntryExitCard({ vehicles, isLoading, error, onRet
           </div>
         </StatePanel>
       ) : vehicles.length === 0 ? (
-        <StatePanel>
+        <StatePanel $empty>
           <div className="state-content">
             <div className="icon-circle"><Truck size={24} /></div>
             <strong>입차 중인 차량이 없습니다.</strong>
@@ -341,7 +462,7 @@ export default function VehicleEntryExitCard({ vehicles, isLoading, error, onRet
               <div role="columnheader">입차시간</div>
               <div role="columnheader">체류시간</div>
             </TableHeader>
-            <TableBody role="rowgroup" $rowCount={vehicles.length}>
+            <TableBody role="rowgroup" tabIndex={0} aria-label="차량입출차정보 스크롤 목록">
               {vehicles.map(vehicle => {
                 const entryTime = getEntryTimeParts(vehicle.INDT);
                 const customerName = vehicle.CUSTNM?.trim();
@@ -380,7 +501,9 @@ export default function VehicleEntryExitCard({ vehicles, isLoading, error, onRet
                       </div>
                     </div>
                     <div className="cell" role="cell">
-                      <span className="stay-time">{vehicle.STAYTIME || '-'}</span>
+                      <span className="stay-time" title={vehicle.STAYTIME || '-'}>
+                        {vehicle.STAYTIME || '-'}
+                      </span>
                     </div>
                   </VehicleRow>
                 );
