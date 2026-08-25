@@ -128,7 +128,6 @@ const NAV_ITEMS: NavEntry[] = [
     description: "생산 시간과 목표 관리",
     icon: ChartNoAxesColumnIncreasing,
     children: [
-      { label: "생산계획", href: "/production/production-plan", detail: "생산계획 업로드와 리비전 관리", icon: CalendarRange },
       { label: "작업시간관리", href: "/production/takttime-dashboard", detail: "택타임과 생산 흐름 분석", icon: CheckCircle2 },
     ],
   },
@@ -159,6 +158,7 @@ const NAV_ITEMS: NavEntry[] = [
     description: "개발 진행 중 화면 UI 확인",
     icon: FlaskConical,
     children: [
+      { label: "생산계획", href: "/lab/production-plan", detail: "개발 중 · 생산계획 업로드와 리비전 관리", icon: CalendarRange },
       { label: "MES BOM LIST", href: "/lab/mes-bom-list", detail: "개발 중 · BOM 정전개 전체 리스트", icon: Wrench },
       { label: "발주대상리스트", href: "/lab/order-plan", detail: "개발 중 · 발주 소요량 산출", icon: PackageSearch },
       { label: "상황 모니터링", href: "/lab/cctv-monitoring", detail: "개발 중 · 동별 CCTV 현황 확인", icon: Cctv },

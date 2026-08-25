@@ -1,5 +1,5 @@
-import ProductionPlanClient from '@/components/production-plan/ProductionPlanClient';
+import { redirect } from 'next/navigation';
 
 export default function ProductionPlanPage() {
-  return <ProductionPlanClient />;
+  redirect('/lab/production-plan');
 }

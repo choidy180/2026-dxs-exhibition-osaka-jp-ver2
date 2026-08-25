@@ -37,7 +37,7 @@ export const PageFontScope = styled.div`
   }
 `;
 
-export const PlanShell = styled.main`
+export const PlanShell = styled.main<{ $labMode?: boolean }>`
   width: 100%;
   height: 100vh;
   min-height: 720px;
@@ -47,8 +47,34 @@ export const PlanShell = styled.main`
   background: ${color.pageBg};
   color: ${color.ink};
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: ${({ $labMode }) =>
+    $labMode ? 'auto auto auto minmax(0, 1fr)' : 'auto auto minmax(0, 1fr)'};
   gap: 12px;
+`;
+
+export const LabInfoBar = styled.div`
+  min-height: 40px;
+  padding: 10px 14px;
+  border-radius: ${radius.control}px;
+  background: ${tone.info.bg};
+  border: 1px solid ${tone.info.border};
+  color: ${tone.info.fg};
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: ${fontSize.meta};
+  font-weight: 600;
+
+  svg {
+    flex: 0 0 auto;
+  }
+
+  p {
+    min-width: 0;
+    margin: 0;
+    line-height: 1.4;
+    word-break: keep-all;
+  }
 `;
 
 /* ───────────────────────── 헤더 ───────────────────────── */

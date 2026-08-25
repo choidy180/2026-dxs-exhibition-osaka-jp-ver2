@@ -28,6 +28,7 @@ import {
   ActionButton,
   HeaderActions,
   Header,
+  LabInfoBar,
   MetricCard,
   NoticeBar,
   PageFontScope,
@@ -38,6 +39,10 @@ import {
   TitleIcon,
   Workspace,
 } from './styles';
+
+interface ProductionPlanClientProps {
+  labMode?: boolean;
+}
 
 const NOTICE_TONE: Record<NoticeTone, ToneName> = {
   success: 'success',
@@ -53,7 +58,7 @@ const NOTICE_ICON: Record<NoticeTone, typeof Info> = {
   danger: AlertCircle,
 };
 
-export default function ProductionPlanClient() {
+export default function ProductionPlanClient({ labMode = false }: ProductionPlanClientProps) {
   const {
     revisions,
     activeRevision,
@@ -125,7 +130,7 @@ export default function ProductionPlanClient() {
 
   return (
     <PageFontScope>
-      <PlanShell>
+      <PlanShell $labMode={labMode}>
         <Header>
           <TitleGroup>
             <TitleIcon>
@@ -133,7 +138,9 @@ export default function ProductionPlanClient() {
             </TitleIcon>
             <div>
               {/* API 미연결 상태를 화면에서 바로 확인할 수 있게 표기한다 */}
-              <span className="eyebrow">Production Plan{USE_MOCK_DATA ? ' · MOCK DATA' : ''}</span>
+              <span className="eyebrow">
+                {labMode ? 'Lab · ' : ''}Production Plan{USE_MOCK_DATA ? ' · MOCK DATA' : ''}
+              </span>
               <h1>생산계획 업로드</h1>
               <p>{rangeLabel}</p>
             </div>
@@ -167,6 +174,13 @@ export default function ProductionPlanClient() {
             </ActionButton>
           </HeaderActions>
         </Header>
+
+        {labMode && (
+          <LabInfoBar role="status">
+            <Info size={17} aria-hidden="true" />
+            <p>개발 진행 중인 실험실 화면으로 실제 생산계획 데이터는 아직 연결되지 않았습니다.</p>
+          </LabInfoBar>
+        )}
 
         <StatsGrid>
           <MetricCard $tone="danger">
