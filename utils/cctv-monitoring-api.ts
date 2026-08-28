@@ -6,7 +6,7 @@
 import {
   CCTV_MOCK_LATENCY_MS,
   CCTV_MONITORING_API_ENDPOINT,
-  CCTV_THUMBNAIL_IMAGE_PATH,
+  CCTV_THUMBNAIL_PROXY_ENDPOINT,
   USE_MOCK_DATA,
 } from '@/constants/cctv-monitoring';
 import { DUMMY_CCTV_CAMERAS } from '@/data/dummy-cctv-monitoring';
@@ -44,9 +44,16 @@ const delay = (ms: number, signal?: AbortSignal): Promise<void> =>
 const isBuildingId = (value: string | null | undefined): value is CctvBuildingId =>
   value === 'D' || value === 'E' || value === 'F';
 
-const toStatus = (value: string | null | undefined): CctvCameraStatus => {
-  if (value === 'online' || value === 'offline' || value === 'maintenance') return value;
-  return 'offline';
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const toText = (value: unknown): string | null =>
+  typeof value === 'string' && value.trim() ? value.trim() : null;
+
+const toThumbnailVersion = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 };
 
 const toIsoDate = (value: string | null | undefined, fallback: string): string => {
@@ -54,32 +61,52 @@ const toIsoDate = (value: string | null | undefined, fallback: string): string =
   return Number.isNaN(Date.parse(value)) ? fallback : new Date(value).toISOString();
 };
 
-const mapApiCamera = (item: CctvCameraApiItem, index: number, generatedAt: string): CctvCamera => {
-  const rawBuildingId = item.buildingId?.trim().toUpperCase();
-  const buildingId = isBuildingId(rawBuildingId) ? rawBuildingId : 'D';
-  const code = item.code?.trim() || `${buildingId}${String(index + 1).padStart(2, '0')}`;
-  const id = String(item.id ?? item.apiCameraId ?? `cctv-${code.toLowerCase()}`);
-  const websocketUrl = item.websocketUrl?.trim() || null;
-  const websocketChannel = item.websocketChannel?.trim() || null;
+const toThumbnailDate = (version: number | null): string | null => {
+  if (version === null) return null;
+  const date = new Date(version * 1_000);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+};
+
+const toThumbnailProxyUrl = (source: string | null): string | null => {
+  if (!source) return null;
+  const params = new URLSearchParams({ source });
+  return `${CCTV_THUMBNAIL_PROXY_ENDPOINT}?${params.toString()}`;
+};
+
+const mapApiCamera = (
+  value: CctvCameraApiItem,
+  index: number,
+  whepBaseUrl: string | null,
+): CctvCamera => {
+  const item = isRecord(value) ? value : {};
+  const number = toText(item.number) || `카메라 ${String(index + 1).padStart(2, '0')}`;
+  const buildingMatch = number.match(/^\s*([DEF])\s*동(?:\s|$)/iu);
+  const rawBuildingId = buildingMatch?.[1]?.toUpperCase();
+  const buildingId = isBuildingId(rawBuildingId) ? rawBuildingId : 'F';
+  const webrtcPath = toText(item.webrtcPath);
+  const thumbnailVersion = toThumbnailVersion(item.thumbnailVersion);
+  const rawThumbnailUrl = toText(item.thumbnailUrl);
+  const hasThumbnail = thumbnailVersion !== null && rawThumbnailUrl !== null;
+  const status: CctvCameraStatus = hasThumbnail ? 'online' : 'offline';
+  const id = webrtcPath || `cctv-${number}-${index}`;
 
   return {
     id,
-    code,
-    name: item.name?.trim() || '이름 미지정 카메라',
+    code: number,
+    name: toText(item.name) || '이름 미지정 카메라',
     buildingId,
-    location: item.location?.trim() || '-',
-    status: toStatus(item.status?.trim().toLowerCase()),
-    thumbnailUrl: item.thumbnailUrl?.trim() || CCTV_THUMBNAIL_IMAGE_PATH,
-    objectPosition: item.objectPosition?.trim() || '50% 50%',
-    thumbnailUpdatedAt: toIsoDate(item.thumbnailUpdatedAt, generatedAt),
-    lastSeenAt: item.lastSeenAt ? toIsoDate(item.lastSeenAt, generatedAt) : null,
-    apiCameraId: item.apiCameraId === null || item.apiCameraId === undefined
-      ? null
-      : String(item.apiCameraId),
+    location: '-',
+    status,
+    thumbnailUrl: hasThumbnail ? toThumbnailProxyUrl(rawThumbnailUrl) : null,
+    thumbnailVersion,
+    objectPosition: '50% 50%',
+    thumbnailUpdatedAt: toThumbnailDate(thumbnailVersion),
+    lastSeenAt: toThumbnailDate(thumbnailVersion),
+    apiCameraId: webrtcPath,
     stream: {
-      transport: 'websocket',
-      endpoint: websocketUrl,
-      channel: websocketChannel,
+      transport: 'whep',
+      baseUrl: whepBaseUrl,
+      path: webrtcPath,
     },
   };
 };
@@ -92,6 +119,7 @@ const buildMockSnapshot = (generatedAt: string): CctvMonitoringSnapshot => {
     revision: mockRevision,
     cameras: DUMMY_CCTV_CAMERAS.map(camera => ({
       ...camera,
+      thumbnailVersion: mockRevision,
       thumbnailUpdatedAt: generatedAt,
       lastSeenAt: camera.status === 'online' ? generatedAt : camera.lastSeenAt,
       stream: { ...camera.stream },
@@ -111,15 +139,24 @@ const requestApiSnapshot = async (signal?: AbortSignal): Promise<CctvMonitoringS
   }
 
   const payload = (await response.json()) as CctvMonitoringApiResponse;
+  if (!payload || !Array.isArray(payload.cameras)) {
+    throw new Error('CCTV API 응답 형식이 올바르지 않습니다.');
+  }
+
   const generatedAt = toIsoDate(payload.generatedAt, new Date().toISOString());
-  const parsedRevision = Number(payload.revision);
+  const whepBaseUrl = toText(payload.whepBaseUrl);
+  const cameras = payload.cameras.map((item, index) =>
+    mapApiCamera(item, index, whepBaseUrl),
+  );
+  const revision = cameras.reduce(
+    (latest, camera) => Math.max(latest, camera.thumbnailVersion ?? 0),
+    0,
+  );
 
   return {
-    cameras: (Array.isArray(payload.cameras) ? payload.cameras : []).map((item, index) =>
-      mapApiCamera(item, index, generatedAt),
-    ),
+    cameras,
     generatedAt,
-    revision: Number.isFinite(parsedRevision) ? parsedRevision : 0,
+    revision,
   };
 };
 

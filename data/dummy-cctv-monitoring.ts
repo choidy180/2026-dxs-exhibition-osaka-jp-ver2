@@ -37,13 +37,14 @@ export const DUMMY_CCTV_CAMERAS: readonly CctvCamera[] = CAMERA_SEEDS.map(seed =
   location: seed.location,
   status: seed.status,
   thumbnailUrl: CCTV_THUMBNAIL_IMAGE_PATH,
+  thumbnailVersion: null,
   objectPosition: seed.objectPosition,
   thumbnailUpdatedAt: null,
   lastSeenAt: null,
   apiCameraId: null,
   stream: {
-    transport: 'websocket',
-    endpoint: null,
-    channel: `cctv/${seed.buildingId.toLowerCase()}/${seed.code.toLowerCase()}`,
+    transport: 'whep',
+    baseUrl: null,
+    path: `cctv/${seed.buildingId.toLowerCase()}/${seed.code.toLowerCase()}`,
   },
 }));

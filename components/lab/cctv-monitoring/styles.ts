@@ -334,10 +334,10 @@ export const ViewModeControl = styled.div`
 export const ViewModeButton = styled.button<{ $active: boolean }>`
   height: 34px;
   padding: 0 11px;
-  border: 1px solid ${({ $active }) => ($active ? color.brand : 'transparent')};
+  border: 1px solid ${({ $active }) => ($active ? color.brandBorder : 'transparent')};
   border-radius: ${radius.control}px;
-  background: ${({ $active }) => ($active ? color.brand : 'transparent')};
-  color: ${({ $active }) => ($active ? color.surface : color.ink3)};
+  background: ${({ $active }) => ($active ? color.brandSoft : 'transparent')};
+  color: ${({ $active }) => ($active ? color.brand : color.ink3)};
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -348,9 +348,9 @@ export const ViewModeButton = styled.button<{ $active: boolean }>`
   transition: background ${motion.state}, border-color ${motion.state}, color ${motion.state};
 
   &:hover {
-    background: ${({ $active }) => ($active ? color.brandStrong : color.brandSoft)};
-    border-color: ${({ $active }) => ($active ? color.brandStrong : color.brandBorder)};
-    color: ${({ $active }) => ($active ? color.surface : color.brand)};
+    background: ${color.brandSoft};
+    border-color: ${({ $active }) => ($active ? color.brand : color.brandBorder)};
+    color: ${color.brand};
   }
 
   &:focus-visible {
@@ -547,7 +547,7 @@ export const ThumbnailFrame = styled.div<{ $large?: boolean; $offline?: boolean 
   min-height: ${({ $large }) => ($large ? 0 : '46px')};
   border-radius: ${({ $large }) => ($large ? radius.card : radius.row)}px;
   overflow: hidden;
-  background: ${color.ink};
+  background: ${color.fill};
 
   .camera-image {
     object-fit: cover;
@@ -566,7 +566,7 @@ export const CameraImage = styled(Image)<{ $position: string }>`
 export const ThumbnailLoading = styled.div`
   position: absolute;
   inset: 0;
-  background: ${color.ink2};
+  background: ${color.fill};
   color: ${color.ink4};
   display: grid;
   place-items: center;
@@ -581,8 +581,9 @@ export const ThumbnailFailure = styled.div<{ $large?: boolean }>`
   position: absolute;
   inset: 0;
   padding: ${({ $large }) => ($large ? 8 : 4)}px;
-  background: ${color.ink};
-  color: ${color.surface};
+  border: 1px solid ${color.borderStrong};
+  background: ${color.fill};
+  color: ${color.ink2};
   display: flex;
   flex-direction: ${({ $large }) => ($large ? 'column' : 'row')};
   align-items: center;
@@ -590,7 +591,32 @@ export const ThumbnailFailure = styled.div<{ $large?: boolean }>`
   gap: ${({ $large }) => ($large ? 7 : 4)}px;
   text-align: center;
 
-  span {
+  .connection-visual {
+    position: relative;
+    width: ${({ $large }) => ($large ? 64 : 18)}px;
+    height: ${({ $large }) => ($large ? 64 : 18)}px;
+    flex: 0 0 auto;
+    border: ${({ $large }) => ($large ? `1px solid ${tone.danger.border}` : 'none')};
+    border-radius: ${({ $large }) => ($large ? radius.card : radius.row)}px;
+    background: ${({ $large }) => ($large ? tone.danger.bg : 'transparent')};
+    color: ${tone.danger.fg};
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    .status-mark {
+      position: absolute;
+      right: -5px;
+      bottom: -5px;
+      padding: 3px;
+      border: 1px solid ${tone.danger.border};
+      border-radius: ${radius.row}px;
+      background: ${color.surface};
+      box-sizing: content-box;
+    }
+  }
+
+  .failure-copy {
     font-size: ${({ $large }) => ($large ? fontSize.bodySm : fontSize.caption)};
     font-weight: 600;
   }
@@ -605,6 +631,9 @@ export const ThumbnailFailure = styled.div<{ $large?: boolean }>`
     font-size: ${fontSize.caption};
     font-weight: 600;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 
     &:focus-visible {
       outline: ${focusRing};

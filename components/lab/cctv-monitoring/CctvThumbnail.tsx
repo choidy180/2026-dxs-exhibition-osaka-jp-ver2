@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ImageOff, Loader2, RefreshCw, WifiOff, Wrench } from 'lucide-react';
+import { Cctv, Loader2, RefreshCw, WifiOff, Wrench } from 'lucide-react';
 import type { CctvCamera } from '@/types/cctv-monitoring';
 import {
   CameraImage,
@@ -35,8 +35,9 @@ export default function CctvThumbnail({
   const imageSrc = useMemo(() => {
     if (!camera.thumbnailUrl) return null;
     const separator = camera.thumbnailUrl.includes('?') ? '&' : '?';
-    return `${camera.thumbnailUrl}${separator}v=${revision}-${attempt}`;
-  }, [attempt, camera.thumbnailUrl, revision]);
+    const cacheVersion = camera.thumbnailVersion ?? revision;
+    return `${camera.thumbnailUrl}${separator}v=${cacheVersion}-${attempt}`;
+  }, [attempt, camera.thumbnailUrl, camera.thumbnailVersion, revision]);
 
   const currentStatus = !imageSrc
     ? 'error'
@@ -71,10 +72,17 @@ export default function CctvThumbnail({
       )}
 
       {hasError && (
-        <ThumbnailFailure $large={large} role="status">
-          <ImageOff size={large ? 28 : 15} aria-hidden="true" />
-          <span>{large ? '썸네일을 불러오지 못했습니다.' : '이미지 없음'}</span>
-          {allowRetry && (
+        <ThumbnailFailure
+          $large={large}
+          role="status"
+          aria-label={`${camera.name} 카메라 연결 안 됨`}
+        >
+          <span className="connection-visual" aria-hidden="true">
+            {large ? <Cctv size={34} /> : <WifiOff size={15} />}
+            {large && <WifiOff className="status-mark" size={16} />}
+          </span>
+          <span className="failure-copy">{large ? '카메라가 연결되어 있지 않습니다.' : '연결 안 됨'}</span>
+          {allowRetry && imageSrc && (
             <button
               type="button"
               onClick={(event) => {

@@ -176,7 +176,7 @@ function BuildingToggle({ group, collapsed, onToggle, card = false }: BuildingTo
         <strong>{group.label}</strong>
       </BuildingIdentity>
       <BuildingCounts>
-        <span className="online">온라인 {group.onlineCount.toLocaleString('ko-KR')}대</span>
+        <span className="online">연결 {group.onlineCount.toLocaleString('ko-KR')}대</span>
         <span>전체 {group.cameras.length.toLocaleString('ko-KR')}대</span>
       </BuildingCounts>
     </HeaderComponent>
@@ -196,7 +196,7 @@ function CameraViewer({ camera, revision, onExpand }: CameraViewerProps) {
         <StateBox>
           <span className="icon-circle"><Camera size={28} aria-hidden="true" /></span>
           <strong>확인할 CCTV를 선택해주세요</strong>
-          <p>왼쪽 목록에서 카메라를 선택하면 최신 썸네일과 설치 위치를 확인할 수 있습니다.</p>
+          <p>왼쪽 목록에서 카메라를 선택하면 최신 썸네일과 카메라 정보를 확인할 수 있습니다.</p>
         </StateBox>
       </ViewerPanel>
     );
@@ -209,7 +209,7 @@ function CameraViewer({ camera, revision, onExpand }: CameraViewerProps) {
           <Cctv size={22} aria-hidden="true" />
           <div>
             <h2>{camera.name}</h2>
-            <p>{getBuildingLabel(camera.buildingId)} · {camera.location} · {camera.code}</p>
+            <p>{getBuildingLabel(camera.buildingId)} · {camera.code} · {camera.stream.path || '-'}</p>
           </div>
         </ViewerTitle>
         <ViewerActions>
@@ -225,14 +225,17 @@ function CameraViewer({ camera, revision, onExpand }: CameraViewerProps) {
         <CctvThumbnail camera={camera} revision={revision} large allowRetry sizes="70vw" />
         <StageLabel><Camera size={13} aria-hidden="true" />{camera.code}</StageLabel>
         <StageTime>{formatTime(camera.thumbnailUpdatedAt)}</StageTime>
-        <StageHint><Wifi size={13} aria-hidden="true" />10초 스냅샷 · WebSocket 연결 예정</StageHint>
+        <StageHint>
+          <Wifi size={13} aria-hidden="true" />
+          {(THUMBNAIL_REFRESH_MS / 1_000).toLocaleString('ko-KR')}초 스냅샷 · WHEP 정보 수신
+        </StageHint>
       </ViewerStage>
 
       <ViewerFooter>
-        <MetaItem><span>설치 동</span><strong>{getBuildingLabel(camera.buildingId)}</strong></MetaItem>
-        <MetaItem><span>설치 위치</span><strong>{camera.location || '-'}</strong></MetaItem>
+        <MetaItem><span>카메라 번호</span><strong>{camera.code}</strong></MetaItem>
+        <MetaItem><span>카메라명</span><strong>{camera.name}</strong></MetaItem>
         <MetaItem><span>최근 썸네일</span><strong>{formatTime(camera.thumbnailUpdatedAt)}</strong></MetaItem>
-        <MetaItem><span>갱신 주기</span><strong>{(THUMBNAIL_REFRESH_MS / 1_000).toLocaleString('ko-KR')}초</strong></MetaItem>
+        <MetaItem><span>스트림 경로</span><strong>{camera.stream.path || '-'}</strong></MetaItem>
       </ViewerFooter>
     </ViewerPanel>
   );
@@ -296,7 +299,7 @@ function CameraList({
                         <CctvThumbnail camera={camera} revision={revision} sizes="82px" />
                         <CameraRowText>
                           <strong>{camera.name}</strong>
-                          <small>{CCTV_STATUS_LABEL[camera.status]} · {camera.location}</small>
+                          <small>{CCTV_STATUS_LABEL[camera.status]} · {camera.stream.path || '-'}</small>
                         </CameraRowText>
                         <CameraCode>{camera.code}</CameraCode>
                       </CameraRowButton>
@@ -366,7 +369,7 @@ function CameraCards({
                         <CameraCardBody>
                           <span className="copy">
                             <strong>{camera.name}</strong>
-                            <small>{CCTV_STATUS_LABEL[camera.status]} · {camera.location}</small>
+                            <small>{CCTV_STATUS_LABEL[camera.status]} · {camera.stream.path || '-'}</small>
                           </span>
                           <CardCode>{camera.code}</CardCode>
                         </CameraCardBody>
@@ -416,7 +419,7 @@ function CameraModal({ camera, revision, closeButtonRef, onClose }: CameraModalP
           >
             <ModalHeader>
               <ModalTitle>
-                <span className="eyebrow">CCTV SNAPSHOT · WEBSOCKET READY</span>
+                <span className="eyebrow">CCTV SNAPSHOT · WHEP METADATA</span>
                 <h2 id="cctv-modal-title">{camera.name} · {camera.code}</h2>
               </ModalTitle>
               <ViewerActions>
@@ -430,10 +433,13 @@ function CameraModal({ camera, revision, closeButtonRef, onClose }: CameraModalP
               <CctvThumbnail camera={camera} revision={revision} large allowRetry sizes="92vw" />
               <StageLabel><Camera size={13} aria-hidden="true" />{camera.code}</StageLabel>
               <StageTime>{formatTime(camera.thumbnailUpdatedAt)}</StageTime>
-              <StageHint><Wifi size={13} aria-hidden="true" />현재는 10초 썸네일 · 실시간 영상은 WebSocket 연결 예정</StageHint>
+              <StageHint>
+                <Wifi size={13} aria-hidden="true" />
+                현재는 {(THUMBNAIL_REFRESH_MS / 1_000).toLocaleString('ko-KR')}초 썸네일 · WHEP 정보 수신
+              </StageHint>
             </ModalStage>
             <ModalFooter>
-              <span className="meta">{getBuildingLabel(camera.buildingId)} · {camera.location}</span>
+              <span className="meta">{getBuildingLabel(camera.buildingId)} · {camera.code}</span>
               <span>최근 갱신 {formatDateTime(camera.thumbnailUpdatedAt)}</span>
             </ModalFooter>
           </ModalDialog>
@@ -473,7 +479,7 @@ export default function CctvMonitoringClient() {
         camera.code,
         camera.name,
         getBuildingLabel(camera.buildingId),
-        camera.location,
+        camera.stream.path,
         CCTV_STATUS_LABEL[camera.status],
       ]
         .join(' ')
@@ -566,12 +572,12 @@ export default function CctvMonitoringClient() {
             <div>
               <span className="eyebrow">LAB · CCTV MONITORING{USE_MOCK_DATA ? ' · MOCK DATA' : ''}</span>
               <h1>상황 모니터링</h1>
-              <p>동별 CCTV를 탐색하고 최신 현장 스냅샷을 한 화면에서 확인합니다.</p>
+              <p>카메라 번호별 최신 현장 스냅샷과 연결 상태를 한 화면에서 확인합니다.</p>
             </div>
           </TitleGroup>
           <HeaderActions>
             <SummaryChip $tone="neutral">전체 {cameras.length.toLocaleString('ko-KR')}대</SummaryChip>
-            <SummaryChip $tone="success">온라인 {onlineCount.toLocaleString('ko-KR')}대</SummaryChip>
+            <SummaryChip $tone="success">연결됨 {onlineCount.toLocaleString('ko-KR')}대</SummaryChip>
             <SummaryChip $tone={attentionCount > 0 ? 'warning' : 'neutral'}>
               확인 필요 {attentionCount.toLocaleString('ko-KR')}대
             </SummaryChip>
@@ -600,7 +606,11 @@ export default function CctvMonitoringClient() {
 
         <NoticeBar initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}>
           <Info size={17} aria-hidden="true" />
-          <p>개발 진행 중인 화면으로 실제 CCTV 데이터는 아직 연결되지 않았습니다. 현재 임시 썸네일을 10초마다 갱신하며, 실시간 영상은 WebSocket 연동 후 제공됩니다.</p>
+          <p>
+            {USE_MOCK_DATA
+              ? '개발 확인용 목업 데이터입니다. 실제 카메라 API는 연결되지 않습니다.'
+              : `사내 카메라 목록 API를 연결했습니다. 썸네일은 ${(THUMBNAIL_REFRESH_MS / 1_000).toLocaleString('ko-KR')}초마다 갱신하며, 응답하지 않는 카메라는 연결 안 됨으로 표시합니다.`}
+          </p>
         </NoticeBar>
 
         <Workspace>
@@ -615,7 +625,7 @@ export default function CctvMonitoringClient() {
                     setSearchQuery(event.target.value);
                     if (event.target.value) setCollapsedBuildings(new Set());
                   }}
-                  placeholder="카메라명, 코드, 동, 위치 검색"
+                  placeholder="카메라명, 번호, 동, 스트림 경로 검색"
                   aria-label="CCTV 검색"
                 />
                 {searchQuery && (
@@ -672,7 +682,7 @@ export default function CctvMonitoringClient() {
             <StateBox>
               <span className="icon-circle"><SearchX size={28} aria-hidden="true" /></span>
               <strong>검색 조건에 맞는 CCTV가 없습니다</strong>
-              <p>카메라 코드나 설치 위치를 다르게 입력해보세요.</p>
+              <p>카메라 번호나 스트림 경로를 다르게 입력해보세요.</p>
               <StateActions>
                 <SoftButton type="button" onClick={clearSearch}>검색 초기화</SoftButton>
               </StateActions>
