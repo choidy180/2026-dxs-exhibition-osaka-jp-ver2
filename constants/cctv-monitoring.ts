@@ -1,7 +1,30 @@
 import type { CctvBuildingId, CctvCameraStatus } from '@/types/cctv-monitoring';
 
-/** 썸네일 목록을 새로 받는 주기 */
-export const THUMBNAIL_REFRESH_MS = 10_000;
+/** 썸네일 목록을 새로 받는 주기 (30분) */
+export const THUMBNAIL_REFRESH_MS = 30 * 60 * 1_000;
+
+/** '30분' / '45초' 처럼 사람이 읽기 쉬운 주기 표기 */
+export const formatRefreshInterval = (ms: number): string => {
+  const totalSeconds = Math.round(ms / 1_000);
+  if (totalSeconds < 60) return `${totalSeconds.toLocaleString('ko-KR')}초`;
+
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return seconds === 0
+    ? `${minutes.toLocaleString('ko-KR')}분`
+    : `${minutes.toLocaleString('ko-KR')}분 ${seconds}초`;
+};
+
+/** 남은 시간을 '12분 34초' / '45초' 로 표기 */
+export const formatRemainingTime = (totalSeconds: number): string => {
+  if (totalSeconds < 60) return `${totalSeconds.toLocaleString('ko-KR')}초`;
+
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return seconds === 0
+    ? `${minutes.toLocaleString('ko-KR')}분`
+    : `${minutes.toLocaleString('ko-KR')}분 ${String(seconds).padStart(2, '0')}초`;
+};
 
 /** 목업 요청에서도 최초 로딩 상태가 보이도록 짧은 지연을 둔다 */
 export const CCTV_MOCK_LATENCY_MS = 420;

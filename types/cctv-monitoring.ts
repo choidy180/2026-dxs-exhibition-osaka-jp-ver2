@@ -47,7 +47,11 @@ export interface CctvCameraApiItem {
   name?: string | null;
   thumbnailUrl?: string | null;
   thumbnailVersion?: number | string | null;
-  /** WHEP 신호 교환 경로. 없으면 `id` 로 '/{id}/whep' 을 만든다 */
+  /**
+   * 실시간 영상 경로. 사내 API 는 'camera-204' 처럼 카메라 키만 내려준다.
+   * 앞뒤 슬래시나 '/whep' 이 붙어 오는 경우도 있어 매핑에서 정규화한다.
+   */
+  webrtcPath?: string | null;
   streamPath?: string | null;
   whepPath?: string | null;
 }

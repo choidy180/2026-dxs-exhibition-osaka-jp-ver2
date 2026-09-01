@@ -75,16 +75,19 @@ const toThumbnailProxyUrl = (source: string | null): string | null => {
 
 /**
  * WHEP 신호 교환 경로를 만든다.
- * API 가 경로를 주면 그대로 쓰고, 없으면 카메라 id 로 '/{id}/whep' 을 만든다.
- * (사내 서버는 http://호스트:8889/camera-204/whep 형태를 사용한다)
+ *
+ * 사내 API 는 `webrtcPath: "camera-204"` 처럼 카메라 키만 내려주므로
+ * '/camera-204/whep' 형태로 맞춘다. 이미 '/whep' 까지 담겨 오면 그대로 쓴다.
  */
 const toWhepPath = (item: CctvCameraApiItem, apiId: string | null): string | null => {
-  const explicitPath = toText(item.whepPath) || toText(item.streamPath);
-  if (explicitPath) {
-    return explicitPath.startsWith('/') ? explicitPath : `/${explicitPath}`;
-  }
+  const rawPath =
+    toText(item.webrtcPath) || toText(item.whepPath) || toText(item.streamPath) || apiId;
+  if (!rawPath) return null;
 
-  return apiId ? `/${encodeURIComponent(apiId)}/whep` : null;
+  const trimmed = rawPath.replace(/^\/+/, '').replace(/\/+$/, '');
+  if (!trimmed) return null;
+
+  return trimmed.endsWith('/whep') ? `/${trimmed}` : `/${trimmed}/whep`;
 };
 
 const mapApiCamera = (value: CctvCameraApiItem, index: number): CctvCamera => {

@@ -27,6 +27,8 @@ import {
   CCTV_STATUS_LABEL,
   THUMBNAIL_REFRESH_MS,
   USE_MOCK_DATA,
+  formatRefreshInterval,
+  formatRemainingTime,
 } from '@/constants/cctv-monitoring';
 import { useCctvMonitoring } from '@/hooks/use-cctv-monitoring';
 import type {
@@ -228,7 +230,7 @@ function CameraViewer({ camera, revision, onExpand }: CameraViewerProps) {
         <StageTime>{formatTime(camera.thumbnailUpdatedAt)}</StageTime>
         <StageHint>
           <Wifi size={13} aria-hidden="true" />
-          {(THUMBNAIL_REFRESH_MS / 1_000).toLocaleString('ko-KR')}초 스냅샷 · WHEP 정보 수신
+          {formatRefreshInterval(THUMBNAIL_REFRESH_MS)} 간격 스냅샷 · 클릭하면 실시간 영상
         </StageHint>
       </ViewerStage>
 
@@ -419,7 +421,7 @@ function CameraModal({ camera, closeButtonRef, onClose }: CameraModalProps) {
           >
             <ModalHeader>
               <ModalTitle>
-                <span className="eyebrow">CCTV LIVE · WEBSOCKET JPEG</span>
+                <span className="eyebrow">CCTV LIVE · WHEP</span>
                 <h2 id="cctv-modal-title">{camera.name} · {camera.code}</h2>
               </ModalTitle>
               <ViewerActions>
@@ -462,7 +464,7 @@ export default function CctvMonitoringClient() {
     revision,
   } = useCctvMonitoring();
 
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>('card');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
   const [modalCameraId, setModalCameraId] = useState<string | null>(null);
@@ -560,7 +562,7 @@ export default function CctvMonitoringClient() {
     ? '썸네일 갱신 중'
     : nextRefreshSeconds === 0
       ? '탭 활성화 시 갱신'
-      : `${nextRefreshSeconds.toLocaleString('ko-KR')}초 후 갱신`;
+      : `${formatRemainingTime(nextRefreshSeconds)} 후 갱신`;
 
   return (
     <PageFontScope>
@@ -608,7 +610,7 @@ export default function CctvMonitoringClient() {
           <p>
             {USE_MOCK_DATA
               ? '개발 확인용 목업 데이터입니다. 실제 카메라 API는 연결되지 않습니다.'
-              : `사내 카메라 목록 API를 연결했습니다. 썸네일은 ${(THUMBNAIL_REFRESH_MS / 1_000).toLocaleString('ko-KR')}초마다 갱신하며, 응답하지 않는 카메라는 연결 안 됨으로 표시합니다.`}
+              : `사내 카메라 목록 API를 연결했습니다. 썸네일은 ${formatRefreshInterval(THUMBNAIL_REFRESH_MS)}마다 갱신하며, 응답하지 않는 카메라는 연결 안 됨으로 표시합니다.`}
           </p>
         </NoticeBar>
 
