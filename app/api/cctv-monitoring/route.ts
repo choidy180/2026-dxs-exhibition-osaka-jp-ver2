@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import {
   CCTV_MONITORING_UPSTREAM_TIMEOUT_MS,
-  getCctvMonitoringStreamBaseUrl,
   getCctvMonitoringUpstreamUrl,
 } from '@/utils/cctv-monitoring-server';
 
@@ -39,12 +38,7 @@ export async function GET() {
     }
 
     return NextResponse.json(
-      {
-        ...payload,
-        // 실시간 영상은 브라우저가 직접 WebSocket 으로 붙으므로 기준 주소를 함께 내려준다
-        streamBaseUrl: getCctvMonitoringStreamBaseUrl(),
-        generatedAt: new Date().toISOString(),
-      },
+      { ...payload, generatedAt: new Date().toISOString() },
       { headers: { 'Cache-Control': 'no-store' } },
     );
   } catch (error) {

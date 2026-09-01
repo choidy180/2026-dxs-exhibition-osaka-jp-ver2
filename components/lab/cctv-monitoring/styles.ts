@@ -1174,15 +1174,13 @@ export const LiveFrame = styled.div`
   place-items: center;
 `;
 
-/**
- * WebSocket 으로 받은 JPEG 프레임.
- * 프레임마다 src 가 바뀌므로 next/image 대신 img 를 쓴다.
- */
-export const LiveImage = styled.img`
+/** WHEP(WebRTC) 미디어 스트림을 재생하는 영상 요소 */
+export const LiveVideo = styled.video`
   width: 100%;
   height: 100%;
   object-fit: contain;
   display: block;
+  background: ${color.ink};
 `;
 
 /** 첫 프레임이 오기 전 보여줄 안내 */

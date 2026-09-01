@@ -73,18 +73,28 @@ const toThumbnailProxyUrl = (source: string | null): string | null => {
   return `${CCTV_THUMBNAIL_PROXY_ENDPOINT}?${params.toString()}`;
 };
 
-const mapApiCamera = (
-  value: CctvCameraApiItem,
-  index: number,
-  streamBaseUrl: string | null,
-): CctvCamera => {
+/**
+ * WHEP 신호 교환 경로를 만든다.
+ * API 가 경로를 주면 그대로 쓰고, 없으면 카메라 id 로 '/{id}/whep' 을 만든다.
+ * (사내 서버는 http://호스트:8889/camera-204/whep 형태를 사용한다)
+ */
+const toWhepPath = (item: CctvCameraApiItem, apiId: string | null): string | null => {
+  const explicitPath = toText(item.whepPath) || toText(item.streamPath);
+  if (explicitPath) {
+    return explicitPath.startsWith('/') ? explicitPath : `/${explicitPath}`;
+  }
+
+  return apiId ? `/${encodeURIComponent(apiId)}/whep` : null;
+};
+
+const mapApiCamera = (value: CctvCameraApiItem, index: number): CctvCamera => {
   const item = isRecord(value) ? value : {};
   const number = toText(item.number) || `카메라 ${String(index + 1).padStart(2, '0')}`;
   const buildingMatch = number.match(/^\s*([DEF])\s*동(?:\s|$)/iu);
   const rawBuildingId = buildingMatch?.[1]?.toUpperCase();
   const buildingId = isBuildingId(rawBuildingId) ? rawBuildingId : 'F';
   const apiId = toText(item.id);
-  const streamPath = toText(item.streamPath);
+  const streamPath = toWhepPath(item, apiId);
   const thumbnailVersion = toThumbnailVersion(item.thumbnailVersion);
   const rawThumbnailUrl = toText(item.thumbnailUrl);
   const hasThumbnail = thumbnailVersion !== null && rawThumbnailUrl !== null;
@@ -105,8 +115,7 @@ const mapApiCamera = (
     lastSeenAt: toThumbnailDate(thumbnailVersion),
     apiCameraId: apiId,
     stream: {
-      transport: 'websocket-jpeg',
-      baseUrl: streamBaseUrl,
+      transport: 'whep',
       path: streamPath,
     },
   };
@@ -145,10 +154,7 @@ const requestApiSnapshot = async (signal?: AbortSignal): Promise<CctvMonitoringS
   }
 
   const generatedAt = toIsoDate(payload.generatedAt, new Date().toISOString());
-  const streamBaseUrl = toText(payload.streamBaseUrl);
-  const cameras = payload.cameras.map((item, index) =>
-    mapApiCamera(item, index, streamBaseUrl),
-  );
+  const cameras = payload.cameras.map((item, index) => mapApiCamera(item, index));
   const revision = cameras.reduce(
     (latest, camera) => Math.max(latest, camera.thumbnailVersion ?? 0),
     0,

@@ -20,16 +20,47 @@ export const getCctvMonitoringUpstreamUrl = (): URL => {
 };
 
 /**
- * 실시간 영상용 WebSocket 기준 주소.
- * 사내 API 주소에서 파생시켜 두 주소가 어긋나지 않게 한다.
- * WebSocket 은 Next.js 라우트로 중계할 수 없어 브라우저가 직접 연결하므로,
- * 이 값은 목록 응답에 담아 클라이언트로 전달한다.
+ * 실시간 영상(WHEP) 서버 주소.
+ * 카메라 목록 API(9000)와 포트가 다르므로 목록 주소에서 파생시키지 않고 따로 설정한다.
  */
-export const getCctvMonitoringStreamBaseUrl = (): string => {
-  const upstreamUrl = getCctvMonitoringUpstreamUrl();
-  const protocol = upstreamUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+const DEFAULT_CCTV_WHEP_BASE_URL = 'http://192.168.2.147:8889';
 
-  return `${protocol}//${upstreamUrl.host}`;
+export const getCctvWhepBaseUrl = (): URL => {
+  const configuredUrl = process.env.CCTV_WHEP_BASE_URL?.trim() || DEFAULT_CCTV_WHEP_BASE_URL;
+  const url = new URL(configuredUrl);
+
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new Error('CCTV WHEP protocol is not allowed');
+  }
+
+  return url;
+};
+
+/** '/camera-204/whep' 처럼 받은 경로를 WHEP 서버 주소로 바꾼다. */
+export const resolveCctvWhepUrl = (streamPath: string): URL => {
+  const baseUrl = getCctvWhepBaseUrl();
+  const resolvedUrl = new URL(streamPath, baseUrl);
+
+  if (resolvedUrl.origin !== baseUrl.origin || decodeURIComponent(resolvedUrl.pathname).includes('..')) {
+    throw new Error('CCTV WHEP path is not allowed');
+  }
+
+  return resolvedUrl;
+};
+
+/**
+ * WHEP 세션 자원(Location) 주소를 검증한다.
+ * 세션 종료(DELETE)를 중계할 때 임의 주소로 요청이 나가지 않도록 막는다.
+ */
+export const resolveCctvWhepSessionUrl = (resource: string): URL => {
+  const baseUrl = getCctvWhepBaseUrl();
+  const resolvedUrl = new URL(resource, baseUrl);
+
+  if (resolvedUrl.origin !== baseUrl.origin || decodeURIComponent(resolvedUrl.pathname).includes('..')) {
+    throw new Error('CCTV WHEP session resource is not allowed');
+  }
+
+  return resolvedUrl;
 };
 
 /** API가 돌려준 썸네일 경로만 허용해 프록시가 임의 URL 호출에 악용되지 않게 한다. */
