@@ -76,19 +76,20 @@ const toThumbnailProxyUrl = (source: string | null): string | null => {
 const mapApiCamera = (
   value: CctvCameraApiItem,
   index: number,
-  whepBaseUrl: string | null,
+  streamBaseUrl: string | null,
 ): CctvCamera => {
   const item = isRecord(value) ? value : {};
   const number = toText(item.number) || `카메라 ${String(index + 1).padStart(2, '0')}`;
   const buildingMatch = number.match(/^\s*([DEF])\s*동(?:\s|$)/iu);
   const rawBuildingId = buildingMatch?.[1]?.toUpperCase();
   const buildingId = isBuildingId(rawBuildingId) ? rawBuildingId : 'F';
-  const webrtcPath = toText(item.webrtcPath);
+  const apiId = toText(item.id);
+  const streamPath = toText(item.streamPath);
   const thumbnailVersion = toThumbnailVersion(item.thumbnailVersion);
   const rawThumbnailUrl = toText(item.thumbnailUrl);
   const hasThumbnail = thumbnailVersion !== null && rawThumbnailUrl !== null;
   const status: CctvCameraStatus = hasThumbnail ? 'online' : 'offline';
-  const id = webrtcPath || `cctv-${number}-${index}`;
+  const id = apiId || streamPath || `cctv-${number}-${index}`;
 
   return {
     id,
@@ -102,11 +103,11 @@ const mapApiCamera = (
     objectPosition: '50% 50%',
     thumbnailUpdatedAt: toThumbnailDate(thumbnailVersion),
     lastSeenAt: toThumbnailDate(thumbnailVersion),
-    apiCameraId: webrtcPath,
+    apiCameraId: apiId,
     stream: {
-      transport: 'whep',
-      baseUrl: whepBaseUrl,
-      path: webrtcPath,
+      transport: 'websocket-jpeg',
+      baseUrl: streamBaseUrl,
+      path: streamPath,
     },
   };
 };
@@ -144,9 +145,9 @@ const requestApiSnapshot = async (signal?: AbortSignal): Promise<CctvMonitoringS
   }
 
   const generatedAt = toIsoDate(payload.generatedAt, new Date().toISOString());
-  const whepBaseUrl = toText(payload.whepBaseUrl);
+  const streamBaseUrl = toText(payload.streamBaseUrl);
   const cameras = payload.cameras.map((item, index) =>
-    mapApiCamera(item, index, whepBaseUrl),
+    mapApiCamera(item, index, streamBaseUrl),
   );
   const revision = cameras.reduce(
     (latest, camera) => Math.max(latest, camera.thumbnailVersion ?? 0),

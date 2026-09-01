@@ -43,8 +43,9 @@ export const DUMMY_CCTV_CAMERAS: readonly CctvCamera[] = CAMERA_SEEDS.map(seed =
   lastSeenAt: null,
   apiCameraId: null,
   stream: {
-    transport: 'whep',
+    transport: 'websocket-jpeg',
+    // 목업에는 실제 스트림 서버가 없어 기준 주소를 비워 둔다
     baseUrl: null,
-    path: `cctv/${seed.buildingId.toLowerCase()}/${seed.code.toLowerCase()}`,
+    path: `/ws/${seed.code.toLowerCase()}`,
   },
 }));

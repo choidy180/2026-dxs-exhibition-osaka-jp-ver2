@@ -15,6 +15,18 @@ export const CCTV_MONITORING_API_ENDPOINT = '/api/cctv-monitoring';
 /** 상대 썸네일 경로를 안전하게 중계하는 동일 출처 프록시 */
 export const CCTV_THUMBNAIL_PROXY_ENDPOINT = '/api/cctv-monitoring/thumbnail';
 
+/** 실시간 영상: 첫 프레임을 기다리는 시간. 넘기면 '신호 없음'으로 안내한다 */
+export const CCTV_LIVE_FIRST_FRAME_TIMEOUT_MS = 10_000;
+
+/** 실시간 영상: 마지막 프레임 이후 이 시간이 지나면 끊긴 것으로 본다 */
+export const CCTV_LIVE_STALL_TIMEOUT_MS = 8_000;
+
+/** 실시간 영상: 연결이 끊겼을 때 자동 재연결 간격 */
+export const CCTV_LIVE_RECONNECT_DELAY_MS = 2_000;
+
+/** 실시간 영상: 자동 재연결 최대 시도 횟수 */
+export const CCTV_LIVE_MAX_RECONNECT_ATTEMPTS = 5;
+
 /** 실제 API가 기본이며, 화면 검증이 필요할 때만 환경변수로 목업을 켠다 */
 export const USE_MOCK_DATA =
   (process.env.NEXT_PUBLIC_CCTV_MONITORING_USE_MOCK ?? 'false').toLowerCase() === 'true';

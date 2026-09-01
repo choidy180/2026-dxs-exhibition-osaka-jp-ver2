@@ -4,10 +4,15 @@ export type CctvBuildingId = 'D' | 'E' | 'F';
 /** 카메라 운영 상태 */
 export type CctvCameraStatus = 'online' | 'offline' | 'maintenance';
 
-/** 향후 실시간 재생 연결에 사용할 WHEP 메타데이터 */
+/**
+ * 실시간 영상 연결 정보.
+ * WebSocket 메시지 한 건이 JPEG 한 장인 방식이라 `baseUrl + path` 로 접속한다.
+ */
 export interface CctvStreamConfig {
-  transport: 'whep';
+  transport: 'websocket-jpeg';
+  /** 'ws://호스트:포트' — 목록 API 응답에서 받는다 */
   baseUrl: string | null;
+  /** '/ws/camera-203' */
   path: string | null;
 }
 
@@ -39,18 +44,35 @@ export interface CctvMonitoringSnapshot {
 
 /** 사내 CCTV API가 반환하는 카메라 항목 계약 */
 export interface CctvCameraApiItem {
+  id?: string | null;
   number?: string | null;
   name?: string | null;
   thumbnailUrl?: string | null;
   thumbnailVersion?: number | string | null;
-  webrtcPath?: string | null;
+  /** '/ws/camera-203' — 실시간 JPEG 스트림 WebSocket 경로 */
+  streamPath?: string | null;
 }
 
 /** 사내 CCTV 목록·썸네일 API 응답 계약 */
 export interface CctvMonitoringApiResponse {
-  whepBaseUrl?: string | null;
   cameras?: CctvCameraApiItem[] | null;
   generatedAt?: string | null;
+  /** 동일 출처 프록시가 사내 API 주소에서 파생시켜 넣어주는 값 */
+  streamBaseUrl?: string | null;
+}
+
+/** 실시간 영상 연결 상태 */
+export type CctvLiveStatus = 'idle' | 'connecting' | 'playing' | 'stalled' | 'error';
+
+/** 실시간 영상 훅의 공개 반환 타입 */
+export interface UseCctvLiveStreamResult {
+  /** 최신 JPEG 프레임의 Blob URL */
+  frameUrl: string | null;
+  status: CctvLiveStatus;
+  error: string | null;
+  /** 수신한 프레임 수 */
+  frameCount: number;
+  retry: () => void;
 }
 
 /** CCTV 데이터 훅의 공개 반환 타입 */

@@ -25,6 +25,12 @@ const thumbnailPulse = keyframes`
   50% { opacity: 0.85; }
 `;
 
+/** 실시간 재생 중임을 알리는 LIVE 점멸 */
+const livePulse = keyframes`
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+`;
+
 export const PageFontScope = styled.div`
   width: 100%;
   min-height: 100vh;
@@ -1153,5 +1159,128 @@ export const ModalFooter = styled.div`
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+`;
+
+/* ───────────────────────── 실시간 영상 ───────────────────────── */
+
+/** 모달 안에서 실시간 프레임을 채우는 영역 */
+export const LiveFrame = styled.div`
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: ${color.ink};
+  display: grid;
+  place-items: center;
+`;
+
+/**
+ * WebSocket 으로 받은 JPEG 프레임.
+ * 프레임마다 src 가 바뀌므로 next/image 대신 img 를 쓴다.
+ */
+export const LiveImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+`;
+
+/** 첫 프레임이 오기 전 보여줄 안내 */
+export const LiveOverlay = styled.div<{ $tone: ToneName }>`
+  position: absolute;
+  inset: 0;
+  z-index: ${zIndex.stickyHead};
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.72);
+  color: ${color.surface};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+
+  .live-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: ${radius.card}px;
+    border: 1px solid ${({ $tone }) => tone[$tone].border};
+    background: ${({ $tone }) => tone[$tone].bg};
+    color: ${({ $tone }) => tone[$tone].fg};
+    display: grid;
+    place-items: center;
+  }
+
+  .live-icon svg.spin {
+    animation: ${spin} 0.9s linear infinite;
+  }
+
+  strong {
+    font-size: ${fontSize.body};
+    font-weight: 600;
+  }
+
+  span {
+    max-width: 420px;
+    color: ${color.borderStrong};
+    font-size: ${fontSize.caption};
+    font-weight: 500;
+    line-height: 1.5;
+    word-break: keep-all;
+  }
+
+  button {
+    height: 34px;
+    margin-top: 4px;
+    padding: 0 14px;
+    border: 1px solid ${color.borderStrong};
+    border-radius: ${radius.control}px;
+    background: transparent;
+    color: ${color.surface};
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: ${fontSize.meta};
+    font-weight: 600;
+    cursor: pointer;
+    transition: background ${motion.hover}, border-color ${motion.hover};
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: ${color.surface};
+    }
+
+    &:focus-visible {
+      outline: ${focusRing};
+      outline-offset: 3px;
+    }
+  }
+`;
+
+/** LIVE 표시 배지 */
+export const LiveBadge = styled.span<{ $active: boolean }>`
+  position: absolute;
+  z-index: ${zIndex.stickyHead};
+  top: 12px;
+  right: 12px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid ${({ $active }) => ($active ? tone.danger.border : color.borderStrong)};
+  border-radius: ${radius.control}px;
+  background: ${({ $active }) => ($active ? tone.danger.bg : color.fill)};
+  color: ${({ $active }) => ($active ? tone.danger.fg : color.ink3)};
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: ${fontSize.caption};
+  font-weight: 600;
+  box-shadow: ${shadow.popover};
+
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: ${({ $active }) => ($active ? tone.danger.fg : color.ink4)};
+    animation: ${({ $active }) => ($active ? livePulse : 'none')} 1.4s ease-in-out infinite;
   }
 `;

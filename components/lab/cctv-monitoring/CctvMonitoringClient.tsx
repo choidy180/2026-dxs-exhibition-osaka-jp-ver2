@@ -35,6 +35,7 @@ import type {
   CctvCameraStatus,
 } from '@/types/cctv-monitoring';
 import type { ToneName } from '@/styles/design-tokens';
+import CctvLivePlayer from './CctvLivePlayer';
 import CctvThumbnail from './CctvThumbnail';
 import {
   BuildingBlock,
@@ -388,12 +389,11 @@ function CameraCards({
 
 interface CameraModalProps {
   camera: CctvCamera | null;
-  revision: number;
   closeButtonRef: RefObject<HTMLButtonElement | null>;
   onClose: () => void;
 }
 
-function CameraModal({ camera, revision, closeButtonRef, onClose }: CameraModalProps) {
+function CameraModal({ camera, closeButtonRef, onClose }: CameraModalProps) {
   return (
     <AnimatePresence>
       {camera && (
@@ -419,7 +419,7 @@ function CameraModal({ camera, revision, closeButtonRef, onClose }: CameraModalP
           >
             <ModalHeader>
               <ModalTitle>
-                <span className="eyebrow">CCTV SNAPSHOT · WHEP METADATA</span>
+                <span className="eyebrow">CCTV LIVE · WEBSOCKET JPEG</span>
                 <h2 id="cctv-modal-title">{camera.name} · {camera.code}</h2>
               </ModalTitle>
               <ViewerActions>
@@ -430,12 +430,11 @@ function CameraModal({ camera, revision, closeButtonRef, onClose }: CameraModalP
               </ViewerActions>
             </ModalHeader>
             <ModalStage>
-              <CctvThumbnail camera={camera} revision={revision} large allowRetry sizes="92vw" />
+              <CctvLivePlayer camera={camera} />
               <StageLabel><Camera size={13} aria-hidden="true" />{camera.code}</StageLabel>
-              <StageTime>{formatTime(camera.thumbnailUpdatedAt)}</StageTime>
               <StageHint>
                 <Wifi size={13} aria-hidden="true" />
-                현재는 {(THUMBNAIL_REFRESH_MS / 1_000).toLocaleString('ko-KR')}초 썸네일 · WHEP 정보 수신
+                실시간 영상 · WebSocket JPEG 수신
               </StageHint>
             </ModalStage>
             <ModalFooter>
@@ -713,7 +712,6 @@ export default function CctvMonitoringClient() {
 
         <CameraModal
           camera={modalCamera}
-          revision={revision}
           closeButtonRef={closeButtonRef}
           onClose={() => setModalCameraId(null)}
         />
