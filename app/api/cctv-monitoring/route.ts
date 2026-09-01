@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   CCTV_MONITORING_UPSTREAM_TIMEOUT_MS,
+  fetchCctvCameraIpMap,
   getCctvMonitoringUpstreamUrl,
 } from '@/utils/cctv-monitoring-server';
 
@@ -37,8 +38,27 @@ export async function GET() {
       throw new Error('CCTV upstream response has an invalid shape');
     }
 
+    // 목록 API 는 카메라 IP 를 주지 않으므로 영상 서버 설정에서 찾아 채운다
+    const ipByPath = await fetchCctvCameraIpMap();
+    const cameras = payload.cameras.map(camera => {
+      if (!isRecord(camera) || camera.ip) return camera;
+
+      const pathName = String(camera.webrtcPath ?? camera.streamPath ?? camera.id ?? '')
+        .replace(/^\/+|\/+$/g, '')
+        .replace(/\/whep$/, '');
+      const ip = pathName ? ipByPath.get(pathName) : undefined;
+
+      return ip ? { ...camera, ip } : camera;
+    });
+
     return NextResponse.json(
-      { ...payload, generatedAt: new Date().toISOString() },
+      {
+        ...payload,
+        cameras,
+        generatedAt: new Date().toISOString(),
+        // 화면에서 IP 가 비어 보일 때 원인을 바로 확인할 수 있게 남긴다
+        cameraIpSource: ipByPath.size > 0 ? 'mediamtx' : 'unavailable',
+      },
       { headers: { 'Cache-Control': 'no-store' } },
     );
   } catch (error) {

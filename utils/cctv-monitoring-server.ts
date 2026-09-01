@@ -63,6 +63,78 @@ export const resolveCctvWhepSessionUrl = (resource: string): URL => {
   return resolvedUrl;
 };
 
+/* ───────────────────────── 카메라 IP 보강 ───────────────────────── */
+
+/**
+ * 카메라 목록 API 는 IP 를 주지 않는다.
+ * 실시간 영상 서버(MediaMTX)의 설정 API 에는 카메라 원본 주소(rtsp://192.168.x.x/...)가 있어
+ * 여기서 호스트만 뽑아 카메라 IP 로 채운다. 기본 포트는 MediaMTX 의 API 포트인 9997 이다.
+ */
+const DEFAULT_MEDIAMTX_API_PORT = '9997';
+
+export const getCctvMediaMtxApiBaseUrl = (): URL | null => {
+  const configured = process.env.CCTV_MEDIAMTX_API_URL?.trim();
+
+  try {
+    if (configured) return new URL(configured);
+
+    // 설정이 없으면 WHEP 서버와 같은 호스트의 API 포트를 사용한다
+    const whepUrl = getCctvWhepBaseUrl();
+    return new URL(`${whepUrl.protocol}//${whepUrl.hostname}:${DEFAULT_MEDIAMTX_API_PORT}`);
+  } catch {
+    return null;
+  }
+};
+
+/** rtsp://user:pass@192.168.2.51:554/stream → 192.168.2.51 */
+const extractHost = (source: unknown): string | null => {
+  if (typeof source !== 'string' || !source.trim()) return null;
+
+  try {
+    const hostname = new URL(source.trim()).hostname;
+    return hostname || null;
+  } catch {
+    // 주소 형태가 아니면 IP 만 들어 있는지 확인한다
+    const match = source.match(/\b\d{1,3}(?:\.\d{1,3}){3}\b/);
+    return match ? match[0] : null;
+  }
+};
+
+/**
+ * 스트림 경로 이름별 카메라 IP 를 조회한다.
+ * 실패하면 빈 맵을 돌려주고, 목록 조회 자체는 계속 진행한다.
+ */
+export const fetchCctvCameraIpMap = async (): Promise<Map<string, string>> => {
+  const result = new Map<string, string>();
+  const baseUrl = getCctvMediaMtxApiBaseUrl();
+  if (!baseUrl) return result;
+
+  try {
+    const response = await fetch(new URL('/v3/config/paths/list', baseUrl), {
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+      // 목록 응답이 느려지지 않게 짧게 끊는다
+      signal: AbortSignal.timeout(3_000),
+    });
+
+    if (!response.ok) {
+      console.warn(`[cctv] 카메라 IP 조회 실패 — MediaMTX API ${response.status}`);
+      return result;
+    }
+
+    const payload = (await response.json()) as { items?: Array<Record<string, unknown>> };
+    (payload.items ?? []).forEach(item => {
+      const name = typeof item.name === 'string' ? item.name : null;
+      const host = extractHost(item.source);
+      if (name && host) result.set(name, host);
+    });
+  } catch (error) {
+    console.warn('[cctv] 카메라 IP 조회 실패 — MediaMTX API 에 접근할 수 없습니다.', error);
+  }
+
+  return result;
+};
+
 /** API가 돌려준 썸네일 경로만 허용해 프록시가 임의 URL 호출에 악용되지 않게 한다. */
 export const resolveCctvThumbnailUpstreamUrl = (source: string): URL => {
   const upstreamUrl = getCctvMonitoringUpstreamUrl();
