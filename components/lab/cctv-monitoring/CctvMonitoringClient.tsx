@@ -211,8 +211,8 @@ function CameraViewer({ camera, revision, onExpand }: CameraViewerProps) {
         <ViewerTitle>
           <Cctv size={22} aria-hidden="true" />
           <div>
-            <h2>{camera.name}</h2>
-            <p>{getBuildingLabel(camera.buildingId)} · {camera.code} · {camera.stream.path || '-'}</p>
+            <h2>{camera.code}</h2>
+            <p>{camera.name} · {camera.ipAddress || '-'}</p>
           </div>
         </ViewerTitle>
         <ViewerActions>
@@ -235,10 +235,10 @@ function CameraViewer({ camera, revision, onExpand }: CameraViewerProps) {
       </ViewerStage>
 
       <ViewerFooter>
-        <MetaItem><span>카메라 번호</span><strong>{camera.code}</strong></MetaItem>
+        <MetaItem><span>설치 위치</span><strong>{camera.code}</strong></MetaItem>
+        <MetaItem><span>카메라 IP</span><strong>{camera.ipAddress || '-'}</strong></MetaItem>
         <MetaItem><span>카메라명</span><strong>{camera.name}</strong></MetaItem>
         <MetaItem><span>최근 썸네일</span><strong>{formatTime(camera.thumbnailUpdatedAt)}</strong></MetaItem>
-        <MetaItem><span>스트림 경로</span><strong>{camera.stream.path || '-'}</strong></MetaItem>
       </ViewerFooter>
     </ViewerPanel>
   );
@@ -301,10 +301,10 @@ function CameraList({
                       >
                         <CctvThumbnail camera={camera} revision={revision} sizes="82px" />
                         <CameraRowText>
-                          <strong>{camera.name}</strong>
-                          <small>{CCTV_STATUS_LABEL[camera.status]} · {camera.stream.path || '-'}</small>
+                          <strong>{camera.code}</strong>
+                          <small>{camera.ipAddress || '-'}</small>
                         </CameraRowText>
-                        <CameraCode>{camera.code}</CameraCode>
+                        <CameraCode>{camera.name}</CameraCode>
                       </CameraRowButton>
                     ))}
                   </CameraRowList>
@@ -371,10 +371,10 @@ function CameraCards({
                         </CardThumbnail>
                         <CameraCardBody>
                           <span className="copy">
-                            <strong>{camera.name}</strong>
-                            <small>{CCTV_STATUS_LABEL[camera.status]} · {camera.stream.path || '-'}</small>
+                            <strong>{camera.code}</strong>
+                            <small>{camera.ipAddress || '-'}</small>
                           </span>
-                          <CardCode>{camera.code}</CardCode>
+                          <CardCode>{camera.name}</CardCode>
                         </CameraCardBody>
                       </CameraCardButton>
                     ))}
@@ -422,7 +422,7 @@ function CameraModal({ camera, closeButtonRef, onClose }: CameraModalProps) {
             <ModalHeader>
               <ModalTitle>
                 <span className="eyebrow">CCTV LIVE · WHEP</span>
-                <h2 id="cctv-modal-title">{camera.name} · {camera.code}</h2>
+                <h2 id="cctv-modal-title">{camera.code} · {camera.ipAddress || '-'}</h2>
               </ModalTitle>
               <ViewerActions>
                 <CameraStatusBadge status={camera.status} />
@@ -479,6 +479,7 @@ export default function CctvMonitoringClient() {
       [
         camera.code,
         camera.name,
+        camera.ipAddress,
         getBuildingLabel(camera.buildingId),
         camera.stream.path,
         CCTV_STATUS_LABEL[camera.status],
@@ -626,7 +627,7 @@ export default function CctvMonitoringClient() {
                     setSearchQuery(event.target.value);
                     if (event.target.value) setCollapsedBuildings(new Set());
                   }}
-                  placeholder="카메라명, 번호, 동, 스트림 경로 검색"
+                  placeholder="설치 위치, IP, 카메라명, 동 검색"
                   aria-label="CCTV 검색"
                 />
                 {searchQuery && (

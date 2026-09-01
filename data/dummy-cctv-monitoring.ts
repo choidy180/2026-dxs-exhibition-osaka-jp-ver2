@@ -29,12 +29,14 @@ const CAMERA_SEEDS: DummyCameraSeed[] = [
 ];
 
 /** API 연결 전 화면 검증에 사용하는 D/E/F동 CCTV 15대 */
-export const DUMMY_CCTV_CAMERAS: readonly CctvCamera[] = CAMERA_SEEDS.map(seed => ({
+export const DUMMY_CCTV_CAMERAS: readonly CctvCamera[] = CAMERA_SEEDS.map((seed, index) => ({
   id: `cctv-${seed.code.toLowerCase()}`,
   code: seed.code,
   name: seed.name,
   buildingId: seed.buildingId,
   location: seed.location,
+  // 목업 IP — 실제 API 가 주는 값으로 대체된다
+  ipAddress: `192.168.2.${100 + index}`,
   status: seed.status,
   thumbnailUrl: CCTV_THUMBNAIL_IMAGE_PATH,
   thumbnailVersion: null,

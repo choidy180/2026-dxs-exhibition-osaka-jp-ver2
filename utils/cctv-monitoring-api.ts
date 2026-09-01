@@ -90,6 +90,30 @@ const toWhepPath = (item: CctvCameraApiItem, apiId: string | null): string | nul
   return trimmed.endsWith('/whep') ? `/${trimmed}` : `/${trimmed}/whep`;
 };
 
+/**
+ * 카메라 IP 를 찾는다.
+ * 서버마다 키 이름이 달라 흔한 이름을 함께 보고, 주소(rtsp://192.168.x.x/...) 형태면 호스트만 뽑는다.
+ */
+const toIpAddress = (item: CctvCameraApiItem): string | null => {
+  const candidate =
+    toText(item.ip)
+    || toText(item.ipAddress)
+    || toText(item.cameraIp)
+    || toText(item.host)
+    || toText(item.address)
+    || toText(item.rtspUrl);
+  if (!candidate) return null;
+
+  // 이미 IP 나 호스트만 들어온 경우
+  if (!candidate.includes('://')) return candidate.replace(/^\/+|\/+$/g, '') || null;
+
+  try {
+    return new URL(candidate).hostname || null;
+  } catch {
+    return candidate;
+  }
+};
+
 const mapApiCamera = (value: CctvCameraApiItem, index: number): CctvCamera => {
   const item = isRecord(value) ? value : {};
   const number = toText(item.number) || `카메라 ${String(index + 1).padStart(2, '0')}`;
@@ -110,6 +134,7 @@ const mapApiCamera = (value: CctvCameraApiItem, index: number): CctvCamera => {
     name: toText(item.name) || '이름 미지정 카메라',
     buildingId,
     location: '-',
+    ipAddress: toIpAddress(item),
     status,
     thumbnailUrl: hasThumbnail ? toThumbnailProxyUrl(rawThumbnailUrl) : null,
     thumbnailVersion,

@@ -21,6 +21,8 @@ export interface CctvCamera {
   name: string;
   buildingId: CctvBuildingId;
   location: string;
+  /** 카메라 IP. API 가 주지 않으면 null 이며 화면에는 '-' 로 표시한다 */
+  ipAddress: string | null;
   status: CctvCameraStatus;
   thumbnailUrl: string | null;
   thumbnailVersion: number | null;
@@ -54,6 +56,13 @@ export interface CctvCameraApiItem {
   webrtcPath?: string | null;
   streamPath?: string | null;
   whepPath?: string | null;
+  /** 카메라 IP. 서버마다 키가 달라 여러 이름을 함께 인식한다 */
+  ip?: string | null;
+  ipAddress?: string | null;
+  cameraIp?: string | null;
+  host?: string | null;
+  address?: string | null;
+  rtspUrl?: string | null;
 }
 
 /** 사내 CCTV 목록·썸네일 API 응답 계약 */
