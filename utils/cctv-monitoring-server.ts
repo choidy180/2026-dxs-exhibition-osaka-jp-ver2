@@ -1,7 +1,7 @@
 /** CCTV 사내 API를 서버에서만 호출하기 위한 설정과 URL 검증 도우미. */
 
 const DEFAULT_CCTV_MONITORING_UPSTREAM_URL =
-  'http://192.168.200.50:9100/api/cameras';
+  'http://192.168.2.147:9000/api/cameras';
 
 export const CCTV_MONITORING_UPSTREAM_TIMEOUT_MS = 8_000;
 
