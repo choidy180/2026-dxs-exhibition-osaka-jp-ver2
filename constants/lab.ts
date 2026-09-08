@@ -11,6 +11,8 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_LAB_API_BASE ?? DEFAULT_API_
 export const API_ENDPOINTS = {
   /** MES DB Link — BOM 정전개 전체 리스트 */
   BOM_EXPLOSION: '/DX_API000201',
+  /** 전체 BOM CSV — 화면의 목업/조회 조건과 별개인 엑셀 다운로드용 */
+  BOM_EXPORT: '/DX_API000053/export',
   /** 발주대상 산출 */
   ORDER_TARGET: '/DX_API000202',
   /** 발주 소요량 재계산 */

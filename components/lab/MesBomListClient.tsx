@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   AlertCircle,
+  CheckCircle2,
   FileDown,
   Info,
   Layers,
@@ -25,16 +26,18 @@ import {
 } from '@/constants/lab';
 import { DUMMY_PRODUCT_OPTIONS } from '@/data/dummy-lab';
 import { useBomExplosion } from '@/hooks/use-bom-explosion';
+import { useBomExcelDownload } from '@/hooks/use-bom-excel-download';
+import { motion as motionTokens } from '@/styles/design-tokens';
 import type { BomRow } from '@/types/lab';
 import {
   BOM_GRID_WIDTH,
   BOM_STICKY_OFFSETS,
   bomGridTemplate,
-  downloadBomExcel,
   formatNumber,
   getLevelLabel,
 } from '@/utils/lab';
 import { FilterSelectField, FilterTextField } from './FilterField';
+import { BomExportNotice, BomExportSpinner } from './bom-export-styles';
 import {
   ActionButton,
   BodyRow,
@@ -56,7 +59,6 @@ import {
   LabShell,
   LevelCell,
   MetricCard,
-  NoticeBar,
   PageFontScope,
   RetryButton,
   StateBox,
@@ -115,16 +117,25 @@ export default function MesBomListClient() {
     resetFilter,
     retry,
   } = useBomExplosion();
+  const download = useBomExcelDownload();
 
   const productOptions = useMemo(() => ['전체', ...DUMMY_PRODUCT_OPTIONS], []);
   const template = bomGridTemplate;
 
-  const handleDownload = useCallback(() => {
-    if (!dataset || !filteredRows.length) return;
-    downloadBomExcel(filteredRows, dataset.baseDate);
-  }, [dataset, filteredRows]);
-
   const hasRows = filteredRows.length > 0;
+  const downloadNotice = download.phase === 'fetching'
+    ? '전체 BOM을 불러오고 있습니다. 데이터가 많아 1분 이상 걸릴 수 있습니다.'
+    : download.phase === 'converting'
+      ? `엑셀 파일로 변환 중입니다. ${formatNumber(download.rows)}건 처리`
+      : download.phase === 'complete'
+        ? `전체 BOM ${formatNumber(download.rows)}건의 엑셀 파일 다운로드를 시작했습니다.`
+        : download.phase === 'empty'
+          ? '다운로드할 BOM 데이터가 없습니다. 잠시 후 다시 시도해주세요.'
+          : download.phase === 'error'
+            ? download.error
+            : download.phase === 'cancelled'
+              ? '엑셀 다운로드 준비를 취소했습니다.'
+              : null;
 
   return (
     <PageFontScope>
@@ -142,26 +153,49 @@ export default function MesBomListClient() {
           </TitleGroup>
 
           <HeaderActions>
-            <ActionButton type="button" $variant="success" onClick={handleDownload} disabled={!hasRows}>
-              <FileDown size={16} />
-              엑셀 다운로드
+            <ActionButton
+              type="button"
+              $variant="success"
+              onClick={download.startDownload}
+              disabled={download.isDownloading}
+              aria-busy={download.isDownloading}
+              aria-describedby="bom-export-notice"
+            >
+              {download.isDownloading ? (
+                <BomExportSpinner
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: parseFloat(motionTokens.enter), ease: 'linear' }}
+                  aria-hidden="true"
+                >
+                  <Loader2 size={16} />
+                </BomExportSpinner>
+              ) : <FileDown size={16} />}
+              {download.phase === 'fetching' ? 'BOM 수신 중...' : download.phase === 'converting' ? '엑셀 변환 중...' : '엑셀 다운로드'}
             </ActionButton>
           </HeaderActions>
         </Header>
 
-        <NoticeBar
-          $tone="info"
-          initial={{ opacity: 0, y: -4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.16 }}
-          role="status"
+        <BomExportNotice
+          id="bom-export-notice"
+          $tone={download.phase === 'error' ? 'danger' : download.phase === 'complete' ? 'success' : 'info'}
+          role={download.phase === 'error' ? 'alert' : 'status'}
         >
-          <Info size={16} />
+          {download.phase === 'error' ? <AlertCircle size={16} /> : download.phase === 'complete' ? <CheckCircle2 size={16} /> : <Info size={16} />}
           <p>
-            MES 시스템 DB Link 연동 — 정전개(Full Explosion) BOM 리스트. 데이터 기준:{' '}
-            <strong>{dataset?.baseDate ?? '-'}</strong> · 개발 진행 중 화면으로 실제 데이터는 연결되지 않았습니다.
+            {downloadNotice ?? <>
+              {USE_MOCK_DATA ? '화면 목록은 개발용 데이터입니다.' : <>목록 데이터 기준: <strong>{dataset?.baseDate ?? '-'}</strong>.</>}{' '}
+              엑셀 다운로드는 조회 조건과 관계없이 MES 전체 BOM을 저장합니다.
+            </>}
           </p>
-        </NoticeBar>
+          {download.isDownloading && (
+            <ActionButton type="button" $variant="soft" $compact onClick={download.cancelDownload}>취소</ActionButton>
+          )}
+          {(download.phase === 'error' || download.phase === 'empty') && (
+            <ActionButton type="button" $variant="soft" $compact onClick={download.retry}>
+              <RotateCcw size={14} /> 재시도
+            </ActionButton>
+          )}
+        </BomExportNotice>
 
         <StatsGrid $columns={4}>
           <MetricCard $tone="danger">

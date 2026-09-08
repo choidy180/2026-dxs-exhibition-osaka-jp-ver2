@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { FILM_ATTACHMENT_API_URL, POLLING_INTERVAL_MS } from '@/constants/gasketCheck';
+import { GASKET_CHECK_API_URL, POLLING_INTERVAL_MS } from '@/constants/gasketCheck';
 import type { ApiData, TotalData } from '@/types/gasketCheck';
 import { getInspectionTone } from '@/utils/gasketCheck';
 
@@ -18,7 +18,7 @@ export function useInspectionPolling() {
 
     const fetchData = useCallback(async () => {
         try {
-            const response = await fetch(FILM_ATTACHMENT_API_URL, {
+            const response = await fetch(GASKET_CHECK_API_URL, {
                 cache: 'no-store',
             });
             const json = await response.json() as ApiResponse;
@@ -38,7 +38,7 @@ export function useInspectionPolling() {
                 setTotalStats(json.total_data);
             }
         } catch (error) {
-            console.error('Film attachment API fetch failed:', error);
+            console.error('Gasket check API fetch failed:', error);
         }
     }, []);
 
