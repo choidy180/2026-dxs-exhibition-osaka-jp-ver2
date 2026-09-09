@@ -20,6 +20,8 @@ export const color = {
   fill: '#f1f5f9',
   /** 데이터 그리드 짝수 행 (zebra) */
   surfaceZebra: '#fbfcfe',
+  /** 모달 뒤 페이지를 가리는 중립 오버레이 */
+  overlay: 'rgba(15, 23, 42, 0.4)',
 
   /** 카드 외곽선(기본) */
   border: '#e2e8f0',
@@ -60,6 +62,33 @@ export const tone = {
 } as const;
 
 export type ToneName = keyof typeof tone;
+
+/** 관제 배경지도 — 내비게이션의 지리 구분을 위한 낮은 채도의 면·도로 색상 */
+export const mapPalette = {
+  land: '#f5f3ed',
+  residential: '#ebeae5',
+  industrial: '#e3e7e9',
+  park: '#e3ecd9',
+  water: '#bfdbea',
+  waterOutline: '#a6c9dc',
+  motorway: '#f2d398',
+  primaryRoad: '#fae7b7',
+  majorRoadOutline: '#ccb991',
+  road: color.surface,
+  roadOutline: '#cbcfcf',
+  building: '#deded8',
+  buildingOutline: '#cccdc7',
+  label: color.ink2,
+  labelMuted: color.ink3,
+} as const;
+
+/** 지도 캔버스 내부의 그리기 순서. 페이지 CSS z-index와 독립적이다. */
+export const mapLayer = {
+  landuse: 1, park: 2, water: 3, building: 4,
+  minorRoad: 5, tertiaryRoad: 7, secondaryRoad: 9, primaryRoad: 11,
+  trunkRoad: 13, motorway: 15,
+  roadLabel: 20, districtLabel: 21, townLabel: 22, cityLabel: 23,
+} as const;
 
 /** 폰트 — Pretendard 고정. 페이지 루트에서 스코프로 강제한다. */
 export const font = {
@@ -151,6 +180,13 @@ export const motion = {
   enter: '0.8s cubic-bezier(0.4, 0, 0.2, 1)',
 } as const;
 
+/** framer-motion의 초 단위 지속 시간 */
+export const motionDuration = {
+  fast: 0.16,
+  enter: 0.22,
+  spin: 0.9,
+} as const;
+
 /** z-index — 새 레이어는 반드시 여기에 등록하고 숫자를 직접 쓰지 않는다 */
 export const zIndex = {
   stickyHead: 1,
@@ -158,6 +194,10 @@ export const zIndex = {
   modalBackdrop: 2000,
   modal: 2001,
   fullscreen: 5000,
+  /** 기존 내비게이션(10020~10050)과 함께 사용하는 전역 Advisor */
+  advisorLauncher: 10030,
+  advisorBackdrop: 10100,
+  advisorPanel: 10101,
 } as const;
 
 /**
@@ -185,6 +225,8 @@ export const scrollbar = `
 export const tokens = {
   color,
   tone,
+  mapPalette,
+  mapLayer,
   font,
   fontSize,
   fontWeight,
@@ -193,6 +235,7 @@ export const tokens = {
   shadow,
   controlHeight,
   motion,
+  motionDuration,
   zIndex,
   gridLayer,
   focusRing,

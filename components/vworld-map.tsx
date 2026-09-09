@@ -3,8 +3,14 @@
 import React, { useEffect, useRef } from "react";
 import Map from "ol/Map";
 import View from "ol/View";
-import TileLayer from "ol/layer/Tile";
-import XYZ from "ol/source/XYZ";
+import VectorTileLayer from "ol/layer/VectorTile";
+import { TRANSPORT_VECTOR_BASEMAP } from "@/constants/transport-basemap";
+import { createTransportMapStyle } from "@/utils/transport-map-style";
+import { mapPalette } from "@/styles/design-tokens";
+import { useTransportBasemap } from "@/hooks/use-transport-basemap";
+import MapAttribution from "@/components/transport-map/MapAttribution";
+import MapTileStatus from "@/components/transport-map/MapTileStatus";
+import { MapFrame, MapSurface } from "@/components/transport-map/styles";
 import { fromLonLat } from "ol/proj";
 import { Point, LineString } from "ol/geom";
 import { Vector as VectorLayer } from "ol/layer";
@@ -102,6 +108,7 @@ const FIXED_NAV_PATH = [
 ];
 
 export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: VWorldMapProps) {
+  const basemap = useTransportBasemap();
   const mapElement = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   
@@ -122,11 +129,11 @@ export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: V
     remainingRouteSourceRef.current = remainingRouteSource;
     markerSourceRef.current = markerSource;
 
-    const baseLayer = new TileLayer({
-      source: new XYZ({
-        url: 'https://{a-c}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png',
-        attributions: '© OpenStreetMap',
-      })
+    const baseLayer = new VectorTileLayer({
+      source: basemap.source,
+      background: mapPalette.land,
+      declutter: true,
+      style: createTransportMapStyle(),
     });
 
     const map = new Map({
@@ -137,7 +144,7 @@ export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: V
         new VectorLayer({ source: remainingRouteSource, zIndex: 15 }), 
         new VectorLayer({ source: markerSource, zIndex: 20 })
       ],
-      view: new View({ center: fromLonLat([128.76, 35.18]), zoom: 9, minZoom: 9, maxZoom: 12 }),
+      view: new View({ center: fromLonLat([128.76, 35.18]), zoom: 9, minZoom: 9, maxZoom: 16 }),
       controls: [], 
     });
     mapRef.current = map;
@@ -178,12 +185,12 @@ export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: V
     routeSource.addFeature(routeFeature);
 
     const extent = boundingExtent(projectedCoords);
-    map.getView().fit(extent, { padding: [100, 100, 100, 100], duration: 1000 });
+    map.getView().fit(extent, { padding: [100, 100, 100, 100], duration: 1000, maxZoom: 12 });
 
     if (onEtaUpdate) onEtaUpdate({ toBusan: 2400, toLG: 2400 });
 
     return () => { map.setTarget(undefined); mapRef.current = null; };
-  }, []);
+  }, [basemap.source]);
 
   useEffect(() => {
     const markerSource = markerSourceRef.current;
@@ -391,7 +398,11 @@ export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: V
   return (
     <>
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v9.0.0/ol.css"  />
-      <div ref={mapElement} style={{ width: "100%", height: "100%", background: "#f8fafc" }} />
+      <MapFrame>
+        <MapSurface ref={mapElement} />
+        <MapTileStatus status={basemap.status} onRetry={basemap.retry} />
+        <MapAttribution sources={TRANSPORT_VECTOR_BASEMAP.attributions} compactAlign="left" />
+      </MapFrame>
     </>
   );
 }

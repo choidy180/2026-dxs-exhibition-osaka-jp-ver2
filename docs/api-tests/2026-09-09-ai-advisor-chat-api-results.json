@@ -1,0 +1,804 @@
+{
+  "testDateKst": "2026-09-09",
+  "endpoint": "http://192.168.0.157:8793/api/chat",
+  "methodology": "Single development PC, sequential Node.js HTTP requests, no authentication header, no UI or load test. Raw row values, answer bodies, SQL, source file names and session IDs excluded.",
+  "totalHttpRequests": 25,
+  "chatPostRequests": 20,
+  "chatHttp200Count": 11,
+  "chatHttp422Count": 9,
+  "preflightRequests": 2,
+  "preflightHttp405Count": 2,
+  "metadataGetHttp200Count": 3,
+  "http200ChatLatencyMs": {
+    "sampleCount": 11,
+    "min": 8824,
+    "median": 13484,
+    "mean": 14169,
+    "max": 18843
+  },
+  "reportedDataState": {
+    "snapshotDate": "2026-08-01",
+    "asOfDate": "2026-08-21",
+    "forecastEndDate": "2026-08-31",
+    "viewCount": 17,
+    "issues": [
+      {
+        "issue_type": "invalid_productivity_row",
+        "count": 6
+      },
+      {
+        "issue_type": "missing_inventory_snapshot",
+        "count": 4
+      }
+    ],
+    "status": "ok",
+    "modelLoaded": true,
+    "dataError": null,
+    "modelError": null
+  },
+  "auxiliaryRequests": [
+    {
+      "id": "initial_cors_preflight",
+      "method": "OPTIONS",
+      "route": "/api/chat",
+      "httpStatus": 405,
+      "elapsedMs": 14,
+      "corsAllowOrigin": null
+    },
+    {
+      "id": "openapi",
+      "method": "GET",
+      "route": "/openapi.json",
+      "httpStatus": 200
+    },
+    {
+      "id": "health",
+      "method": "GET",
+      "route": "/api/health",
+      "httpStatus": 200,
+      "elapsedMs": 245
+    },
+    {
+      "id": "data_meta",
+      "method": "GET",
+      "route": "/api/data-meta",
+      "httpStatus": 200,
+      "elapsedMs": 71
+    }
+  ],
+  "records": [
+    {
+      "id": "first_without_session",
+      "observedAtUtc": "2026-09-09T00:21:54.611Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 200,
+      "elapsedMs": 8824,
+      "headersMs": 8822,
+      "firstChunkMs": null,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "answer",
+        "sources",
+        "model_used",
+        "session_id",
+        "intent",
+        "sql",
+        "table"
+      ],
+      "hasNonEmptyAnswer": true,
+      "reportedSqlFailure": true,
+      "sessionLabel": "test-session-1",
+      "sessionIsUuid": true,
+      "sqlPresent": false,
+      "sqlDateLiterals": [],
+      "table": null,
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "cors_preflight",
+      "observedAtUtc": "2026-09-09T00:23:25.886Z",
+      "method": "OPTIONS",
+      "route": "/api/chat",
+      "httpStatus": 405,
+      "elapsedMs": 14,
+      "headersMs": 13,
+      "firstChunkMs": 14,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "detail"
+      ],
+      "hasNonEmptyAnswer": false,
+      "reportedSqlFailure": false,
+      "sessionLabel": null,
+      "sessionIsUuid": false,
+      "sqlPresent": false,
+      "sqlDateLiterals": [],
+      "table": null,
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "missing_query",
+      "observedAtUtc": "2026-09-09T00:23:25.901Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 422,
+      "elapsedMs": 5,
+      "headersMs": 5,
+      "firstChunkMs": 5,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "detail"
+      ],
+      "hasNonEmptyAnswer": false,
+      "reportedSqlFailure": false,
+      "sessionLabel": null,
+      "sessionIsUuid": false,
+      "sqlPresent": false,
+      "sqlDateLiterals": [],
+      "table": null,
+      "validationErrors": [
+        {
+          "type": "missing",
+          "loc": [
+            "body",
+            "query"
+          ],
+          "msg": "Field required"
+        }
+      ],
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "empty_query",
+      "observedAtUtc": "2026-09-09T00:23:25.906Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 422,
+      "elapsedMs": 3,
+      "headersMs": 3,
+      "firstChunkMs": 3,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "detail"
+      ],
+      "hasNonEmptyAnswer": false,
+      "reportedSqlFailure": false,
+      "sessionLabel": null,
+      "sessionIsUuid": false,
+      "sqlPresent": false,
+      "sqlDateLiterals": [],
+      "table": null,
+      "validationErrors": [
+        {
+          "type": "string_too_short",
+          "loc": [
+            "body",
+            "query"
+          ],
+          "msg": "String should have at least 1 character"
+        }
+      ],
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "null_query",
+      "observedAtUtc": "2026-09-09T00:23:25.910Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 422,
+      "elapsedMs": 3,
+      "headersMs": 3,
+      "firstChunkMs": 3,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "detail"
+      ],
+      "hasNonEmptyAnswer": false,
+      "reportedSqlFailure": false,
+      "sessionLabel": null,
+      "sessionIsUuid": false,
+      "sqlPresent": false,
+      "sqlDateLiterals": [],
+      "table": null,
+      "validationErrors": [
+        {
+          "type": "string_type",
+          "loc": [
+            "body",
+            "query"
+          ],
+          "msg": "Input should be a valid string"
+        }
+      ],
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "numeric_query",
+      "observedAtUtc": "2026-09-09T00:23:25.913Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 422,
+      "elapsedMs": 3,
+      "headersMs": 3,
+      "firstChunkMs": 3,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "detail"
+      ],
+      "hasNonEmptyAnswer": false,
+      "reportedSqlFailure": false,
+      "sessionLabel": null,
+      "sessionIsUuid": false,
+      "sqlPresent": false,
+      "sqlDateLiterals": [],
+      "table": null,
+      "validationErrors": [
+        {
+          "type": "string_type",
+          "loc": [
+            "body",
+            "query"
+          ],
+          "msg": "Input should be a valid string"
+        }
+      ],
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "query_too_long",
+      "observedAtUtc": "2026-09-09T00:23:25.917Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 422,
+      "elapsedMs": 4,
+      "headersMs": 4,
+      "firstChunkMs": 4,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "detail"
+      ],
+      "hasNonEmptyAnswer": false,
+      "reportedSqlFailure": false,
+      "sessionLabel": null,
+      "sessionIsUuid": false,
+      "sqlPresent": false,
+      "sqlDateLiterals": [],
+      "table": null,
+      "validationErrors": [
+        {
+          "type": "string_too_long",
+          "loc": [
+            "body",
+            "query"
+          ],
+          "msg": "String should have at most 2000 characters"
+        }
+      ],
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "session_too_long",
+      "observedAtUtc": "2026-09-09T00:23:25.922Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 422,
+      "elapsedMs": 3,
+      "headersMs": 3,
+      "firstChunkMs": 3,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "detail"
+      ],
+      "hasNonEmptyAnswer": false,
+      "reportedSqlFailure": false,
+      "sessionLabel": null,
+      "sessionIsUuid": false,
+      "sqlPresent": false,
+      "sqlDateLiterals": [],
+      "table": null,
+      "validationErrors": [
+        {
+          "type": "string_too_long",
+          "loc": [
+            "body",
+            "session_id"
+          ],
+          "msg": "String should have at most 128 characters"
+        }
+      ],
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "malformed_json",
+      "observedAtUtc": "2026-09-09T00:23:25.925Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 422,
+      "elapsedMs": 3,
+      "headersMs": 3,
+      "firstChunkMs": 3,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "detail"
+      ],
+      "hasNonEmptyAnswer": false,
+      "reportedSqlFailure": false,
+      "sessionLabel": null,
+      "sessionIsUuid": false,
+      "sqlPresent": false,
+      "sqlDateLiterals": [],
+      "table": null,
+      "validationErrors": [
+        {
+          "type": "json_invalid",
+          "loc": [
+            "body",
+            9
+          ],
+          "msg": "JSON decode error"
+        }
+      ],
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "wrong_content_type",
+      "observedAtUtc": "2026-09-09T00:23:25.929Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 422,
+      "elapsedMs": 6,
+      "headersMs": 5,
+      "firstChunkMs": 5,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "detail"
+      ],
+      "hasNonEmptyAnswer": false,
+      "reportedSqlFailure": false,
+      "sessionLabel": null,
+      "sessionIsUuid": false,
+      "sqlPresent": false,
+      "sqlDateLiterals": [],
+      "table": null,
+      "validationErrors": [
+        {
+          "type": "model_attributes_type",
+          "loc": [
+            "body"
+          ],
+          "msg": "Input should be a valid dictionary or object to extract fields from"
+        }
+      ],
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "max_results_zero",
+      "observedAtUtc": "2026-09-09T00:23:25.935Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 422,
+      "elapsedMs": 3,
+      "headersMs": 3,
+      "firstChunkMs": 3,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "detail"
+      ],
+      "hasNonEmptyAnswer": false,
+      "reportedSqlFailure": false,
+      "sessionLabel": null,
+      "sessionIsUuid": false,
+      "sqlPresent": false,
+      "sqlDateLiterals": [],
+      "table": null,
+      "validationErrors": [
+        {
+          "type": "greater_than_equal",
+          "loc": [
+            "body",
+            "max_results"
+          ],
+          "msg": "Input should be greater than or equal to 1"
+        }
+      ],
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "dated_material_top3",
+      "observedAtUtc": "2026-09-09T00:23:25.938Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 200,
+      "elapsedMs": 13484,
+      "headersMs": 13483,
+      "firstChunkMs": 13483,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "answer",
+        "sources",
+        "model_used",
+        "session_id",
+        "intent",
+        "sql",
+        "table"
+      ],
+      "hasNonEmptyAnswer": true,
+      "reportedSqlFailure": false,
+      "sessionLabel": "test-session-2",
+      "sessionIsUuid": true,
+      "sqlPresent": true,
+      "sqlDateLiterals": [
+        "2026-08-24"
+      ],
+      "table": {
+        "columns": [
+          "자재품목번호",
+          "자재명",
+          "소요계획량",
+          "단위"
+        ],
+        "rowCount": 3,
+        "columnCount": 4,
+        "cellsAreStrings": true,
+        "rowWidthsMatch": true,
+        "truncated": false,
+        "summaryKeyCount": 0
+      },
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "followup_same_session",
+      "observedAtUtc": "2026-09-09T00:23:39.423Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 200,
+      "elapsedMs": 18843,
+      "headersMs": 18843,
+      "firstChunkMs": 18843,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "answer",
+        "sources",
+        "model_used",
+        "session_id",
+        "intent",
+        "sql",
+        "table"
+      ],
+      "hasNonEmptyAnswer": true,
+      "reportedSqlFailure": true,
+      "sessionLabel": "test-session-2",
+      "sessionIsUuid": true,
+      "sqlPresent": false,
+      "sqlDateLiterals": [],
+      "table": null,
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "new_explicit_uuid",
+      "observedAtUtc": "2026-09-09T00:23:58.267Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 200,
+      "elapsedMs": 13432,
+      "headersMs": 13432,
+      "firstChunkMs": 13432,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "answer",
+        "sources",
+        "model_used",
+        "session_id",
+        "intent",
+        "sql",
+        "table"
+      ],
+      "hasNonEmptyAnswer": true,
+      "reportedSqlFailure": false,
+      "sessionLabel": "test-session-3",
+      "sessionIsUuid": true,
+      "sqlPresent": true,
+      "sqlDateLiterals": [
+        "2026-08-25"
+      ],
+      "table": {
+        "columns": [
+          "자재품목번호",
+          "자재명",
+          "단위",
+          "소요계획량"
+        ],
+        "rowCount": 2,
+        "columnCount": 4,
+        "cellsAreStrings": true,
+        "rowWidthsMatch": true,
+        "truncated": false,
+        "summaryKeyCount": 0
+      },
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "empty_result",
+      "observedAtUtc": "2026-09-09T00:24:11.700Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 200,
+      "elapsedMs": 13757,
+      "headersMs": 13757,
+      "firstChunkMs": 13757,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "answer",
+        "sources",
+        "model_used",
+        "session_id",
+        "intent",
+        "sql",
+        "table"
+      ],
+      "hasNonEmptyAnswer": true,
+      "reportedSqlFailure": false,
+      "sessionLabel": "test-session-4",
+      "sessionIsUuid": true,
+      "sqlPresent": true,
+      "sqlDateLiterals": [
+        "2099-01-01"
+      ],
+      "table": null,
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "whitespace_query",
+      "observedAtUtc": "2026-09-09T00:24:25.458Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 200,
+      "elapsedMs": 13204,
+      "headersMs": 13204,
+      "firstChunkMs": 13204,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "answer",
+        "sources",
+        "model_used",
+        "session_id",
+        "intent",
+        "sql",
+        "table"
+      ],
+      "hasNonEmptyAnswer": true,
+      "reportedSqlFailure": false,
+      "sessionLabel": "test-session-5",
+      "sessionIsUuid": true,
+      "sqlPresent": true,
+      "sqlDateLiterals": [
+        "2026-08-24",
+        "2026-08-30"
+      ],
+      "table": {
+        "columns": [
+          "일자",
+          "소요계획량",
+          "단위"
+        ],
+        "rowCount": 4,
+        "columnCount": 3,
+        "cellsAreStrings": true,
+        "rowWidthsMatch": true,
+        "truncated": false,
+        "summaryKeyCount": 0
+      },
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "invalid_uuid_session",
+      "observedAtUtc": "2026-09-09T00:24:38.662Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 200,
+      "elapsedMs": 11237,
+      "headersMs": 11237,
+      "firstChunkMs": 11237,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "answer",
+        "sources",
+        "model_used",
+        "session_id",
+        "intent",
+        "sql",
+        "table"
+      ],
+      "hasNonEmptyAnswer": true,
+      "reportedSqlFailure": false,
+      "sessionLabel": "test-session-6",
+      "sessionIsUuid": false,
+      "sqlPresent": true,
+      "sqlDateLiterals": [
+        "2026-08-21"
+      ],
+      "table": {
+        "columns": [
+          "reference_date"
+        ],
+        "rowCount": 1,
+        "columnCount": 1,
+        "cellsAreStrings": true,
+        "rowWidthsMatch": true,
+        "truncated": false,
+        "summaryKeyCount": 0
+      },
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "followup_plan_only_session_a",
+      "observedAtUtc": "2026-09-09T00:25:17.333Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 200,
+      "elapsedMs": 18424,
+      "headersMs": 18423,
+      "firstChunkMs": 18423,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "answer",
+        "sources",
+        "model_used",
+        "session_id",
+        "intent",
+        "sql",
+        "table"
+      ],
+      "hasNonEmptyAnswer": true,
+      "reportedSqlFailure": false,
+      "sessionLabel": "test-session-2",
+      "sessionIsUuid": true,
+      "sqlPresent": true,
+      "sqlDateLiterals": [
+        "2026-08-24"
+      ],
+      "table": null,
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "followup_plan_only_session_b",
+      "observedAtUtc": "2026-09-09T00:25:35.758Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 200,
+      "elapsedMs": 17496,
+      "headersMs": 17496,
+      "firstChunkMs": 17496,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "answer",
+        "sources",
+        "model_used",
+        "session_id",
+        "intent",
+        "sql",
+        "table"
+      ],
+      "hasNonEmptyAnswer": true,
+      "reportedSqlFailure": false,
+      "sessionLabel": "test-session-3",
+      "sessionIsUuid": true,
+      "sqlPresent": true,
+      "sqlDateLiterals": [
+        "2026-08-25"
+      ],
+      "table": null,
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "max_results_one_table_top3",
+      "observedAtUtc": "2026-09-09T00:25:53.255Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 200,
+      "elapsedMs": 13321,
+      "headersMs": 13321,
+      "firstChunkMs": 13321,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "answer",
+        "sources",
+        "model_used",
+        "session_id",
+        "intent",
+        "sql",
+        "table"
+      ],
+      "hasNonEmptyAnswer": true,
+      "reportedSqlFailure": false,
+      "sessionLabel": "test-session-7",
+      "sessionIsUuid": true,
+      "sqlPresent": true,
+      "sqlDateLiterals": [
+        "2026-08-24"
+      ],
+      "table": {
+        "columns": [
+          "자재품목번호",
+          "자재명",
+          "소요계획량",
+          "단위"
+        ],
+        "rowCount": 3,
+        "columnCount": 4,
+        "cellsAreStrings": true,
+        "rowWidthsMatch": true,
+        "truncated": false,
+        "summaryKeyCount": 0
+      },
+      "hasUnicodeReplacementCharacter": false
+    },
+    {
+      "id": "monthly_table_truncation",
+      "observedAtUtc": "2026-09-09T00:26:06.577Z",
+      "method": "POST",
+      "route": "/api/chat",
+      "httpStatus": 200,
+      "elapsedMs": 13832,
+      "headersMs": 13831,
+      "firstChunkMs": 13832,
+      "contentType": "application/json",
+      "corsAllowOrigin": null,
+      "responseKeys": [
+        "answer",
+        "sources",
+        "model_used",
+        "session_id",
+        "intent",
+        "sql",
+        "table"
+      ],
+      "hasNonEmptyAnswer": true,
+      "reportedSqlFailure": false,
+      "sessionLabel": "test-session-8",
+      "sessionIsUuid": true,
+      "sqlPresent": true,
+      "sqlDateLiterals": [
+        "2026-08-01",
+        "2026-08-31"
+      ],
+      "table": {
+        "columns": [
+          "일자",
+          "자재품목번호",
+          "자재명",
+          "단위",
+          "소요계획량"
+        ],
+        "rowCount": 100,
+        "columnCount": 5,
+        "cellsAreStrings": true,
+        "rowWidthsMatch": true,
+        "truncated": true,
+        "summaryKeyCount": 0
+      },
+      "hasUnicodeReplacementCharacter": false
+    }
+  ]
+}

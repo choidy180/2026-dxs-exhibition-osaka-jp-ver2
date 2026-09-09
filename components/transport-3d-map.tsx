@@ -1,11 +1,16 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { ContactShadows, Html, Line, OrbitControls, RoundedBox, Sky } from "@react-three/drei";
+import { ContactShadows, Html, Line, OrbitControls, RoundedBox } from "@react-three/drei";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import * as THREE from "three";
+import styled from "styled-components";
 import type { VWorldMarker } from "@/components/vworld-map-dev";
+import MapAttribution from "@/components/transport-map/MapAttribution";
+import MapTileStatus from "@/components/transport-map/MapTileStatus";
+import { useTransportMapTexture } from "@/hooks/use-transport-map-texture";
+import { color as mapColor } from "@/styles/design-tokens";
 
 type MarkerInfoMode = "hidden" | "all" | "selected" | "auto";
 
@@ -119,45 +124,6 @@ const BUILDINGS = Array.from({ length: 180 }, (_, index) => {
   return { id: index, x, z, height, width, depth, visible };
 }).filter((building) => building.visible);
 
-const TREE_POSITIONS = Array.from({ length: 150 }, (_, index) => {
-  const x = -24.5 + random01(index + 111) * 49;
-  const z = -11.5 + random01(index + 233) * 23;
-  const scale = 0.62 + random01(index + 347) * 0.72;
-  const distanceFromRoute = ROUTE_POINTS.reduce(
-    (minimum, point) => Math.min(minimum, Math.hypot(point.x - x, point.z - z)),
-    Number.POSITIVE_INFINITY
-  );
-  const distanceFromBuilding = BUILDINGS.reduce(
-    (minimum, building) => Math.min(minimum, Math.hypot(building.x - x, building.z - z)),
-    Number.POSITIVE_INFINITY
-  );
-  return {
-    id: index,
-    x,
-    z,
-    scale,
-    color: ["#2f6b45", "#3f7d4d", "#557f47", "#2d5f3c"][index % 4],
-    visible: distanceFromRoute > 1.28 && distanceFromBuilding > 0.92,
-  };
-}).filter((tree) => tree.visible);
-
-const TERRAIN_PATCHES = [
-  { x: -21.5, z: -7.8, sx: 4.8, sz: 2.6, color: "#7da96b", opacity: 0.46 },
-  { x: -18.2, z: 7.7, sx: 5.8, sz: 2.2, color: "#8db878", opacity: 0.42 },
-  { x: -7.2, z: -9.8, sx: 5.2, sz: 1.8, color: "#6f9e63", opacity: 0.36 },
-  { x: 3.2, z: 9.1, sx: 6.6, sz: 1.9, color: "#93b87a", opacity: 0.38 },
-  { x: 13.8, z: -9.5, sx: 6.1, sz: 2.1, color: "#719b63", opacity: 0.4 },
-  { x: 21.2, z: 8.4, sx: 4.1, sz: 2.5, color: "#83aa70", opacity: 0.36 },
-];
-
-const HILLS = [
-  { x: -25.2, z: -11.6, sx: 5.2, sy: 1.5, sz: 3.2, color: "#6f9564" },
-  { x: -16.8, z: -12.1, sx: 4.5, sy: 1.1, sz: 2.4, color: "#7aa06e" },
-  { x: 2.2, z: -12.6, sx: 6.4, sy: 1.4, sz: 2.7, color: "#719769" },
-  { x: 14.2, z: -12.2, sx: 5.6, sy: 1.25, sz: 2.6, color: "#789f6d" },
-  { x: 25.4, z: -10.8, sx: 4.8, sy: 1.35, sz: 3.3, color: "#678e60" },
-];
-
 const getMarkerRouteProgress = (marker: VWorldMarker) => {
   const progress = Math.max(0, Math.min(1, marker.progress ?? 0));
   const startsAtLg = (marker.startLat ?? marker.lat) > 35.18;
@@ -171,164 +137,22 @@ const getMarkerPoint = (marker: VWorldMarker) => {
   return geoToWorld(marker.lng, marker.lat);
 };
 
-const useCartoMapTexture = () => {
-  const [texture, setTexture] = useState<THREE.CanvasTexture | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    let generatedTexture: THREE.CanvasTexture | null = null;
-    const canvas = document.createElement("canvas");
-    canvas.width = TILE_COLUMN_COUNT * TILE_SIZE;
-    canvas.height = TILE_ROW_COUNT * TILE_SIZE;
-    const context = canvas.getContext("2d");
-    if (!context) return;
-
-    context.fillStyle = "#b8d1ae";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-
-    const jobs: Promise<void>[] = [];
-    for (let tileY = TILE_RANGE.minY; tileY <= TILE_RANGE.maxY; tileY += 1) {
-      for (let tileX = TILE_RANGE.minX; tileX <= TILE_RANGE.maxX; tileX += 1) {
-        jobs.push(new Promise((resolve) => {
-          const image = new Image();
-          image.crossOrigin = "anonymous";
-          image.onload = () => {
-            const drawX = (tileX - TILE_RANGE.minX) * TILE_SIZE;
-            const drawY = (tileY - TILE_RANGE.minY) * TILE_SIZE;
-            context.drawImage(image, drawX, drawY, TILE_SIZE, TILE_SIZE);
-            resolve();
-          };
-          image.onerror = () => resolve();
-          image.src = `https://a.basemaps.cartocdn.com/rastertiles/voyager_nolabels/${TILE_ZOOM}/${tileX}/${tileY}.png`;
-        }));
-      }
-    }
-
-    Promise.all(jobs).then(() => {
-      if (!active) return;
-      context.fillStyle = "rgba(193, 220, 179, 0.18)";
-      context.fillRect(0, 0, canvas.width, canvas.height);
-      generatedTexture = new THREE.CanvasTexture(canvas);
-      generatedTexture.colorSpace = THREE.SRGBColorSpace;
-      generatedTexture.anisotropy = 8;
-      generatedTexture.needsUpdate = true;
-      setTexture(generatedTexture);
-    });
-
-    return () => {
-      active = false;
-      generatedTexture?.dispose();
-    };
-  }, []);
-
-  return texture;
-};
-
-function GroundMap() {
-  const texture = useCartoMapTexture();
-
+function GroundMap({ texture }: { texture: THREE.CanvasTexture | null }) {
   return (
     <group>
       <mesh position={[0, -0.16, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[WORLD_WIDTH, WORLD_DEPTH]} />
         <meshStandardMaterial
-          color={texture ? "#edf6e8" : "#a9c99c"}
+          color={texture ? mapColor.surface : mapColor.fill}
           map={texture}
           roughness={0.96}
           metalness={0}
         />
       </mesh>
-      <mesh position={[0, -0.32, 0]} receiveShadow>
+      <mesh position={[0, -0.35, 0]} receiveShadow>
         <boxGeometry args={[WORLD_WIDTH + 0.6, 0.34, WORLD_DEPTH + 0.6]} />
-        <meshStandardMaterial color="#6f8d65" roughness={1} />
+        <meshStandardMaterial color={mapColor.borderStrong} roughness={1} />
       </mesh>
-    </group>
-  );
-}
-
-function Trees() {
-  const trunksRef = useRef<THREE.InstancedMesh>(null);
-  const crownsRef = useRef<THREE.InstancedMesh>(null);
-
-  useEffect(() => {
-    const dummy = new THREE.Object3D();
-    TREE_POSITIONS.forEach((tree, index) => {
-      dummy.position.set(tree.x, 0.25 * tree.scale, tree.z);
-      dummy.rotation.set(0, random01(tree.id + 401) * Math.PI, 0);
-      dummy.scale.set(tree.scale, tree.scale, tree.scale);
-      dummy.updateMatrix();
-      trunksRef.current?.setMatrixAt(index, dummy.matrix);
-
-      dummy.position.set(tree.x, 0.78 * tree.scale, tree.z);
-      dummy.rotation.set(0, random01(tree.id + 509) * Math.PI, 0);
-      dummy.scale.set(tree.scale, tree.scale, tree.scale);
-      dummy.updateMatrix();
-      crownsRef.current?.setMatrixAt(index, dummy.matrix);
-      crownsRef.current?.setColorAt(index, new THREE.Color(tree.color));
-    });
-
-    if (trunksRef.current) trunksRef.current.instanceMatrix.needsUpdate = true;
-    if (crownsRef.current) {
-      crownsRef.current.instanceMatrix.needsUpdate = true;
-      if (crownsRef.current.instanceColor) crownsRef.current.instanceColor.needsUpdate = true;
-    }
-  }, []);
-
-  return (
-    <group>
-      <instancedMesh ref={trunksRef} args={[undefined, undefined, TREE_POSITIONS.length]} castShadow>
-        <cylinderGeometry args={[0.07, 0.1, 0.5, 7]} />
-        <meshStandardMaterial color="#6f5238" roughness={1} />
-      </instancedMesh>
-      <instancedMesh ref={crownsRef} args={[undefined, undefined, TREE_POSITIONS.length]} castShadow>
-        <coneGeometry args={[0.38, 0.92, 8]} />
-        <meshStandardMaterial roughness={0.92} />
-      </instancedMesh>
-    </group>
-  );
-}
-
-function NatureLayer() {
-  return (
-    <group>
-      {TERRAIN_PATCHES.map((patch, index) => (
-        <mesh
-          key={`terrain-${index}`}
-          position={[patch.x, -0.09, patch.z]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          scale={[patch.sx, patch.sz, 1]}
-          receiveShadow
-        >
-          <circleGeometry args={[1, 40]} />
-          <meshStandardMaterial color={patch.color} transparent opacity={patch.opacity} roughness={1} />
-        </mesh>
-      ))}
-
-      <mesh position={[0, -0.08, 11.75]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[WORLD_WIDTH, 3.8, 1, 1]} />
-        <meshStandardMaterial color="#67aeb6" transparent opacity={0.7} roughness={0.24} metalness={0.08} />
-      </mesh>
-      <Line
-        points={[[-26, 0.02, 9.92], [-15, 0.02, 10.25], [-5, 0.02, 9.92], [7, 0.02, 10.18], [17, 0.02, 9.78], [26, 0.02, 10.12]]}
-        color="#d8eee4"
-        lineWidth={2}
-        transparent
-        opacity={0.72}
-      />
-
-      {HILLS.map((hill, index) => (
-        <mesh
-          key={`hill-${index}`}
-          position={[hill.x, -0.4, hill.z]}
-          scale={[hill.sx, hill.sy, hill.sz]}
-          castShadow
-          receiveShadow
-        >
-          <sphereGeometry args={[1, 20, 12]} />
-          <meshStandardMaterial color={hill.color} roughness={1} />
-        </mesh>
-      ))}
-      <Trees />
     </group>
   );
 }
@@ -337,7 +161,7 @@ function CityBlocks() {
   return (
     <group>
       {BUILDINGS.map((building, index) => {
-        const palette = ["#e5dfcf", "#d7ded4", "#e8e4da", "#cbd6ce", "#ded4c5"];
+        const palette = [mapColor.surface, mapColor.fill, mapColor.borderSoft, mapColor.border, mapColor.borderStrong];
         const color = palette[index % palette.length];
         return (
           <mesh
@@ -545,12 +369,13 @@ function CameraRig({ focusPoint, controlsRef }: CameraRigProps) {
 }
 
 function Scene({
+  texture,
   markers,
   focusedTitle,
   markerInfoMode,
   selectedMarkerIds,
   onMarkerClick,
-}: Required<Pick<Transport3DMapProps, "markers" | "markerInfoMode" | "selectedMarkerIds">> &
+}: { texture: THREE.CanvasTexture | null } & Required<Pick<Transport3DMapProps, "markers" | "markerInfoMode" | "selectedMarkerIds">> &
   Pick<Transport3DMapProps, "focusedTitle" | "onMarkerClick">) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const cars = markers.filter((marker) => !marker.isFacility);
@@ -570,22 +395,14 @@ function Scene({
 
   return (
     <>
-      <color attach="background" args={["#c9dde4"]} />
-      <fog attach="fog" args={["#c9dde4", 38, 78]} />
-      <Sky
-        distance={450000}
-        sunPosition={[42, 28, -18]}
-        turbidity={7}
-        rayleigh={1.2}
-        mieCoefficient={0.004}
-        mieDirectionalG={0.82}
-      />
-      <ambientLight intensity={1.35} />
-      <hemisphereLight args={["#eaf6ff", "#77916d", 1.45]} />
+      <color attach="background" args={[mapColor.surfaceSubtle]} />
+      <fog attach="fog" args={[mapColor.surfaceSubtle, 38, 78]} />
+      <ambientLight color={mapColor.surface} intensity={1.15} />
+      <hemisphereLight args={[mapColor.surface, mapColor.borderStrong, 1.0]} />
       <directionalLight
         position={[-14, 28, 18]}
-        intensity={2.35}
-        color="#fff2d2"
+        intensity={1.75}
+        color={mapColor.surface}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -595,8 +412,7 @@ function Scene({
         shadow-camera-bottom={-22}
       />
 
-      <GroundMap />
-      <NatureLayer />
+      <GroundMap texture={texture} />
       <CityBlocks />
       <RouteLayer />
       <Facility point={ROUTE_CURVE.getPointAt(0)} name="LG전자" shortName="LG" color="#ce0037" />
@@ -618,12 +434,12 @@ function Scene({
 
       <ContactShadows
         position={[0, -0.1, 0]}
-        opacity={0.24}
+        opacity={0.14}
         scale={62}
         blur={2.4}
         far={8}
         resolution={512}
-        color="#40543f"
+        color={mapColor.ink3}
       />
       <CameraRig focusPoint={focusPoint} controlsRef={controlsRef} />
       <OrbitControls
@@ -652,8 +468,10 @@ export default function Transport3DMap({
   onMarkerClick,
   onMapBlankClick,
 }: Transport3DMapProps) {
+  const { texture, status, retry } = useTransportMapTexture({ zoom: TILE_ZOOM, tileSize: TILE_SIZE, ...TILE_RANGE });
+
   return (
-    <div className="transport-3d-map">
+    <MapContainer className="transport-3d-map">
       <Canvas
         dpr={[1, 1.5]}
         shadows
@@ -662,6 +480,7 @@ export default function Transport3DMap({
         onPointerMissed={() => onMapBlankClick?.()}
       >
         <Scene
+          texture={texture}
           markers={markers}
           focusedTitle={focusedTitle}
           markerInfoMode={markerInfoMode}
@@ -680,18 +499,10 @@ export default function Transport3DMap({
       <div className="transport-3d-help" aria-hidden="true">
         드래그 회전 · 휠 줌 · 우클릭 이동
       </div>
-      <div className="transport-3d-attribution" aria-hidden="true">
-        © OpenStreetMap © CARTO
-      </div>
+      <MapTileStatus status={status} onRetry={retry} />
+      <MapAttribution />
 
       <style jsx global>{`
-        .transport-3d-map {
-          position: relative;
-          width: 100%;
-          height: 100%;
-          overflow: hidden;
-          background: #c9dde4;
-        }
         .transport-3d-map canvas {
           display: block;
           outline: none;
@@ -735,8 +546,7 @@ export default function Transport3DMap({
           font-size: 10px;
           font-weight: 700;
         }
-        .transport-3d-help,
-        .transport-3d-attribution {
+        .transport-3d-help {
           position: absolute;
           z-index: 2;
           bottom: 18px;
@@ -751,7 +561,6 @@ export default function Transport3DMap({
           pointer-events: none;
         }
         .transport-3d-help { left: 24px; }
-        .transport-3d-attribution { right: 24px; }
         .transport-3d-facility-label {
           display: flex;
           align-items: center;
@@ -835,6 +644,14 @@ export default function Transport3DMap({
           font-weight: 800;
         }
       `}</style>
-    </div>
+    </MapContainer>
   );
 }
+
+const MapContainer = styled.div`
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: ${mapColor.surfaceSubtle};
+`;

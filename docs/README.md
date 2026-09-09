@@ -6,6 +6,9 @@
 | [design-guide/AI-RULES.md](./design-guide/AI-RULES.md) | 위 가이드의 AI용 압축 규칙 |
 | [design-guide/CHATGPT-SETUP.md](./design-guide/CHATGPT-SETUP.md) | ChatGPT·Claude·Cursor·Copilot 에서 가이드를 자동 적용하는 방법 |
 | [local-llm-qwen3-8b/](./local-llm-qwen3-8b/) | 사내 PC용 로컬 LLM(Qwen3-8B) 구축 자료 |
+| [api-tests/2026-09-09-ai-advisor-chat-api.md](./api-tests/2026-09-09-ai-advisor-chat-api.md) | AI Advisor 내부망 채팅 API 실측 결과와 연동 보완 사항 |
+| [api-tests/ai-advisor-integration.md](./api-tests/ai-advisor-integration.md) | 실제 AI Advisor 사용 방법, 서버 주소 설정, 오류·세션 처리 |
+| [transport-basemap.md](./transport-basemap.md) | 운송 지도 인증 문구 원인, 기본지도·CARTO 설정, 로딩·재시도와 운영 조건 |
 
 관련 코드 파일:
 
