@@ -14,6 +14,11 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
+        protocol: "https",
+        hostname: "gapi.dxsplatform.com",
+        pathname: "/images/**",
+      },
+      {
         protocol: "http",
         hostname: "192.168.2.147",
         port: "24828",

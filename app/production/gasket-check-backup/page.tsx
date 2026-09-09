@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
+import { getDxApiUrl, resolveDxResourceUrl } from '@/utils/dx-api';
 import { 
   Monitor, Clock, CheckCircle2, XCircle, 
   ZoomIn, Volume2, VolumeX, Siren, X,
@@ -175,13 +176,7 @@ const formatStatusLabel = (status?: string) => {
   return normalized && normalized !== '-' ? normalized : '대기';
 };
 
-const DX_IMAGE_BASE_URL = (
-  process.env.NEXT_PUBLIC_DX_IMAGE_BASE_URL || 'https://gapi.dxsplatform.com'
-).replace(/\/$/, '');
-
-const DX_API_BASE_URL = (
-  process.env.NEXT_PUBLIC_DX_API_BASE_URL || DX_IMAGE_BASE_URL
-).replace(/\/$/, '');
+const subscribeToOrigin = () => () => undefined;
 
 const normalizeImageUrlText = (url?: string | null) => {
   const imageUrl = (url ?? '').trim().replace(/^['"]|['"]$/g, '');
@@ -190,40 +185,7 @@ const normalizeImageUrlText = (url?: string | null) => {
   return imageUrl.replace(/\\/g, '/');
 };
 
-const getImageUrlByCurrentPage = (url?: string | null) => {
-  const imageUrl = normalizeImageUrlText(url);
-  if (!imageUrl) return '';
-
-  if (imageUrl.startsWith('data:') || imageUrl.startsWith('blob:')) {
-    return imageUrl;
-  }
-
-  const imagesPathIndex = imageUrl.indexOf('/images/');
-  if (imagesPathIndex >= 0) {
-    return `${DX_IMAGE_BASE_URL}${imageUrl.slice(imagesPathIndex)}`;
-  }
-
-  if (/^images\//i.test(imageUrl)) {
-    return `${DX_IMAGE_BASE_URL}/${imageUrl}`;
-  }
-
-  try {
-    const parsedUrl = new URL(imageUrl, `${DX_IMAGE_BASE_URL}/`);
-
-    const isDxsImageHost =
-      parsedUrl.host === '192.168.2.147:24828' ||
-      parsedUrl.host === '1.254.24.170:24828' ||
-      parsedUrl.host === 'gapi.dxsplatform.com';
-
-    if (isDxsImageHost) {
-      return `${DX_IMAGE_BASE_URL}${parsedUrl.pathname}${parsedUrl.search}`;
-    }
-
-    return parsedUrl.href;
-  } catch {
-    return imageUrl;
-  }
-};
+const getImageUrlByCurrentPage = (url?: string | null) => resolveDxResourceUrl(normalizeImageUrlText(url));
 
 const getImageUrlWithVersion = (url?: string | null, version?: string | number | null) => {
   const normalizedUrl = getImageUrlByCurrentPage(url);
@@ -234,7 +196,7 @@ const getImageUrlWithVersion = (url?: string | null, version?: string | number |
   }
 
   try {
-    const parsedUrl = new URL(normalizedUrl, `${DX_IMAGE_BASE_URL}/`);
+    const parsedUrl = new URL(normalizedUrl);
     parsedUrl.searchParams.set('_v', versionText);
     return parsedUrl.href;
   } catch {
@@ -2988,7 +2950,7 @@ export default function GlassGapInspection() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(`${DX_API_BASE_URL}/api/DX_API000023`, {
+        const response = await fetch(getDxApiUrl('/api/DX_API000023'), {
           cache: 'no-store',
         });
         const json = await response.json();
@@ -3051,7 +3013,7 @@ export default function GlassGapInspection() {
 
   const toggleSound = () => setAudioAllowed(prev => !prev);
   const layout = LAYOUT_CONFIGS[screenMode];
-  const guideImageSrc = getImageUrlByCurrentPage('/images/DX_API000102/guide_img.png');
+  const guideImageSrc = useSyncExternalStore(subscribeToOrigin, () => getImageUrlByCurrentPage('/images/DX_API000102/guide_img.png'), () => '');
   const imageVersionKey = apiData
     ? [apiData.TIMEVALUE2, apiData.TIMEVALUE, apiData.COUNT_NUM, apiData.WO].filter(Boolean).join('_')
     : '';
@@ -3150,7 +3112,7 @@ export default function GlassGapInspection() {
   const renderGuideViewport = (solo = false) => (
     <CenterGuideViewport ref={guideViewportRef} $solo={solo}>
       <GuideImage
-        src={guideImageSrc}
+        src={guideImageSrc || undefined}
         alt="Main Glass Guide"
         draggable={false}
         onError={(event) => {

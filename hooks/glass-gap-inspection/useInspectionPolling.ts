@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { resolveDxResourceUrl } from '@/utils/dx-api';
 
-import { INSPECTION_API_URL, POLLING_INTERVAL_MS } from '@/constants/glassGapInspection';
+import { getInspectionApiUrl, POLLING_INTERVAL_MS } from '@/constants/glassGapInspection';
 import type { ApiData, InspectionApiResponse, TotalData } from '@/types/glassGapInspection';
 
 interface InspectionPollingState {
@@ -25,14 +26,21 @@ export const useInspectionPolling = () => {
 
     const fetchInspectionData = async () => {
       try {
-        const response = await fetch(INSPECTION_API_URL);
+        const response = await fetch(getInspectionApiUrl());
         const json = (await response.json()) as InspectionApiResponse;
 
         if (!mounted) {
           return;
         }
 
-        const nextData = json.success && json.data?.length ? json.data[0] : null;
+        const rawData = json.success && json.data?.length ? json.data[0] : null;
+        const nextData = rawData ? {
+          ...rawData,
+          FILEPATH1: resolveDxResourceUrl(rawData.FILEPATH1),
+          FILEPATH2: resolveDxResourceUrl(rawData.FILEPATH2),
+          FILEPATH3: resolveDxResourceUrl(rawData.FILEPATH3),
+          FILEPATH4: resolveDxResourceUrl(rawData.FILEPATH4),
+        } : null;
         const nextStats = json.success && json.total_data ? json.total_data : null;
 
         setState({

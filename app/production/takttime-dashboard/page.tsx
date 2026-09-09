@@ -1,5 +1,7 @@
 "use client";
 
+import { getDxApiUrl } from "@/utils/dx-api";
+
 import React, { useState, useEffect, useMemo, memo, useCallback, useRef, useId } from "react";
 import styled, { createGlobalStyle } from "styled-components";
 import { motion, AnimatePresence, Variants } from "framer-motion";
@@ -936,7 +938,7 @@ export default function ProcessDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch("http://192.168.2.147:24828/api/DX_API000016");
+        const response = await fetch(getDxApiUrl("/api/DX_API000016"));
         const json: ApiResponse = await response.json();
         
         // 데이터 통신에 성공하여 history_data가 있을 경우에만 덮어씌움

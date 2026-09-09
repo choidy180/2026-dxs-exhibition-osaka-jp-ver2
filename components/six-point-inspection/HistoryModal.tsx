@@ -1,5 +1,7 @@
 'use client';
 
+import { resolveDxResourceUrl } from '@/utils/dx-api';
+
 import { useMemo, useState } from 'react';
 import { Calendar, CheckCircle2, FileText, X, XCircle, ZoomIn } from 'lucide-react';
 import { createPortal } from 'react-dom';
@@ -305,7 +307,7 @@ export default function HistoryModal({
                   <HistoryImageButton
                     type="button"
                     $contain
-                    $imgUrl={selectedLog.images.main}
+                    $imgUrl={resolveDxResourceUrl(selectedLog.images.main)}
                     onClick={() => onImageClick('메인 검사 이미지', selectedLog.images.main)}
                   >
                     <ImageChip>MAIN</ImageChip>

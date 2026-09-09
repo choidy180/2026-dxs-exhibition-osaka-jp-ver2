@@ -35,15 +35,10 @@ export type BomRow = {
 };
 
 export type BomFilter = {
+  applyDate: string;
+  pjtCode: string;
   productNo: string;
-  itemNo: string;
-  itemNm: string;
-  level: string;
-  processGb: string;
-  orderGb: string;
-  vendor: string;
-  buyer: string;
-  materialManager: string;
+  orderGb: '' | '발주' | '미발주';
 };
 
 export type BomSummary = {

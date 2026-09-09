@@ -1,5 +1,7 @@
 "use client";
 
+import { getDxApiUrl, resolveDxResourceUrl } from "@/utils/dx-api";
+
 import React, { useState, Suspense, useRef, useMemo, useEffect, useCallback } from "react";
 import styled, { keyframes } from "styled-components";
 import { Canvas, useFrame, ThreeEvent } from "@react-three/fiber";
@@ -62,16 +64,6 @@ const MOTOR_DATA = [
 const JIG_MODEL_PATH = "/models/final_final_final.glb";
 const FLOOR_MODEL_PATH = "/models/final_final_final_final.glb";
 const FACTORY_BG_IMAGE = "/images/gmt_back.png"; 
-const API_URL =
-  typeof window !== 'undefined' &&
-  (
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1' ||
-    window.location.pathname.includes('-dev')
-  )
-    ? 'https://gapi.dxsplatform.com/api/DX_API000024'
-    : 'http://192.168.2.147:24828/api/DX_API000024';
-
 // 새롭게 적용된 화이트 & 레드 테마 색상표
 const THEME = {
   primary: "#0f172a", // 텍스트 짙은색으로 변경
@@ -720,7 +712,7 @@ const Panels = React.memo(({ hoveredInfo, errorUnits, apiData, injectUnit }: { h
     ? apiData.find(item => parseInt(item.대차번호) === parseInt(hoveredInfo.name.replace("M-", ""), 10))
     : null;
 
-  const displayImage = matchedData?.FILEPATH1 || "https://images.unsplash.com/photo-1616401784845-180882ba9ba8?q=80&w=1000&auto=format&fit=crop";
+  const displayImage = resolveDxResourceUrl(matchedData?.FILEPATH1) || "https://images.unsplash.com/photo-1616401784845-180882ba9ba8?q=80&w=1000&auto=format&fit=crop";
 
   const boxes = isError 
     ? [{ top: 40, left: 20, width: 10, height: 10, color: '#EF4444' }]
@@ -965,7 +957,7 @@ export default function GlbViewerPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(API_URL);
+        const response = await fetch(getDxApiUrl("/api/DX_API000024"));
         const json = await response.json();
         if (json.success && json.data && json.data.length > 0) {
             const cleanData = json.data.map((d: any) => ({

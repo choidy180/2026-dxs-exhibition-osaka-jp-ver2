@@ -1,22 +1,26 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { API_BASE_URL, API_ENDPOINTS } from '@/constants/lab';
+import { API_ENDPOINTS } from '@/constants/lab';
+import { getDxApiUrl } from '@/utils/dx-api';
 import type { BomExportWorkerMessage } from '@/types/bom-export';
+import type { BomRow } from '@/types/lab';
 
 type DownloadPhase = 'idle' | 'fetching' | 'converting' | 'complete' | 'empty' | 'error' | 'cancelled';
-type DownloadState = { phase: DownloadPhase; rows: number; error: string | null };
+type DownloadScope = 'all' | 'current';
+type DownloadRequest = { scope: 'all' } | { scope: 'current'; rows: BomRow[] };
+type DownloadState = { phase: DownloadPhase; scope: DownloadScope; rows: number; error: string | null };
 
-const INITIAL_STATE: DownloadState = { phase: 'idle', rows: 0, error: null };
+const INITIAL_STATE: DownloadState = { phase: 'idle', scope: 'all', rows: 0, error: null };
 const MAX_EXPORT_DURATION_MS = 5 * 60 * 1_000;
 
-const getFilename = () => {
+const getFilename = (scope: DownloadScope) => {
   const timestamp = new Intl.DateTimeFormat('sv-SE', {
     timeZone: 'Asia/Seoul',
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
   }).format(new Date()).replace(/[-:]/g, '').replace(' ', '_');
-  return `MES_BOM_전체_${timestamp}.xlsx`;
+  return `MES_BOM_${scope === 'all' ? '전체' : '현재조건'}_${timestamp}.xlsx`;
 };
 
 export function useBomExcelDownload() {
@@ -24,6 +28,7 @@ export function useBomExcelDownload() {
   const workerRef = useRef<Worker | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const downloadsRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const lastRequestRef = useRef<DownloadRequest>({ scope: 'all' });
 
   const stopWorker = useCallback(() => {
     workerRef.current?.terminate();
@@ -44,14 +49,16 @@ export function useBomExcelDownload() {
     };
   }, [stopWorker]);
 
-  const startDownload = useCallback(() => {
+  const beginDownload = useCallback((request: DownloadRequest) => {
     // 렌더링 전 연속 클릭도 차단해 대용량 API를 중복 호출하지 않는다.
     if (workerRef.current) return;
-    setState({ phase: 'fetching', rows: 0, error: null });
+    lastRequestRef.current = request;
+    const { scope } = request;
+    setState({ phase: scope === 'all' ? 'fetching' : 'converting', scope, rows: 0, error: null });
 
     const fail = (message: string) => {
       stopWorker();
-      setState({ phase: 'error', rows: 0, error: message });
+      setState({ phase: 'error', scope, rows: 0, error: message });
     };
 
     try {
@@ -65,7 +72,7 @@ export function useBomExcelDownload() {
         if (workerRef.current !== worker) return;
         const message = event.data;
         if (message.type === 'progress') {
-          setState({ phase: message.phase, rows: message.rows, error: null });
+          setState({ phase: message.phase, scope, rows: message.rows, error: null });
           return;
         }
         if (message.type === 'error') {
@@ -74,7 +81,7 @@ export function useBomExcelDownload() {
         }
         stopWorker();
         if (message.type === 'empty') {
-          setState({ phase: 'empty', rows: 0, error: null });
+          setState({ phase: 'empty', scope, rows: 0, error: null });
           return;
         }
 
@@ -83,7 +90,7 @@ export function useBomExcelDownload() {
         try {
           url = URL.createObjectURL(message.blob);
           anchor.href = url;
-          anchor.download = getFilename();
+          anchor.download = getFilename(scope);
           document.body.appendChild(anchor);
           anchor.click();
           // 브라우저가 파일을 읽기 전에 URL을 해제하지 않는다.
@@ -93,7 +100,7 @@ export function useBomExcelDownload() {
             downloadsRef.current.delete(downloadUrl);
           }, 60_000);
           downloadsRef.current.set(downloadUrl, timer);
-          setState({ phase: 'complete', rows: message.rows, error: null });
+          setState({ phase: 'complete', scope, rows: message.rows, error: null });
         } catch {
           if (url) URL.revokeObjectURL(url);
           fail('엑셀 파일을 저장하지 못했습니다. 다시 시도해주세요.');
@@ -111,23 +118,32 @@ export function useBomExcelDownload() {
       worker.onmessageerror = () => {
         if (workerRef.current === worker) fail('엑셀 파일을 전달받지 못했습니다. 다시 시도해주세요.');
       };
-      worker.postMessage({ type: 'start', url: `${API_BASE_URL.replace(/\/$/, '')}${API_ENDPOINTS.BOM_EXPORT}` });
+      worker.postMessage(request.scope === 'current'
+        ? { type: 'start', scope: 'current', rows: request.rows }
+        : { type: 'start', scope: 'all', url: getDxApiUrl(`/api${API_ENDPOINTS.BOM_EXPORT}`) });
     } catch {
       fail('엑셀 다운로드를 시작하지 못했습니다. 브라우저를 새로고침한 뒤 다시 시도해주세요.');
     }
   }, [stopWorker]);
 
+  const startDownload = useCallback(() => beginDownload({ scope: 'all' }), [beginDownload]);
+  const startCurrentDownload = useCallback((rows: BomRow[]) => {
+    beginDownload({ scope: 'current', rows: [...rows] });
+  }, [beginDownload]);
+  const retry = useCallback(() => beginDownload(lastRequestRef.current), [beginDownload]);
+
   const cancelDownload = useCallback(() => {
     if (!workerRef.current) return;
     stopWorker();
-    setState({ phase: 'cancelled', rows: 0, error: null });
+    setState(current => ({ phase: 'cancelled', scope: current.scope, rows: 0, error: null }));
   }, [stopWorker]);
 
   return {
     ...state,
     isDownloading: state.phase === 'fetching' || state.phase === 'converting',
     startDownload,
+    startCurrentDownload,
     cancelDownload,
-    retry: startDownload,
+    retry,
   };
 }

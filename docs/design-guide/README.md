@@ -607,7 +607,6 @@ overflow-y: auto;
 
 | 위치 | 편차 | 처리 |
 | --- | --- | --- |
-| `components/material-inbound-status/InboundInspectionStatusClient.tsx` | Tailwind gray 계열(`#111827`, `#6b7280`, `#e5e7eb`), px 폰트 사이즈, weight 700 | 해당 파일 수정 시 slate 계열 + rem + weight 600 으로 교체 |
 | `styles/styles.ts` | `Card` radius 8, 이중 그림자, `CardTitle` weight 800 | 신규 화면은 이 primitive 대신 5-1 레시피 사용. 부득이 쓰면 radius/shadow/weight 를 덮어쓴다 |
 | `styles/*.styles.ts` (검사 화면 5종) | 화면별 자체 테마 파일 | 유지. 신규 화면에서는 참조하지 않는다 |
 | `components/material-monitoring/MaterialMonitoringClient.tsx` | 폰트 스코프에 `!important` 사용 | 신규 화면은 `inherit` 만 사용 |
@@ -625,3 +624,4 @@ overflow-y: auto;
 | 2026-08-20 | v1.2 | 데이터 그리드 세로 채움 규칙 추가. **한쪽 변만 강조하는 패턴(좌측 인셋 바 등)을 금지**하고, 기존 v1 의 인셋 바 권장 문구를 철회. 강조는 옅은 톤 배경 + 사방 테두리로 통일 |
 | 2026-08-20 | v1.3 | 실험실(개발 진행 중) 화면 규칙 추가(1-3-1). 공용 컴포넌트 위치 `components/common/<component>/` 와 공용 날짜 유틸 `utils/date.ts` 규칙 추가. 일자 선택 팝오버를 생산계획 전용에서 공용으로 승격 |
 | 2026-08-20 | v1.4 | 셀렉트 레시피 추가(5-6-1). **네이티브 `<select>` 사용을 금지**하고 공용 커스텀 셀렉트로 통일 |
+| 2026-09-09 | v1.5 | 입고 검수 현황의 토큰·rem·weight 600 이관을 완료해 해당 알려진 편차를 제거. 스타일은 `components/material-inbound-status/styles.ts`로 분리 |

@@ -1,61 +1,21 @@
 import type { AnchorMap, CornerKey, TypeOption } from '@/types/sixPointInspection';
 
-const stripTrailingSlash = (value: string) => value.replace(/\/+$/, '');
+import { getDxApiUrl, resolveDxResourceUrl } from '@/utils/dx-api';
 
-const DEFAULT_DX_API_BASE_URL = 'http://192.168.2.147:24828';
-const DEFAULT_DX_IMAGE_BASE_URL = 'https://gapi.dxsplatform.com';
-
-export const API_BASE_URL = stripTrailingSlash(
-  process.env.NEXT_PUBLIC_DX_API_BASE_URL ||
-    process.env.NEXT_PUBLIC_DX_BASE_URL ||
-    DEFAULT_DX_API_BASE_URL,
-);
-
-export const IMAGE_BASE_URL = stripTrailingSlash(
-  process.env.NEXT_PUBLIC_DX_IMAGE_BASE_URL ||
-    process.env.NEXT_PUBLIC_DX_BASE_URL ||
-    DEFAULT_DX_IMAGE_BASE_URL,
-);
-
-export const INSPECTION_API_URL = `${API_BASE_URL}/api/DX_API000025`;
-export const GUIDE_IMAGE_URL = `${IMAGE_BASE_URL}/images/DX_API000102/guide_2.jpg`;
+export const getInspectionApiUrl = () => getDxApiUrl('/api/DX_API000025');
+export const GUIDE_IMAGE_PATH = '/images/DX_API000102/guide_2.jpg';
 export const HOTSPOT_STORAGE_KEY = 'six-point-inspection-hotspot-anchors-v1';
 export const POLLING_INTERVAL_MS = 3000;
 
-export const DX_KNOWN_IMAGE_HOSTS = new Set([
-  '192.168.2.147:24828',
-  '1.254.24.170:24828',
-  'gapi.dxsplatform.com',
-]);
-
 export const normalizeInspectionImageUrl = (url?: string | null, cacheKey?: string | number | null) => {
-  if (!url) return '';
-
-  let imageUrl = String(url).trim().replace(/\\/g, '/');
-  if (!imageUrl) return '';
-
-  if (imageUrl.startsWith('data:') || imageUrl.startsWith('blob:')) {
-    return imageUrl;
-  }
-
-  if (/^(images|upload|uploads|files)\//i.test(imageUrl)) {
-    imageUrl = `/${imageUrl}`;
-  }
-
+  const normalizedUrl = resolveDxResourceUrl(url?.trim().replace(/\\/g, '/'));
+  if (!normalizedUrl || !cacheKey || !/^https?:/i.test(normalizedUrl)) return normalizedUrl;
   try {
-    const parsedUrl = new URL(imageUrl, IMAGE_BASE_URL);
-    const isDxsHost = DX_KNOWN_IMAGE_HOSTS.has(parsedUrl.host);
-    const normalizedUrl = isDxsHost
-      ? `${IMAGE_BASE_URL}${parsedUrl.pathname}${parsedUrl.search}`
-      : parsedUrl.href;
-
-    if (!cacheKey) return normalizedUrl;
-
     const cacheBustedUrl = new URL(normalizedUrl);
     cacheBustedUrl.searchParams.set('_dxv', String(cacheKey));
     return cacheBustedUrl.href;
   } catch {
-    return imageUrl;
+    return normalizedUrl;
   }
 };
 

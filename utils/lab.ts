@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import {
   BOM_COLUMNS,
+  BOM_BASE_DATE,
   ORDER_DAY_COLUMN_WIDTH,
   ORDER_FIXED_COLUMNS,
   ORDER_VALUE_COLUMNS,
@@ -36,35 +37,41 @@ export const ORDER_NEED_LABEL: Record<OrderNeed, string> = {
 /* ───────────────────────── BOM ───────────────────────── */
 
 export const EMPTY_BOM_FILTER: BomFilter = {
-  productNo: '전체',
-  itemNo: '',
-  itemNm: '',
-  level: '전체',
-  processGb: '전체',
-  orderGb: '전체',
-  vendor: '',
-  buyer: '전체',
-  materialManager: '전체',
+  applyDate: BOM_BASE_DATE,
+  pjtCode: '',
+  productNo: '',
+  orderGb: '',
 };
 
 const includesText = (source: string, keyword: string) =>
   !keyword.trim() || source.toLowerCase().includes(keyword.trim().toLowerCase());
 
-const matchesSelect = (source: string, selected: string) => selected === '전체' || source === selected;
+export const normalizeBomFilter = (filter: BomFilter): BomFilter => ({
+  ...filter,
+  applyDate: filter.applyDate.trim(),
+  pjtCode: filter.pjtCode.trim(),
+  productNo: filter.productNo.trim(),
+});
 
-export const filterBomRows = (rows: BomRow[], filter: BomFilter) =>
-  rows.filter(
-    row =>
-      matchesSelect(row.productNo, filter.productNo) &&
-      includesText(row.itemNo, filter.itemNo) &&
-      includesText(row.itemNm, filter.itemNm) &&
-      (filter.level === '전체' || String(row.level) === filter.level) &&
-      matchesSelect(row.processGb, filter.processGb) &&
-      matchesSelect(row.orderGb, filter.orderGb) &&
-      includesText(row.vendor, filter.vendor) &&
-      matchesSelect(row.buyer, filter.buyer) &&
-      matchesSelect(row.materialManager, filter.materialManager),
+export function validateBomFilter(filter: BomFilter): string | null {
+  const date = filter.applyDate.trim();
+  if (!date) return '적용일자를 선택해 주세요.';
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(parsed.getTime()) ||
+    parsed.toISOString().slice(0, 10) !== date) return '올바른 적용일자를 선택해 주세요.';
+  if (!filter.pjtCode.trim()) return 'PJT코드를 입력해 주세요.';
+  return null;
+}
+
+/** 현재 목록은 한 기준일의 스냅샷이다. 지원하지 않는 날짜를 무시하지 않는다. */
+export const filterBomRows = (rows: BomRow[], filter: BomFilter, baseDate: string) => {
+  if (validateBomFilter(filter) || filter.applyDate !== baseDate) return [];
+  return rows.filter(row =>
+    row.pjtCode.trim().toLowerCase() === filter.pjtCode.trim().toLowerCase() &&
+    includesText(row.productNo, filter.productNo) &&
+    (!filter.orderGb || row.orderGb === filter.orderGb),
   );
+};
 
 export const getBomSummary = (rows: BomRow[]): BomSummary => ({
   totalRows: rows.length,

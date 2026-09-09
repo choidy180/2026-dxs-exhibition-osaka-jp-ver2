@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { FILM_ATTACHMENT_API_URL, POLLING_INTERVAL_MS } from '@/constants/filmAttachmentCheck';
+import { getFilmAttachmentApiUrl, POLLING_INTERVAL_MS } from '@/constants/filmAttachmentCheck';
 import type { ApiData, TotalData } from '@/types/gasketCheck';
 import { getInspectionTone } from '@/utils/gasketCheck';
 
@@ -18,7 +18,7 @@ export function useInspectionPolling() {
 
     const fetchData = useCallback(async () => {
         try {
-            const response = await fetch(FILM_ATTACHMENT_API_URL, {
+            const response = await fetch(getFilmAttachmentApiUrl(), {
                 cache: 'no-store',
             });
             const json = await response.json() as ApiResponse;

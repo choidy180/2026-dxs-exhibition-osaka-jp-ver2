@@ -44,7 +44,7 @@ const VENDORS = [
 const BUYERS = ['김민수', '박지훈', '이서연', '정우진', '최다은'];
 const MATERIAL_MANAGERS = ['강태호', '윤채원', '임현우', '한소희'];
 const PROCESS_GBS = ['조립', '사출', '발포', '진공성형', '외주'];
-const ORDER_GBS = ['구매', '외주', '사내생산', '무상지급'];
+const ORDER_GBS = ['발주', '미발주'];
 
 /** BOM 템플릿 노드 */
 type TemplateNode = {

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { RefreshCw, ZoomIn } from 'lucide-react';
 import type { ApiData } from '@/types/gasketCheck';
 import { getInspectionTone } from '@/utils/gasketCheck';
+import { getDxApiBaseUrl, resolveDxResourceUrl } from '@/utils/dx-api';
 import {
     FileBadge,
     ImageContent,
@@ -26,66 +27,20 @@ interface MainInspectionViewProps {
     onImageOpen: (title: string, url: string) => void;
 }
 
-const DEFAULT_DX_IMAGE_BASE_URL = 'https://gapi.dxsplatform.com';
-
-const DX_IMAGE_HOSTS = new Set([
-    '192.168.2.147:24828',
-    '1.254.24.170:24828',
-    'gapi.dxsplatform.com',
-]);
-
-const getDxsImageBaseUrl = () => {
-    return (
-        process.env.NEXT_PUBLIC_DX_IMAGE_BASE_URL ||
-        DEFAULT_DX_IMAGE_BASE_URL
-    ).replace(/\/$/, '');
-};
-
-const isDxsImagePath = (pathname: string) => {
-    return pathname.startsWith('/images/');
-};
-
-/**
- * DX 이미지 URL을 화면 표시용 URL로 정규화한다.
- *
- * 중요:
- * - 이 화면에서는 `_dxv`, `_retry` 같은 cache-busting query를 절대 붙이지 않는다.
- * - 이미 `_dxv`가 붙어 들어온 URL도 pathname만 사용해서 query 전체를 제거한다.
- * - 내부망 이미지 host는 항상 NEXT_PUBLIC_DX_IMAGE_BASE_URL 기준 host로 치환한다.
- */
 const normalizeDxsImageUrl = (url?: string | null) => {
-    const rawUrl = (url || '').trim();
-
-    if (!rawUrl) return '';
-
-    if (rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) {
-        return rawUrl;
-    }
-
+    const normalizedUrl = resolveDxResourceUrl(url);
+    if (!normalizedUrl || !/^https?:/i.test(normalizedUrl)) return normalizedUrl;
     try {
-        const imageBaseUrl = getDxsImageBaseUrl();
-        const parsedUrl = new URL(rawUrl, imageBaseUrl);
-
-        const shouldUseDxsBaseUrl =
-            DX_IMAGE_HOSTS.has(parsedUrl.host) || isDxsImagePath(parsedUrl.pathname);
-
-        if (shouldUseDxsBaseUrl) {
-            // query/hash를 의도적으로 모두 버린다.
-            // 결과 예: https://gapi.dxsplatform.com/images/DX_API000102/Image_...jpg
-            return `${imageBaseUrl}${parsedUrl.pathname}`;
+        const parsedUrl = new URL(normalizedUrl);
+        if (parsedUrl.origin === getDxApiBaseUrl()) {
+            // 이 검사 화면의 캐시 정책을 유지하기 위해 DX 이미지의 query/hash를 제거한다.
+            parsedUrl.search = '';
+            parsedUrl.hash = '';
+            return parsedUrl.href;
         }
-
-        // 외부 URL은 원칙적으로 유지하되, 이전 잘못된 cache-busting 값만 제거한다.
-        parsedUrl.searchParams.delete('_dxv');
-        parsedUrl.searchParams.delete('_retry');
-        parsedUrl.hash = '';
-
-        return parsedUrl.href;
+        return normalizedUrl;
     } catch {
-        // URL 파싱 실패 시에도 최소한 _dxv/_retry 뒤는 잘라낸다.
-        return rawUrl
-            .replace(/[?&](_dxv|_retry)=[^#&]*/g, '')
-            .replace(/[?&]$/, '');
+        return normalizedUrl;
     }
 };
 

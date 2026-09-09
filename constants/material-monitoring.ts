@@ -1,12 +1,10 @@
+import { getDxApiUrl } from '@/utils/dx-api';
+
 export const PORT = 8080;
 export const MAX_CAMERA_COUNT = 6;
 export const CAMERA_RECHECK_INTERVAL_MS = 15_000;
 export const DEFAULT_STREAM_HOSTS =
   process.env.NEXT_PUBLIC_MATERIAL_CAMERA_HOSTS ?? '10.172.167.185, 192.168.0.54';
-
-const DEV_API_BASE_URL = 'https://gapi.dxsplatform.com/api';
-const INTERNAL_API_BASE_URL = 'http://192.168.2.147:24828/api';
-const MATERIAL_DEPLOYMENT_HOST = '192.168.2.147:3000';
 
 export const API_ENDPOINTS = {
   VEHICLE: '/DX_API000020',
@@ -15,23 +13,7 @@ export const API_ENDPOINTS = {
   MATERIAL_LIST: '/DX_API000034',
 } as const;
 
-const isDevApiEnvironment = () => {
-  if (typeof window === 'undefined') {
-    return process.env.NODE_ENV === 'development';
-  }
-
-  const { hostname, pathname } = window.location;
-
-  return (
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    pathname.includes('inbound-inspection-dev')
-  );
-};
-
-export const getApiBaseUrl = () => {
-  return isDevApiEnvironment() ? DEV_API_BASE_URL : INTERNAL_API_BASE_URL;
-};
+export const getApiBaseUrl = () => getDxApiUrl('/api');
 
 export const buildApiUrl = (
   endpoint: string,
@@ -50,15 +32,7 @@ export const buildApiUrl = (
   return url.toString();
 };
 
-export const API_URL_VEHICLE = buildApiUrl(API_ENDPOINTS.VEHICLE);
-export const getVehicleEntryExitApiUrl = (
-  host = typeof window === 'undefined' ? '' : window.location.host
-) => {
-  const baseUrl = host === MATERIAL_DEPLOYMENT_HOST
-    ? INTERNAL_API_BASE_URL
-    : DEV_API_BASE_URL;
-
-  return `${baseUrl}${API_ENDPOINTS.VEHICLE_ENTRY_EXIT}`;
-};
-export const API_URL_INVOICE = buildApiUrl(API_ENDPOINTS.INVOICE);
-export const API_URL_MATERIAL_LIST = buildApiUrl(API_ENDPOINTS.MATERIAL_LIST);
+export const getVehicleApiUrl = () => buildApiUrl(API_ENDPOINTS.VEHICLE);
+export const getVehicleEntryExitApiUrl = (origin?: string) => getDxApiUrl(`/api${API_ENDPOINTS.VEHICLE_ENTRY_EXIT}`, origin);
+export const getInvoiceApiUrl = () => buildApiUrl(API_ENDPOINTS.INVOICE);
+export const getMaterialListApiUrl = () => buildApiUrl(API_ENDPOINTS.MATERIAL_LIST);

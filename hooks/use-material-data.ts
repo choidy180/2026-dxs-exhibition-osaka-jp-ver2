@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { API_URL_MATERIAL_LIST } from '@/constants/material-monitoring';
+import { getMaterialListApiUrl } from '@/constants/material-monitoring';
 import type { MaterialListItem } from '@/types/material-monitoring';
 import { getMaterialStats } from '@/utils/material-monitoring';
 
@@ -30,7 +30,7 @@ export function useMaterialData() {
     setIsMaterialLoading(true);
 
     try {
-      const res = await fetch(API_URL_MATERIAL_LIST, {
+      const res = await fetch(getMaterialListApiUrl(), {
         cache: 'no-store',
         signal: controller.signal
       });

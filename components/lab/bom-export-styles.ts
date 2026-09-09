@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
-import { controlHeight, fontSize, radius, space, tone } from '@/styles/design-tokens';
+import { color, controlHeight, fontSize, radius, space, tone } from '@/styles/design-tokens';
 import type { ToneName } from '@/styles/design-tokens';
 
 export const BomExportNotice = styled.div<{ $tone: ToneName }>`
@@ -39,4 +39,18 @@ export const BomExportSpinner = styled(motion.span)`
   display: inline-flex;
   align-items: center;
   justify-content: center;
+`;
+
+export const BomFilterHelp = styled.p<{ $error: boolean }>`
+  flex: 1 0 100%;
+  margin: 0;
+  min-width: 0;
+  padding: ${space.sm}px ${space.md}px;
+  border-radius: ${radius.row}px;
+  border: 1px solid ${({ $error }) => $error ? tone.danger.border : color.borderSoft};
+  background: ${({ $error }) => $error ? tone.danger.bg : color.surfaceSubtle};
+  color: ${({ $error }) => $error ? tone.danger.fg : color.ink3};
+  font-size: ${fontSize.meta};
+  font-weight: 500;
+  line-height: 1.4;
 `;

@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useSyncExternalStore } from 'react';
+import { resolveDxResourceUrl } from '@/utils/dx-api';
 import type { PointerEvent } from 'react';
 
 import type { AnchorPoint, CornerItem, CornerKey } from '@/types/glassGapInspection';
@@ -10,6 +11,8 @@ import {
   CornerHotspot,
   GuideImage,
 } from '@/styles/glassGapInspection.styles';
+
+const subscribeToOrigin = () => () => undefined;
 
 interface GuideViewportProps {
   activeCorner: CornerKey | null;
@@ -42,6 +45,7 @@ export default function GuideViewport({
   registerRef,
   solo = false,
 }: GuideViewportProps) {
+  const imageUrl = useSyncExternalStore(subscribeToOrigin, () => resolveDxResourceUrl(guideImgUrl), () => '');
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
   const [draggingKey, setDraggingKey] = useState<CornerKey | null>(null);
@@ -112,7 +116,7 @@ export default function GuideViewport({
 
   return (
     <CenterGuideViewport ref={viewportRef} $solo={solo}>
-      <GuideImage src={guideImgUrl} alt="Main Glass Guide" draggable={false} />
+      <GuideImage src={imageUrl || undefined} alt="Main Glass Guide" draggable={false} />
       {cornerItems.map((item) => {
         const tone = getInspectionTone(item.status);
         const active = activeCorner === item.key;

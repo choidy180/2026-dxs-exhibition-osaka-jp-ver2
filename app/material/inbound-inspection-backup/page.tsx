@@ -20,6 +20,8 @@ import {
   PinkButton,
 } from '@/styles/styles';
 import { WearableApiEntry } from '@/types/types';
+import { API_ENDPOINTS, buildApiUrl } from '@/constants/material-monitoring';
+import { resolveDxResourceUrl } from '@/utils/dx-api';
 import AIDashboardModal from '@/components/ai-dashboard-modal';
 import WarehouseBoard from '@/components/wearable-warehouse-board';
 import {
@@ -35,55 +37,6 @@ import {
 
 // --- Constants ---
 const PORT = 8080;
-const DEV_API_BASE_URL = "https://gapi.dxsplatform.com/api";
-const INTERNAL_API_BASE_URL = "http://192.168.2.147:24828/api";
-
-const API_ENDPOINTS = {
-  VEHICLE: "/DX_API000020",
-  INVOICE: "/V_PurchaseIn",
-  MATERIAL_LIST: "/DX_API000034",
-} as const;
-
-const isDevFrontUrl = () => {
-  if (typeof window === "undefined") {
-    return true;
-  }
-
-  const { hostname, pathname } = window.location;
-
-  return (
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    pathname.includes("inbound-inspection-dev")
-  );
-};
-
-const getApiBaseUrl = () => {
-  return isDevFrontUrl() ? DEV_API_BASE_URL : INTERNAL_API_BASE_URL;
-};
-
-const buildApiUrl = (
-  endpoint: string,
-  params?: Record<string, string | number | boolean | null | undefined>
-) => {
-  const url = new URL(`${getApiBaseUrl()}${endpoint}`);
-
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        url.searchParams.set(key, String(value));
-      }
-    });
-  }
-
-  console.log("[API URL]", {
-    page: typeof window !== "undefined" ? window.location.href : "server",
-    apiUrl: url.toString(),
-  });
-
-  return url.toString();
-};
-
 // --- Types ---
 interface VehicleSlotDetail {
   slot_id: number;
@@ -815,7 +768,7 @@ export default function DashboardPage() {
                       <div style={{ padding: '0 20px 20px 20px' }}>
                         <VehicleImagePlaceholder style={{ borderRadius: '12px', height: '180px', marginBottom: '20px', overflow: 'hidden' }}>
                           <img 
-                            src={vehicleInfo.FILEPATH} 
+                            src={resolveDxResourceUrl(vehicleInfo.FILEPATH)}
                             alt="Vehicle" 
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                             onError={(e) => { e.currentTarget.style.display = 'none'; }} 

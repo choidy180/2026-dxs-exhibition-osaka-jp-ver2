@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { limitToLast, onValue, query, ref } from 'firebase/database';
-import { API_URL_INVOICE } from '@/constants/material-monitoring';
+import { getInvoiceApiUrl } from '@/constants/material-monitoring';
 import { db } from '@/lib/firebase';
 import type { WearableApiEntry } from '@/types/types';
 
@@ -50,7 +50,7 @@ export function useVuzixLog({ onDetected }: Props) {
       if (!barcode) return;
 
       try {
-        const res = await fetch(`${API_URL_INVOICE}?InvoiceNo=${barcode}`);
+        const res = await fetch(`${getInvoiceApiUrl()}?InvoiceNo=${encodeURIComponent(barcode)}`);
         const json = await res.json();
         if (res.ok && Array.isArray(json)) setScannedInvoiceData(json);
       } catch (error) {

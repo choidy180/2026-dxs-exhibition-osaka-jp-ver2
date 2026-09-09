@@ -10,7 +10,7 @@ import InspectionHeader from '@/components/glass-gap-inspection/InspectionHeader
 import MainInspectionPanel from '@/components/glass-gap-inspection/MainInspectionPanel';
 import SoundPermissionModal from '@/components/glass-gap-inspection/SoundPermissionModal';
 import TypeSelectionModal from '@/components/glass-gap-inspection/TypeSelectionModal';
-import { GUIDE_IMAGE_URL } from '@/constants/glassGapInspection';
+import { GUIDE_IMAGE_PATH } from '@/constants/glassGapInspection';
 import { useBoxConnectors } from '@/hooks/glass-gap-inspection/useBoxConnectors';
 import { useDefectAlarm } from '@/hooks/glass-gap-inspection/useDefectAlarm';
 import { useHotspotAnchors } from '@/hooks/glass-gap-inspection/useHotspotAnchors';
@@ -156,7 +156,7 @@ export default function GlassGapInspectionClient() {
         cameraTileRefs={cameraTileRefs}
         connectorLines={connectorLines}
         cornerItems={cornerItems}
-        guideImgUrl={GUIDE_IMAGE_URL}
+        guideImgUrl={GUIDE_IMAGE_PATH}
         hotspotRefs={hotspotRefs}
         isFail={resultState.isFail}
         onAnchorChange={handleAnchorChange}

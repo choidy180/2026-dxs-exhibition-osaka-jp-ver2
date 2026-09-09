@@ -1,4 +1,5 @@
 import { BomCsvExportError, convertBomCsvToXlsx } from './bom-csv-excel';
+import { bomRowsToCsv } from './bom-row-export';
 import type { BomExportRequest, BomExportWorkerMessage } from '../types/bom-export';
 
 const FETCH_TIMEOUT_MS = 180_000;
@@ -15,25 +16,32 @@ workerScope.onmessage = async ({ data }) => {
   if (data.type !== 'start' || running) return;
   running = true;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timeout = data.scope === 'all' ? setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS) : undefined;
   let phase: 'fetching' | 'converting' = 'fetching';
   const send = (message: BomExportWorkerMessage) => workerScope.postMessage(message);
 
   try {
-    send({ type: 'progress', phase: 'fetching', rows: 0 });
-    const response = await fetch(data.url, {
-      method: 'GET',
-      credentials: 'omit',
-      signal: controller.signal,
-    });
-    if (!response.ok) {
-      throw new BomCsvExportError(`BOM 데이터를 불러오지 못했습니다. (HTTP ${response.status})`);
+    let csv: string;
+    if (data.scope === 'all') {
+      send({ type: 'progress', phase: 'fetching', rows: 0 });
+      const response = await fetch(data.url, {
+        method: 'GET',
+        credentials: 'omit',
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        throw new BomCsvExportError(`BOM 데이터를 불러오지 못했습니다. (HTTP ${response.status})`);
+      }
+      const contentType = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase();
+      if (contentType !== 'text/csv' && contentType !== 'application/csv') {
+        throw new BomCsvExportError('서버에서 CSV 파일을 받지 못했습니다. 다시 시도해 주세요.');
+      }
+      csv = await response.text();
+    } else {
+      phase = 'converting';
+      send({ type: 'progress', phase, rows: 0 });
+      csv = bomRowsToCsv(data.rows);
     }
-    const contentType = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase();
-    if (contentType !== 'text/csv' && contentType !== 'application/csv') {
-      throw new BomCsvExportError('서버에서 CSV 파일을 받지 못했습니다. 다시 시도해 주세요.');
-    }
-    const csv = await response.text();
     clearTimeout(timeout);
 
     phase = 'converting';

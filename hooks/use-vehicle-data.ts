@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { API_URL_VEHICLE } from '@/constants/material-monitoring';
+import { getVehicleApiUrl } from '@/constants/material-monitoring';
 import type { VehicleApiResponse, VehicleSlotDetail } from '@/types/material-monitoring';
 
 export function useVehicleData() {
@@ -20,7 +20,7 @@ export function useVehicleData() {
     setIsLoading(true);
 
     try {
-      const res = await fetch(API_URL_VEHICLE);
+      const res = await fetch(getVehicleApiUrl());
       if (!res.ok) throw new Error('Vehicle API Error');
 
       const data: VehicleApiResponse = await res.json();

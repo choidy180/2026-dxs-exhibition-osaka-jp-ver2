@@ -7,7 +7,7 @@ import {
   FiCheck, FiMinus, FiPlayCircle, FiArrowUp, FiX, FiPackage
 } from 'react-icons/fi';
 import { FaRobot } from 'react-icons/fa';
-import { useVehicleImageUrl } from '@/hooks/useVehicleImageUrl';
+import { getDxApiUrl } from '@/utils/dx-api';
 
 // 앱 전역과 동일한 Pretendard 폰트 스택 (한글 폴백 포함 → 로드 중 폰트 스와프/깜빡임 방지)
 const FONT_STACK =
@@ -57,11 +57,9 @@ interface WorkingData { NoWkOrd: string; ItemName: string; OrdQty: number; ProdQ
 interface ApiResult { success: boolean; working_data: WorkingData; camData: CamDataMap; }
 interface FlattenedSlotItem extends SlotDetail { camId: string; }
 
-const CAM_DATA_API_URL = useVehicleImageUrl('http://192.168.2.147:24828/api/DX_API000018');
-
 const CAMERAS = [
-  { camId: '207', title: 'GR5 가조립 자재 #1', wsUrl: useVehicleImageUrl('ws://192.168.2.147:8132') },
-  { camId: '218', title: 'GR5 가조립 자재 #2', wsUrl: useVehicleImageUrl('ws://192.168.2.147:8133') },
+  { camId: '207', title: 'GR5 가조립 자재 #1', wsUrl: 'ws://192.168.2.147:8132' },
+  { camId: '218', title: 'GR5 가조립 자재 #2', wsUrl: 'ws://192.168.2.147:8133' },
 ] as const;
 
 const getCamOccupancyPercent = (cameraData?: CameraData) => {
@@ -1030,7 +1028,7 @@ const SmartFactoryDashboard: React.FC = () => {
       controller = new AbortController();
 
       try {
-        const response = await fetch(CAM_DATA_API_URL, {
+        const response = await fetch(getDxApiUrl('/api/DX_API000018'), {
           method: 'GET',
           cache: 'no-store',
           signal: controller.signal,

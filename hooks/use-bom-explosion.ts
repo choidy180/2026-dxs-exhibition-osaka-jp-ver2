@@ -2,77 +2,85 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BomDataset, BomFilter } from '@/types/lab';
-import { EMPTY_BOM_FILTER, filterBomRows, getBomSummary } from '@/utils/lab';
-import { fetchBomExplosion } from '@/utils/lab-api';
-
-const toErrorMessage = (error: unknown, fallback: string) => {
-  if (error instanceof Error && error.message && !error.message.startsWith('API ')) return error.message;
-  return fallback;
-};
+import {
+  EMPTY_BOM_FILTER, filterBomRows, getBomSummary, normalizeBomFilter, validateBomFilter,
+} from '@/utils/lab';
+import { BomQueryUnavailableError, fetchBomExplosion } from '@/utils/lab-api';
 
 export function useBomExplosion() {
   const [dataset, setDataset] = useState<BomDataset | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // 입력 중인 조건과 '조회' 로 적용된 조건을 분리한다
   const [draftFilter, setDraftFilter] = useState<BomFilter>(EMPTY_BOM_FILTER);
-  const [appliedFilter, setAppliedFilter] = useState<BomFilter>(EMPTY_BOM_FILTER);
+  const [appliedFilter, setAppliedFilter] = useState<BomFilter | null>(null);
+  const controllerRef = useRef<AbortController | null>(null);
+  const lastRequestRef = useRef<BomFilter | null>(null);
 
-  const isMountedRef = useRef(true);
+  useEffect(() => () => { controllerRef.current?.abort(); }, []);
 
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  const load = useCallback(async () => {
+  const load = useCallback(async (filter: BomFilter) => {
+    const normalized = normalizeBomFilter(filter);
+    const invalid = validateBomFilter(normalized);
+    setValidationError(invalid);
+    if (invalid) return;
+    controllerRef.current?.abort();
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    lastRequestRef.current = normalized;
     setIsLoading(true);
     setError(null);
 
     try {
-      const result = await fetchBomExplosion();
-      if (!isMountedRef.current) return;
+      const result = await fetchBomExplosion(controller.signal);
+      if (controller.signal.aborted || controllerRef.current !== controller) return;
       setDataset(result);
+      setAppliedFilter(normalized);
     } catch (caught) {
-      if (!isMountedRef.current) return;
-      console.error('[lab/bom] BOM 정전개 조회 실패', caught);
+      if (controller.signal.aborted || controllerRef.current !== controller) return;
       setDataset(null);
-      setError(toErrorMessage(caught, 'BOM 정전개 데이터를 불러오지 못했습니다.'));
+      setError(caught instanceof BomQueryUnavailableError
+        ? caught.message
+        : 'BOM 정전개 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
     } finally {
-      if (isMountedRef.current) setIsLoading(false);
+      if (!controller.signal.aborted && controllerRef.current === controller) setIsLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   /** 전체 데이터 기준 지표 — 필터와 무관하게 원본 규모를 보여준다 */
   const summary = useMemo(() => getBomSummary(dataset?.rows ?? []), [dataset]);
 
   const filteredRows = useMemo(
-    () => (dataset ? filterBomRows(dataset.rows, appliedFilter) : []),
+    () => dataset && appliedFilter ? filterBomRows(dataset.rows, appliedFilter, dataset.baseDate) : [],
     [appliedFilter, dataset],
   );
 
   const updateDraft = useCallback(<K extends keyof BomFilter>(key: K, value: BomFilter[K]) => {
     setDraftFilter(current => ({ ...current, [key]: value }));
+    setValidationError(null);
   }, []);
 
-  const applyFilter = useCallback(() => setAppliedFilter(draftFilter), [draftFilter]);
+  const applyFilter = useCallback(() => { void load(draftFilter); }, [draftFilter, load]);
+  const retry = useCallback(() => {
+    if (lastRequestRef.current) void load(lastRequestRef.current);
+  }, [load]);
 
   const resetFilter = useCallback(() => {
+    controllerRef.current?.abort();
+    controllerRef.current = null;
+    lastRequestRef.current = null;
     setDraftFilter(EMPTY_BOM_FILTER);
-    setAppliedFilter(EMPTY_BOM_FILTER);
+    setAppliedFilter(null);
+    setDataset(null);
+    setIsLoading(false);
+    setError(null);
+    setValidationError(null);
   }, []);
 
-  const isFiltered = useMemo(
-    () => JSON.stringify(appliedFilter) !== JSON.stringify(EMPTY_BOM_FILTER),
-    [appliedFilter],
-  );
+  const isDraftDirty = appliedFilter === null ||
+    JSON.stringify(normalizeBomFilter(draftFilter)) !== JSON.stringify(appliedFilter);
 
   return {
     dataset,
@@ -80,11 +88,14 @@ export function useBomExplosion() {
     summary,
     isLoading,
     error,
+    validationError,
     draftFilter,
-    isFiltered,
+    appliedFilter,
+    isFiltered: appliedFilter !== null,
+    isDraftDirty,
     updateDraft,
     applyFilter,
     resetFilter,
-    retry: load,
+    retry,
   };
 }

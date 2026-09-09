@@ -1,7 +1,8 @@
-export type BomExportRequest = {
-  type: 'start';
-  url: string;
-};
+import type { BomRow } from './lab';
+
+export type BomExportRequest =
+  | { type: 'start'; scope: 'all'; url: string }
+  | { type: 'start'; scope: 'current'; rows: BomRow[] };
 
 export type BomExportWorkerMessage =
   | { type: 'progress'; phase: 'fetching' | 'converting'; rows: number }

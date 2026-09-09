@@ -1,5 +1,7 @@
 'use client';
 
+import { resolveDxResourceUrl } from '@/utils/dx-api';
+
 import { X, ZoomIn } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
@@ -43,7 +45,7 @@ export default function ImageModal({
           </ModalCloseButton>
         </ImageModalTop>
         <ImageModalBody>
-          <ImageModalImage src={imgUrl} alt={title} />
+          <ImageModalImage src={resolveDxResourceUrl(imgUrl)} alt={title} />
         </ImageModalBody>
       </ImageModalShell>
     </ModalBackdrop>,

@@ -1,3 +1,4 @@
+import { resolveDxResourceUrl } from '@/utils/dx-api';
 import type {
   ApiDataItem,
   EquipmentPositionItem,
@@ -51,7 +52,7 @@ export const normalizeApiItem = (item: Partial<ApiDataItem>): ApiDataItem => {
     AI_TIME_STR: asString(item.AI_TIME_STR),
     AI_LABEL: asString(item.AI_LABEL, result002),
     RESULT002: result002,
-    FILEPATH1: asString(item.FILEPATH1),
+    FILEPATH1: resolveDxResourceUrl(asString(item.FILEPATH1)),
   } as ApiDataItem;
 };
 

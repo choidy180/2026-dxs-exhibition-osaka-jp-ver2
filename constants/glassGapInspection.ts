@@ -1,43 +1,9 @@
 import type { AnchorMap, CornerKey, TypeOption } from '@/types/glassGapInspection';
 
-export const DEV_RESOURCE_BASE_URL = 'https://gapi.dxsplatform.com';
-export const INTERNAL_RESOURCE_BASE_URL = 'http://1.254.24.170:24828';
+import { getDxApiUrl } from '@/utils/dx-api';
 
-const isDevResourceEnvironment = () => {
-  if (typeof window === 'undefined') {
-    return process.env.NODE_ENV === 'development';
-  }
-
-  const { hostname, pathname } = window.location;
-
-  return (
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    pathname.includes('glass-gap-inspection-dev') ||
-    pathname.includes('-dev')
-  );
-};
-
-export const getResourceBaseUrl = () => {
-  return isDevResourceEnvironment()
-    ? DEV_RESOURCE_BASE_URL
-    : INTERNAL_RESOURCE_BASE_URL;
-};
-
-export const buildResourceUrl = (path: string) => {
-  const baseUrl = getResourceBaseUrl();
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-
-  return `${baseUrl}${normalizedPath}`;
-};
-
-export const API_BASE_URL = getResourceBaseUrl();
-
-export const INSPECTION_API_URL = buildResourceUrl('/api/DX_API000023');
-
-export const GUIDE_IMAGE_URL = buildResourceUrl(
-  '/images/DX_API000102/guide_img.png'
-);
+export const getInspectionApiUrl = () => getDxApiUrl('/api/DX_API000023');
+export const GUIDE_IMAGE_PATH = '/images/DX_API000102/guide_img.png';
 
 export const HOTSPOT_STORAGE_KEY = 'glass-gap-inspection-hotspot-anchors-v2';
 export const POLLING_INTERVAL_MS = 3000;

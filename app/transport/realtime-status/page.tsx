@@ -13,6 +13,7 @@ import {
 import { format } from "date-fns";
 import dynamic from "next/dynamic";
 import type { VWorldMarker } from "@/components/vworld-map-dev";
+import { getDxApiUrl } from "@/utils/dx-api";
 
 const VWorldMap = dynamic(
   () => import("@/components/vworld-map-dev"),
@@ -29,25 +30,6 @@ const Transport3DMap = dynamic(
     loading: () => <div style={{ width: "100%", height: "100%", background: "#d8e6e3" }} />
   }
 );
-
-const getCurrentBaseUrl = () => {
-  if (
-    typeof window !== "undefined" &&
-    (
-      window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1" ||
-      window.location.pathname.includes("-dev")
-    )
-  ) {
-    return "https://gapi.dxsplatform.com";
-  }
-
-  return "http://192.168.2.147:24828";
-};
-
-const getCurrentUrl = (path: string) => {
-  return `${getCurrentBaseUrl()}${path}`;
-};
 
 type VehicleStatus = "Arrived" | "Moving";
 type MarkerInfoMode = "hidden" | "all" | "selected";
@@ -409,16 +391,7 @@ const useVehicleSimulation = () => {
         await new Promise(r => setTimeout(r, 300));
       } else {
         try {
-          const res = await axios.get(
-            typeof window !== 'undefined' &&
-            (
-              window.location.hostname === 'localhost' ||
-              window.location.hostname === '127.0.0.1' ||
-              window.location.pathname.includes('-dev')
-            )
-              ? 'https://gapi.dxsplatform.com/api/DX_API000002'
-              : 'http://192.168.2.147:24828/api/DX_API000002'
-          );
+          const res = await axios.get(getDxApiUrl('/api/DX_API000002'));
           const data: ApiVehicleData[] = res.data;
           const now = Date.now();
           const tripCounts: Record<string, number> = {};

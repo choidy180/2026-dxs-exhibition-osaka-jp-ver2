@@ -2,14 +2,13 @@
  * 실험실 화면 API 클라이언트
  *
  * `USE_MOCK_DATA` 가 true 인 동안은 목업 데이터로 동작하고,
- * false 로 바꾸면 같은 함수 시그니처로 실제 엔드포인트를 호출한다.
+ * false 로 바꾸면 연결된 실제 엔드포인트를 호출한다. BOM 조건 조회는 명세 확인이 필요하다.
  * 화면·훅 코드는 이 모듈만 사용하므로 API 연결 시 수정할 곳은 이 파일뿐이다.
  */
 
 import {
-  API_BASE_URL,
+  getApiBaseUrl,
   API_ENDPOINTS,
-  BOM_BASE_DATE,
   ENABLE_MES_TRANSFER,
   MOCK_LATENCY_MS,
   ORDER_SCHEDULE_DAY_COUNT,
@@ -23,8 +22,6 @@ import {
 import { buildDayRange } from '@/utils/date';
 import type {
   BomDataset,
-  BomRow,
-  BomRowResponse,
   MesTransferResult,
   OrderNeed,
   OrderPlanDataset,
@@ -35,7 +32,7 @@ import type {
 import { fetchRevisions as fetchPlanRevisions } from './production-plan-api';
 
 const buildUrl = (endpoint: string, params?: Record<string, string>) => {
-  const url = new URL(`${API_BASE_URL}${endpoint}`);
+  const url = new URL(`${getApiBaseUrl()}${endpoint}`);
   Object.entries(params ?? {}).forEach(([key, value]) => url.searchParams.set(key, value));
   return url.toString();
 };
@@ -64,28 +61,6 @@ const toOptionalNumber = (value: unknown): number | null => {
 };
 
 /* ───────────────────────── 응답 매핑 ───────────────────────── */
-
-const mapBomRow = (item: BomRowResponse, index: number): BomRow => ({
-  id: `${item.ITEM_NO}-${index}`,
-  level: toNumber(item.LVL),
-  itemNo: String(item.ITEM_NO ?? '').trim(),
-  itemNm: String(item.ITEM_NM ?? '').trim(),
-  designBomNo: toNumber(item.DESIGN_BOM_NO),
-  purchaseBomNo: toNumber(item.PUR_BOM_NO),
-  pjtCode: String(item.PJT_CD ?? '').trim(),
-  productNo: String(item.PROD_NO ?? '').trim(),
-  productNm: String(item.PROD_NM ?? '').trim(),
-  parentItemNo: String(item.UP_ITEM_NO ?? '').trim(),
-  parentItemNm: String(item.UP_ITEM_NM ?? '').trim(),
-  spec: String(item.SPEC ?? '').trim(),
-  material: String(item.MATERIAL ?? '').trim(),
-  unit: String(item.UNIT ?? '').trim(),
-  processGb: String(item.PROC_GB ?? '').trim(),
-  orderGb: String(item.ORDER_GB ?? '').trim(),
-  vendor: String(item.VENDOR ?? '').trim(),
-  buyer: String(item.BUYER ?? '').trim(),
-  materialManager: String(item.MAT_MGR ?? '').trim(),
-});
 
 const ORDER_NEED_BY_CODE: Record<string, OrderNeed> = {
   U: 'urgent',
@@ -122,18 +97,22 @@ const mapOrderRow = (item: OrderTargetResponse, index: number): OrderTargetRow =
 
 /* ───────────────────────── MES BOM ───────────────────────── */
 
-/** BOM 정전개 전체 리스트 조회 */
-export const fetchBomExplosion = async (): Promise<BomDataset> => {
+export class BomQueryUnavailableError extends Error {
+  constructor() {
+    super('실제 BOM 목록의 적용일자·PJT코드 조회 연결을 확인 중입니다. 연결이 준비된 뒤 다시 시도해 주세요.');
+    this.name = 'BomQueryUnavailableError';
+  }
+}
+
+/** 실제 조회 계약과 기준일을 확인하기 전에는 개발용 날짜를 실제 결과에 붙이지 않는다. */
+export const fetchBomExplosion = async (signal?: AbortSignal): Promise<BomDataset> => {
+  signal?.throwIfAborted();
   if (USE_MOCK_DATA) {
     await delay(MOCK_LATENCY_MS);
+    signal?.throwIfAborted();
     return DUMMY_BOM_DATASET;
   }
-
-  const data = await requestJson<BomRowResponse[]>(buildUrl(API_ENDPOINTS.BOM_EXPLOSION));
-  return {
-    baseDate: BOM_BASE_DATE,
-    rows: (Array.isArray(data) ? data : []).map(mapBomRow),
-  };
+  throw new BomQueryUnavailableError();
 };
 
 /* ───────────────────────── 발주대상 ───────────────────────── */

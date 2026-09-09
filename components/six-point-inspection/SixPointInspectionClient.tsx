@@ -10,7 +10,7 @@ import InspectionHeader from '@/components/six-point-inspection/InspectionHeader
 import MainInspectionPanel from '@/components/six-point-inspection/MainInspectionPanel';
 import SoundPermissionModal from '@/components/six-point-inspection/SoundPermissionModal';
 import TypeSelectionModal from '@/components/six-point-inspection/TypeSelectionModal';
-import { GUIDE_IMAGE_URL } from '@/constants/sixPointInspection';
+import { GUIDE_IMAGE_PATH } from '@/constants/sixPointInspection';
 import { useBoxConnectors } from '@/hooks/six-point-inspection/useBoxConnectors';
 import { useDefectAlarm } from '@/hooks/six-point-inspection/useDefectAlarm';
 import { useHotspotAnchors } from '@/hooks/six-point-inspection/useHotspotAnchors';
@@ -160,7 +160,7 @@ export default function SixPointInspectionClient() {
         cameraTileRefs={cameraTileRefs}
         connectorLines={connectorLines}
         cornerItems={cornerItems}
-        guideImgUrl={GUIDE_IMAGE_URL}
+        guideImgUrl={GUIDE_IMAGE_PATH}
         hotspotRefs={hotspotRefs}
         isFail={resultState.isFail}
         onAnchorChange={handleAnchorChange}

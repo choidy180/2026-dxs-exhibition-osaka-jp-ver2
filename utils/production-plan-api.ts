@@ -7,7 +7,7 @@
  */
 
 import {
-  API_BASE_URL,
+  getApiBaseUrl,
   API_ENDPOINTS,
   ENABLE_DB_SAVE,
   MOCK_LATENCY_MS,
@@ -33,7 +33,7 @@ import { buildPlanDay, getRowCount, parseDateKey, sortRevisions } from './produc
 /* ───────────────────────── 공통 ───────────────────────── */
 
 const buildUrl = (endpoint: string, params?: Record<string, string>) => {
-  const url = new URL(`${API_BASE_URL}${endpoint}`);
+  const url = new URL(`${getApiBaseUrl()}${endpoint}`);
   Object.entries(params ?? {}).forEach(([key, value]) => url.searchParams.set(key, value));
   return url.toString();
 };

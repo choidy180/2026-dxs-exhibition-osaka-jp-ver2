@@ -1,5 +1,7 @@
 'use client';
 
+import { resolveDxResourceUrl } from '@/utils/dx-api';
+
 import { useEffect, useState } from 'react';
 import { X, ZoomIn } from 'lucide-react';
 import { createPortal } from 'react-dom';
@@ -71,7 +73,7 @@ export default function ImageModal({
         <ImageModalBody>
           {hasImage ? (
             <ImageModalImage
-              src={imgUrl}
+              src={resolveDxResourceUrl(imgUrl)}
               alt={title}
               onError={() => setLoadError(true)}
             />

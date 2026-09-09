@@ -4,9 +4,9 @@
  * API 가 준비되면 `NEXT_PUBLIC_LAB_USE_MOCK=false` 로 두면 실제 엔드포인트를 호출한다.
  */
 
-const DEFAULT_API_BASE_URL = 'https://gapi.dxsplatform.com/api';
+import { getDxApiUrl } from '@/utils/dx-api';
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_LAB_API_BASE ?? DEFAULT_API_BASE_URL;
+export const getApiBaseUrl = () => getDxApiUrl('/api');
 
 export const API_ENDPOINTS = {
   /** MES DB Link — BOM 정전개 전체 리스트 */

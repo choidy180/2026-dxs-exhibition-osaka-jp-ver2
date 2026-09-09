@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { getDxApiUrl } from '@/utils/dx-api';
 import styled, { createGlobalStyle, css, keyframes } from 'styled-components';
 import { Check, ChevronDown, Info, Maximize, Minimize, Search, MapPin, X, ZoomIn, ZoomOut } from 'lucide-react';
 
@@ -1006,7 +1007,7 @@ export default function FinalDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch('http://gapi.dxsplatform.com/api/DX_API000014');
+        const res = await fetch(getDxApiUrl('/api/DX_API000014'));
         const json: ApiResponse = await res.json();
         const newMap: SlotDataMap = {};
         Object.values(json).forEach((zone) => {

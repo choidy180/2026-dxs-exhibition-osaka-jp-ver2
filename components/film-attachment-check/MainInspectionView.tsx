@@ -3,6 +3,7 @@
 import { RefreshCw, ZoomIn } from 'lucide-react';
 import type { ApiData } from '@/types/gasketCheck';
 import { getInspectionTone } from '@/utils/gasketCheck';
+import { resolveDxResourceUrl } from '@/utils/dx-api';
 import {
     FileBadge,
     ImageContent,
@@ -30,7 +31,7 @@ export function MainInspectionView({
     onImageOpen,
 }: MainInspectionViewProps) {
     const tone = getInspectionTone(data?.RESULT);
-    const imageUrl = data?.FILEPATH1 || '';
+    const imageUrl = resolveDxResourceUrl(data?.FILEPATH1);
 
     return (
         <ImagePanel $tone={tone}>

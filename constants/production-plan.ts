@@ -5,9 +5,9 @@
  * 목업 대신 실제 엔드포인트로 전환된다. 엔드포인트 경로는 아래 상수만 교체한다.
  */
 
-const DEFAULT_API_BASE_URL = 'https://gapi.dxsplatform.com/api';
+import { getDxApiUrl } from '@/utils/dx-api';
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_PRODUCTION_PLAN_API_BASE ?? DEFAULT_API_BASE_URL;
+export const getApiBaseUrl = () => getDxApiUrl('/api');
 
 export const API_ENDPOINTS = {
   /** 업로드 히스토리(리비전 목록) 조회 */

@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
@@ -16,15 +15,12 @@ import {
   Wrench,
 } from 'lucide-react';
 import {
-  BUYER_OPTIONS,
+  BOM_BASE_DATE,
   BOM_COLUMNS,
-  LEVEL_OPTIONS,
-  MATERIAL_MANAGER_OPTIONS,
-  ORDER_GB_OPTIONS,
-  PROCESS_GB_OPTIONS,
   USE_MOCK_DATA,
 } from '@/constants/lab';
-import { DUMMY_PRODUCT_OPTIONS } from '@/data/dummy-lab';
+import DatePickerField from '@/components/common/date-picker/DatePickerField';
+import SelectField from '@/components/common/select/SelectField';
 import { useBomExplosion } from '@/hooks/use-bom-explosion';
 import { useBomExcelDownload } from '@/hooks/use-bom-excel-download';
 import { motion as motionTokens } from '@/styles/design-tokens';
@@ -36,8 +32,8 @@ import {
   formatNumber,
   getLevelLabel,
 } from '@/utils/lab';
-import { FilterSelectField, FilterTextField } from './FilterField';
-import { BomExportNotice, BomExportSpinner } from './bom-export-styles';
+import { FilterTextField } from './FilterField';
+import { BomExportNotice, BomExportSpinner, BomFilterHelp } from './bom-export-styles';
 import {
   ActionButton,
   BodyRow,
@@ -48,6 +44,7 @@ import {
 
   FilterActions,
   FilterCard,
+  Field,
   GridBody,
   GridFooter,
   GridInner,
@@ -110,8 +107,11 @@ export default function MesBomListClient() {
     summary,
     isLoading,
     error,
+    validationError,
     draftFilter,
+    appliedFilter,
     isFiltered,
+    isDraftDirty,
     updateDraft,
     applyFilter,
     resetFilter,
@@ -119,16 +119,20 @@ export default function MesBomListClient() {
   } = useBomExplosion();
   const download = useBomExcelDownload();
 
-  const productOptions = useMemo(() => ['전체', ...DUMMY_PRODUCT_OPTIONS], []);
   const template = bomGridTemplate;
 
   const hasRows = filteredRows.length > 0;
+  // 전체 MES CSV와 화면 목록은 원천·열이 달라 행 수만으로 중복 여부를 판단할 수 없다.
+  const currentDownloadDisabled = download.isDownloading || isLoading || !!error || !hasRows || isDraftDirty;
+  const currentDownloadHint = isDraftDirty
+    ? '조회 조건을 적용한 뒤 다운로드할 수 있습니다.'
+    : !hasRows ? '조회 결과가 있어야 다운로드할 수 있습니다.' : '현재 화면에 조회된 행과 열을 저장합니다.';
   const downloadNotice = download.phase === 'fetching'
     ? '전체 BOM을 불러오고 있습니다. 데이터가 많아 1분 이상 걸릴 수 있습니다.'
     : download.phase === 'converting'
       ? `엑셀 파일로 변환 중입니다. ${formatNumber(download.rows)}건 처리`
       : download.phase === 'complete'
-        ? `전체 BOM ${formatNumber(download.rows)}건의 엑셀 파일 다운로드를 시작했습니다.`
+        ? `${download.scope === 'all' ? '전체 리스트' : '현재 조건'} ${formatNumber(download.rows)}건의 엑셀 파일 다운로드를 시작했습니다.`
         : download.phase === 'empty'
           ? '다운로드할 BOM 데이터가 없습니다. 잠시 후 다시 시도해주세요.'
           : download.phase === 'error'
@@ -153,25 +157,29 @@ export default function MesBomListClient() {
           </TitleGroup>
 
           <HeaderActions>
-            <ActionButton
-              type="button"
-              $variant="success"
-              onClick={download.startDownload}
-              disabled={download.isDownloading}
-              aria-busy={download.isDownloading}
-              aria-describedby="bom-export-notice"
-            >
-              {download.isDownloading ? (
-                <BomExportSpinner
-                  animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: parseFloat(motionTokens.enter), ease: 'linear' }}
-                  aria-hidden="true"
-                >
-                  <Loader2 size={16} />
-                </BomExportSpinner>
-              ) : <FileDown size={16} />}
-              {download.phase === 'fetching' ? 'BOM 수신 중...' : download.phase === 'converting' ? '엑셀 변환 중...' : '엑셀 다운로드'}
-            </ActionButton>
+            {(['current', 'all'] as const).map(scope => (
+              <ActionButton
+                key={scope}
+                type="button"
+                $variant={scope === 'current' ? 'soft' : 'success'}
+                onClick={() => scope === 'current' ? download.startCurrentDownload(filteredRows) : download.startDownload()}
+                disabled={scope === 'current' ? currentDownloadDisabled : download.isDownloading}
+                aria-busy={download.isDownloading && download.scope === scope}
+                aria-describedby="bom-export-notice"
+                title={scope === 'current' ? currentDownloadHint : '조회 조건과 관계없이 MES 전체 원본 목록을 저장합니다.'}
+              >
+                {download.isDownloading && download.scope === scope ? (
+                  <BomExportSpinner
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: parseFloat(motionTokens.enter), ease: 'linear' }}
+                    aria-hidden="true"
+                  >
+                    <Loader2 size={16} />
+                  </BomExportSpinner>
+                ) : <FileDown size={16} />}
+                {scope === 'current' ? '현재 조건 엑셀 다운로드' : '전체 리스트 엑셀 다운로드'}
+              </ActionButton>
+            ))}
           </HeaderActions>
         </Header>
 
@@ -183,8 +191,8 @@ export default function MesBomListClient() {
           {download.phase === 'error' ? <AlertCircle size={16} /> : download.phase === 'complete' ? <CheckCircle2 size={16} /> : <Info size={16} />}
           <p>
             {downloadNotice ?? <>
-              {USE_MOCK_DATA ? '화면 목록은 개발용 데이터입니다.' : <>목록 데이터 기준: <strong>{dataset?.baseDate ?? '-'}</strong>.</>}{' '}
-              엑셀 다운로드는 조회 조건과 관계없이 MES 전체 BOM을 저장합니다.
+              {USE_MOCK_DATA ? <>화면 목록은 <strong>{BOM_BASE_DATE}</strong> 기준 개발용 데이터입니다.</> : <>목록 데이터 기준: <strong>{dataset?.baseDate ?? '-'}</strong>.</>}{' '}
+              현재 조건은 화면 조회 결과를, 전체 리스트는 조건과 관계없이 MES 전체 원본을 저장하므로 열과 건수가 다를 수 있습니다.
             </>}
           </p>
           {download.isDownloading && (
@@ -232,72 +240,47 @@ export default function MesBomListClient() {
         </StatsGrid>
 
         <FilterCard>
-          <FilterSelectField
+          <DatePickerField
+            label="적용일자 · 필수"
+            inline
+            value={draftFilter.applyDate}
+            onChange={value => updateDraft('applyDate', value)}
+          />
+          <Field $width={176}>
+            <span>PJT코드 · 필수</span>
+            <input
+              type="text"
+              value={draftFilter.pjtCode}
+              placeholder="PJT코드 입력"
+              required
+              aria-invalid={!!validationError && !draftFilter.pjtCode.trim()}
+              aria-describedby="bom-filter-help"
+              onChange={event => updateDraft('pjtCode', event.target.value)}
+              onKeyDown={event => {
+                if (event.key === 'Enter' && !event.nativeEvent.isComposing) applyFilter();
+              }}
+            />
+          </Field>
+          <FilterTextField
             label="제품번호"
             value={draftFilter.productNo}
-            options={productOptions}
-            width={168}
+            placeholder="전체 제품"
+            width={176}
             onChange={value => updateDraft('productNo', value)}
-          />
-          <FilterTextField
-            label="품목번호"
-            value={draftFilter.itemNo}
-            width={132}
-            onChange={value => updateDraft('itemNo', value)}
             onSubmit={applyFilter}
           />
-          <FilterTextField
-            label="품목명"
-            value={draftFilter.itemNm}
-            width={148}
-            onChange={value => updateDraft('itemNm', value)}
-            onSubmit={applyFilter}
-          />
-          <FilterSelectField
-            label="LEVEL"
-            value={draftFilter.level}
-            options={LEVEL_OPTIONS}
-            width={96}
-            onChange={value => updateDraft('level', value)}
-          />
-          <FilterSelectField
-            label="공정구분"
-            value={draftFilter.processGb}
-            options={PROCESS_GB_OPTIONS}
-            width={112}
-            onChange={value => updateDraft('processGb', value)}
-          />
-          <FilterSelectField
+          <SelectField
             label="발주구분"
             value={draftFilter.orderGb}
-            options={ORDER_GB_OPTIONS}
-            width={112}
-            onChange={value => updateDraft('orderGb', value)}
-          />
-          <FilterTextField
-            label="매입처"
-            value={draftFilter.vendor}
+            options={['', '발주', '미발주']}
             width={120}
-            onChange={value => updateDraft('vendor', value)}
-            onSubmit={applyFilter}
-          />
-          <FilterSelectField
-            label="구매담당자"
-            value={draftFilter.buyer}
-            options={BUYER_OPTIONS}
-            width={116}
-            onChange={value => updateDraft('buyer', value)}
-          />
-          <FilterSelectField
-            label="자재담당자"
-            value={draftFilter.materialManager}
-            options={MATERIAL_MANAGER_OPTIONS}
-            width={116}
-            onChange={value => updateDraft('materialManager', value)}
+            onChange={value => {
+              if (value === '' || value === '발주' || value === '미발주') updateDraft('orderGb', value);
+            }}
           />
 
           <FilterActions>
-            <ActionButton type="button" $variant="dark" onClick={applyFilter}>
+            <ActionButton type="button" $variant="dark" onClick={applyFilter} disabled={isLoading}>
               <Search size={15} />
               조회
             </ActionButton>
@@ -306,6 +289,13 @@ export default function MesBomListClient() {
               초기화
             </ActionButton>
           </FilterActions>
+          <BomFilterHelp id="bom-filter-help" $error={!!validationError} role={validationError ? 'alert' : 'status'}>
+            {validationError ?? <>
+              적용일자와 PJT코드는 필수입니다. 발주구분 공백은 전체를 조회합니다.{' '}
+              {USE_MOCK_DATA ? `개발용 목록은 ${BOM_BASE_DATE} 기준입니다.` : '실제 목록의 날짜별 조회 연결을 준비 중입니다.'}
+              {appliedFilter && isDraftDirty && ' 변경한 조건은 조회 버튼을 눌러 적용해 주세요.'}
+            </>}
+          </BomFilterHelp>
         </FilterCard>
 
         <DataCard>
@@ -313,7 +303,7 @@ export default function MesBomListClient() {
             <div className="title-group">
               <Table2 size={19} />
               <h2>BOM 정전개 리스트</h2>
-              {isFiltered && <CountPill>조회 조건 적용</CountPill>}
+              {isFiltered && <CountPill>{appliedFilter?.applyDate} · {appliedFilter?.pjtCode}</CountPill>}
             </div>
           </CardHead>
 
@@ -336,13 +326,21 @@ export default function MesBomListClient() {
                 <RotateCcw size={14} /> 재시도
               </RetryButton>
             </StateBox>
+          ) : !appliedFilter ? (
+            <StateBox>
+              <div className="icon-circle"><Search size={26} /></div>
+              <strong>조회 조건을 입력해 주세요</strong>
+              <span>적용일자와 PJT코드를 입력하고 조회하면 BOM 정전개를 확인할 수 있습니다.</span>
+            </StateBox>
           ) : !hasRows ? (
             <StateBox>
               <div className="icon-circle">
                 <Search size={26} />
               </div>
               <strong>조회 결과가 없습니다</strong>
-              <span>조회 조건을 변경하거나 초기화 후 다시 조회해주세요.</span>
+              <span>{appliedFilter.applyDate !== dataset?.baseDate
+                ? `선택한 적용일자의 데이터가 없습니다. 현재 목록의 기준일은 ${dataset?.baseDate ?? '-'}입니다.`
+                : 'PJT코드, 제품번호 또는 발주구분을 확인하고 다시 조회해 주세요.'}</span>
             </StateBox>
           ) : (
             <GridShell>
@@ -418,7 +416,7 @@ export default function MesBomListClient() {
           )}
 
           <GridFooter>
-            <span>{isLoading ? '데이터 로딩 중...' : error ? '데이터 로딩 실패' : '데이터 로딩 완료'}</span>
+            <span>{isLoading ? '데이터 로딩 중...' : error ? '데이터 로딩 실패' : !appliedFilter ? '조회 대기' : '데이터 로딩 완료'}</span>
             <span>총 {formatNumber(filteredRows.length)}건</span>
           </GridFooter>
         </DataCard>

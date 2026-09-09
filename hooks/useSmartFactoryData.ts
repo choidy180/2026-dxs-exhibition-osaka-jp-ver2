@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { INSPECTION_API_URL } from '@/constants/smartFactoryViewer';
+import { getInspectionApiUrl } from '@/constants/smartFactoryViewer';
 import type { ApiDataItem, EquipmentPositionItem } from '@/types/smartFactoryViewer';
 import {
   getEquipmentPositionSignature,
@@ -34,7 +34,7 @@ export const useSmartFactoryData = () => {
       activeController = controller;
 
       try {
-        const response = await fetch(INSPECTION_API_URL, {
+        const response = await fetch(getInspectionApiUrl(), {
           cache: 'no-store',
           signal: controller.signal,
         });

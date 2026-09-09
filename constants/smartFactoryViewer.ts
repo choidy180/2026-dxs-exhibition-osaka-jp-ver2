@@ -1,3 +1,4 @@
+import { getDxApiUrl } from '@/utils/dx-api';
 import type {
   ProcessStepConfig,
   ViewOption,
@@ -7,7 +8,7 @@ import type {
 
 export const JIG_MODEL_PATH = '/models/final_final_final.glb';
 export const FLOOR_MODEL_PATH = '/models/final_final_final_final.glb';
-export const INSPECTION_API_URL = 'https://gapi.dxsplatform.com/api/DX_API000035';
+export const getInspectionApiUrl = () => getDxApiUrl('/api/DX_API000035');
 
 export const PROCESS_CONFIG: ProcessStepConfig[] = [
   { name: '오픈', color: '#6ab04c' },

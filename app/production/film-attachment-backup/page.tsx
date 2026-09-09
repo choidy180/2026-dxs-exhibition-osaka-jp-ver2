@@ -1,5 +1,7 @@
 "use client";
 
+import { getDxApiUrl, resolveDxResourceUrl } from "@/utils/dx-api";
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -502,7 +504,7 @@ export default function FilmAttachmentCheck() {
 
   const fetchData = useCallback(async () => {
       try {
-          const response = await fetch("http://192.168.2.147:24828/api/DX_API000027");
+          const response = await fetch(getDxApiUrl("/api/DX_API000027"));
           const json = await response.json();
           
           if (json.success) {
@@ -690,7 +692,7 @@ export default function FilmAttachmentCheck() {
                   <div style={{ flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: '#FFFFFF', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {apiData?.FILEPATH1 ? (
                            <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                               <img src={apiData.FILEPATH1} alt="Inspection" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                               <img src={resolveDxResourceUrl(apiData.FILEPATH1)} alt="Inspection" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                            </div>
                       ) : (
                           <div style={{display:'flex', flexDirection:'column', alignItems:'center', color: theme.textSecondary, gap: '12px'}}>
@@ -700,7 +702,7 @@ export default function FilmAttachmentCheck() {
                       )}
                       
                       {apiData?.FILEPATH1 && (
-                          <button onClick={(e) => { e.stopPropagation(); handleImageClick("Film Attachment Detail", apiData.FILEPATH1); }} style={{ position: 'absolute', bottom: '16px', right: '16px', backgroundColor: '#FFFFFF', width: '44px', height: '44px', borderRadius: '12px', border: `1px solid ${theme.border}`, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.2s', color: theme.textPrimary }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+                          <button onClick={(e) => { e.stopPropagation(); handleImageClick("Film Attachment Detail", resolveDxResourceUrl(apiData.FILEPATH1)); }} style={{ position: 'absolute', bottom: '16px', right: '16px', backgroundColor: '#FFFFFF', width: '44px', height: '44px', borderRadius: '12px', border: `1px solid ${theme.border}`, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.2s', color: theme.textPrimary }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
                               <ZoomIn size={20} strokeWidth={2} />
                           </button>
                       )}
