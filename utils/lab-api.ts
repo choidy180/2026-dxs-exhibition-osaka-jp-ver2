@@ -1,8 +1,8 @@
 /**
  * 실험실 화면 API 클라이언트
  *
- * `USE_MOCK_DATA` 가 true 인 동안은 목업 데이터로 동작하고,
- * false 로 바꾸면 연결된 실제 엔드포인트를 호출한다. BOM 조건 조회는 명세 확인이 필요하다.
+ * BOM은 실제 MES API를 기본으로 사용하고 명시적인 목업 설정만 허용한다.
+ * 발주대상 화면은 `USE_MOCK_DATA` 설정에 따라 목업 또는 실제 API로 동작한다.
  * 화면·훅 코드는 이 모듈만 사용하므로 API 연결 시 수정할 곳은 이 파일뿐이다.
  */
 
@@ -12,6 +12,7 @@ import {
   ENABLE_MES_TRANSFER,
   MOCK_LATENCY_MS,
   ORDER_SCHEDULE_DAY_COUNT,
+  USE_MOCK_BOM_DATA,
   USE_MOCK_DATA,
 } from '@/constants/lab';
 import {
@@ -22,6 +23,9 @@ import {
 import { buildDayRange } from '@/utils/date';
 import type {
   BomDataset,
+  BomFilter,
+  BomRow,
+  BomRowResponse,
   MesTransferResult,
   OrderNeed,
   OrderPlanDataset,
@@ -97,22 +101,119 @@ const mapOrderRow = (item: OrderTargetResponse, index: number): OrderTargetRow =
 
 /* ───────────────────────── MES BOM ───────────────────────── */
 
-export class BomQueryUnavailableError extends Error {
-  constructor() {
-    super('실제 BOM 목록의 적용일자·PJT코드 조회 연결을 확인 중입니다. 연결이 준비된 뒤 다시 시도해 주세요.');
-    this.name = 'BomQueryUnavailableError';
+export class BomQueryError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'BomQueryError';
   }
 }
 
-/** 실제 조회 계약과 기준일을 확인하기 전에는 개발용 날짜를 실제 결과에 붙이지 않는다. */
-export const fetchBomExplosion = async (signal?: AbortSignal): Promise<BomDataset> => {
+const BOM_QUERY_TIMEOUT_MS = 90_000;
+const BOM_RESPONSE_ERROR = 'BOM 서버의 응답 형식이 올바르지 않습니다. 다시 시도해 주세요.';
+const bomText = (value: unknown) => String(value ?? '').trim();
+
+/** MES는 하위 레벨을 '.1', '..2'처럼 점으로 들여쓰기해 반환한다. */
+const parseBomLevel = (value: unknown): number | null => {
+  if (typeof value !== 'number' && typeof value !== 'string') return null;
+  const matched = /^\.*(\d+)$/.exec(String(value).trim());
+  if (!matched) return null;
+  const level = Number(matched[1]);
+  return Number.isSafeInteger(level) ? level : null;
+};
+
+const isBomRowResponse = (value: unknown): value is BomRowResponse => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const row = value as Record<string, unknown>;
+  return parseBomLevel(row.BomLevel) !== null &&
+    ['CdGItem', 'PrjCode', 'ItemCode'].every(key =>
+      key in row && (row[key] === null || typeof row[key] === 'string'),
+    ) && ['NmGItem', 'CdGItUp', 'NmGItUp', 'SzStand', 'Ingrdnt', 'SzSUnit', 'NmProcGB',
+      'PurType', 'NmCustmIn', 'NmEmplo'].every(key =>
+      row[key] === undefined || row[key] === null || typeof row[key] === 'string',
+    ) && ['BomID', 'PurchaseID'].every(key =>
+      row[key] === undefined || row[key] === null || typeof row[key] === 'number' || typeof row[key] === 'string',
+    );
+};
+
+const mapBomRow = (item: BomRowResponse, index: number): BomRow => ({
+  id: `${bomText(item.ItemCode)}-${bomText(item.CdGItem)}-${index}`,
+  level: parseBomLevel(item.BomLevel)!,
+  itemNo: bomText(item.CdGItem),
+  itemNm: bomText(item.NmGItem),
+  designBomNo: toOptionalNumber(item.BomID),
+  purchaseBomNo: toOptionalNumber(item.PurchaseID),
+  pjtCode: bomText(item.PrjCode),
+  productNo: bomText(item.ItemCode),
+  // 계약에 없는 제품명·자재 담당자에 다른 품목/담당자 정보를 대신 붙이지 않는다.
+  productNm: '',
+  parentItemNo: bomText(item.CdGItUp),
+  parentItemNm: bomText(item.NmGItUp),
+  spec: bomText(item.SzStand),
+  material: bomText(item.Ingrdnt),
+  unit: bomText(item.SzSUnit),
+  processGb: bomText(item.NmProcGB),
+  orderGb: bomText(item.PurType),
+  vendor: bomText(item.NmCustmIn),
+  buyer: bomText(item.NmEmplo),
+  materialManager: '',
+});
+
+/** 실제 MES 서버에서 적용일자·PJT·제품번호·발주구분 조건을 적용한다. */
+export const fetchBomExplosion = async (filter: BomFilter, signal?: AbortSignal): Promise<BomDataset> => {
   signal?.throwIfAborted();
-  if (USE_MOCK_DATA) {
+  if (USE_MOCK_BOM_DATA) {
     await delay(MOCK_LATENCY_MS);
     signal?.throwIfAborted();
     return DUMMY_BOM_DATASET;
   }
-  throw new BomQueryUnavailableError();
+
+  const params: Record<string, string> = {
+    AdaptDate: filter.applyDate.trim(),
+    PrjCode: filter.pjtCode.trim(),
+  };
+  if (filter.productNo.trim()) params.ItemCode = filter.productNo.trim();
+  if (filter.orderGb) params.PurType = filter.orderGb;
+
+  const controller = new AbortController();
+  const abort = () => controller.abort(signal?.reason);
+  signal?.addEventListener('abort', abort, { once: true });
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, BOM_QUERY_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(buildUrl(API_ENDPOINTS.BOM_EXPLOSION, params), {
+      method: 'GET',
+      credentials: 'omit',
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new BomQueryError(`BOM 서버에서 조회하지 못했습니다. (HTTP ${response.status}) 잠시 후 다시 시도해 주세요.`);
+    }
+    let data: unknown;
+    try {
+      data = await response.json();
+    } catch {
+      throw new BomQueryError(BOM_RESPONSE_ERROR);
+    }
+    signal?.throwIfAborted();
+    if (!Array.isArray(data) || !data.every(isBomRowResponse)) {
+      throw new BomQueryError(BOM_RESPONSE_ERROR);
+    }
+    return { baseDate: filter.applyDate.trim(), rows: data.map(mapBomRow) };
+  } catch (error) {
+    signal?.throwIfAborted();
+    if (timedOut) {
+      throw new BomQueryError('BOM 조회 응답 시간이 90초를 초과했습니다. 조건을 좁히거나 잠시 후 다시 시도해 주세요.');
+    }
+    if (error instanceof BomQueryError) throw error;
+    throw new BomQueryError('BOM 서버에 연결하지 못했습니다. 네트워크 연결을 확인하고 다시 시도해 주세요.');
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener('abort', abort);
+  }
 };
 
 /* ───────────────────────── 발주대상 ───────────────────────── */

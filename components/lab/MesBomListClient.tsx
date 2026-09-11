@@ -17,7 +17,7 @@ import {
 import {
   BOM_BASE_DATE,
   BOM_COLUMNS,
-  USE_MOCK_DATA,
+  USE_MOCK_BOM_DATA,
 } from '@/constants/lab';
 import DatePickerField from '@/components/common/date-picker/DatePickerField';
 import SelectField from '@/components/common/select/SelectField';
@@ -30,6 +30,7 @@ import {
   BOM_STICKY_OFFSETS,
   bomGridTemplate,
   formatNumber,
+  formatOptionalNumber,
   getLevelLabel,
 } from '@/utils/lab';
 import { FilterTextField } from './FilterField';
@@ -76,9 +77,9 @@ const getCellText = (row: BomRow, key: string): string => {
     case 'itemNm':
       return row.itemNm;
     case 'designBomNo':
-      return formatNumber(row.designBomNo);
+      return formatOptionalNumber(row.designBomNo);
     case 'purchaseBomNo':
-      return formatNumber(row.purchaseBomNo);
+      return formatOptionalNumber(row.purchaseBomNo);
     case 'pjtCode':
       return row.pjtCode;
     case 'productNo':
@@ -122,6 +123,7 @@ export default function MesBomListClient() {
   const template = bomGridTemplate;
 
   const hasRows = filteredRows.length > 0;
+  const showSummary = dataset !== null && !isLoading && !error;
   // 전체 MES CSV와 화면 목록은 원천·열이 달라 행 수만으로 중복 여부를 판단할 수 없다.
   const currentDownloadDisabled = download.isDownloading || isLoading || !!error || !hasRows || isDraftDirty;
   const currentDownloadHint = isDraftDirty
@@ -150,8 +152,8 @@ export default function MesBomListClient() {
               <Wrench size={22} />
             </TitleIcon>
             <div>
-              <span className="eyebrow">Lab · MES BOM{USE_MOCK_DATA ? ' · MOCK DATA' : ''}</span>
-              <h1>MES BOM LIST</h1>
+              <span className="eyebrow">Lab · MES BOM{USE_MOCK_BOM_DATA ? ' · MOCK DATA' : ''}</span>
+              <h1>MES BOM 리스트</h1>
               <p>MES 시스템 DB Link — BOM 정전개 전체 리스트</p>
             </div>
           </TitleGroup>
@@ -191,7 +193,7 @@ export default function MesBomListClient() {
           {download.phase === 'error' ? <AlertCircle size={16} /> : download.phase === 'complete' ? <CheckCircle2 size={16} /> : <Info size={16} />}
           <p>
             {downloadNotice ?? <>
-              {USE_MOCK_DATA ? <>화면 목록은 <strong>{BOM_BASE_DATE}</strong> 기준 개발용 데이터입니다.</> : <>목록 데이터 기준: <strong>{dataset?.baseDate ?? '-'}</strong>.</>}{' '}
+              {USE_MOCK_BOM_DATA ? <>화면 목록은 <strong>{BOM_BASE_DATE}</strong> 기준 개발용 데이터입니다.</> : <>목록 적용일자: <strong>{dataset?.baseDate ?? '-'}</strong>.</>}{' '}
               현재 조건은 화면 조회 결과를, 전체 리스트는 조건과 관계없이 MES 전체 원본을 저장하므로 열과 건수가 다를 수 있습니다.
             </>}
           </p>
@@ -211,7 +213,7 @@ export default function MesBomListClient() {
               <span>총 BOM 건수</span>
               <Table2 size={19} />
             </div>
-            <strong>{formatNumber(summary.totalRows)}</strong>
+            <strong>{showSummary ? formatNumber(summary.totalRows) : '-'}</strong>
           </MetricCard>
 
           <MetricCard $tone="info">
@@ -219,7 +221,7 @@ export default function MesBomListClient() {
               <span>고유 품목수</span>
               <Package size={19} />
             </div>
-            <strong>{formatNumber(summary.uniqueItems)}</strong>
+            <strong>{showSummary ? formatNumber(summary.uniqueItems) : '-'}</strong>
           </MetricCard>
 
           <MetricCard $tone="success">
@@ -227,7 +229,7 @@ export default function MesBomListClient() {
               <span>최대 LEVEL</span>
               <Layers size={19} />
             </div>
-            <strong>{formatNumber(summary.maxLevel)}</strong>
+            <strong>{showSummary ? formatNumber(summary.maxLevel) : '-'}</strong>
           </MetricCard>
 
           <MetricCard $tone="warning">
@@ -235,7 +237,7 @@ export default function MesBomListClient() {
               <span>거래처 수</span>
               <Users size={19} />
             </div>
-            <strong>{formatNumber(summary.vendorCount)}</strong>
+            <strong>{showSummary ? formatNumber(summary.vendorCount) : '-'}</strong>
           </MetricCard>
         </StatsGrid>
 
@@ -292,7 +294,7 @@ export default function MesBomListClient() {
           <BomFilterHelp id="bom-filter-help" $error={!!validationError} role={validationError ? 'alert' : 'status'}>
             {validationError ?? <>
               적용일자와 PJT코드는 필수입니다. 발주구분 공백은 전체를 조회합니다.{' '}
-              {USE_MOCK_DATA ? `개발용 목록은 ${BOM_BASE_DATE} 기준입니다.` : '실제 목록의 날짜별 조회 연결을 준비 중입니다.'}
+              {USE_MOCK_BOM_DATA ? `개발용 목록은 ${BOM_BASE_DATE} 기준입니다.` : '선택한 조건으로 MES BOM을 조회합니다.'}
               {appliedFilter && isDraftDirty && ' 변경한 조건은 조회 버튼을 눌러 적용해 주세요.'}
             </>}
           </BomFilterHelp>
@@ -313,7 +315,7 @@ export default function MesBomListClient() {
                 <Loader2 size={26} className="spin" />
               </div>
               <strong>데이터 조회 중...</strong>
-              <span>MES DB Link 에서 BOM 정전개를 불러오고 있습니다.</span>
+              <span>MES BOM을 불러오고 있습니다. 데이터가 많으면 1분 이상 걸릴 수 있습니다.</span>
             </StateBox>
           ) : error ? (
             <StateBox $tone="danger">
@@ -338,7 +340,7 @@ export default function MesBomListClient() {
                 <Search size={26} />
               </div>
               <strong>조회 결과가 없습니다</strong>
-              <span>{appliedFilter.applyDate !== dataset?.baseDate
+              <span>{USE_MOCK_BOM_DATA && appliedFilter.applyDate !== dataset?.baseDate
                 ? `선택한 적용일자의 데이터가 없습니다. 현재 목록의 기준일은 ${dataset?.baseDate ?? '-'}입니다.`
                 : 'PJT코드, 제품번호 또는 발주구분을 확인하고 다시 조회해 주세요.'}</span>
             </StateBox>
@@ -370,7 +372,7 @@ export default function MesBomListClient() {
                     {filteredRows.map((row, rowIndex) => (
                       <BodyRow key={row.id} $template={template} $even={rowIndex % 2 === 1}>
                         <StickyCell $left={BOM_STICKY_OFFSETS[0]} $align="center" $variant="body" $muted>
-                          <span>{rowIndex + 1}</span>
+                          <span>{formatNumber(rowIndex + 1)}</span>
                         </StickyCell>
 
                         <LevelCell
@@ -383,7 +385,7 @@ export default function MesBomListClient() {
                         </LevelCell>
 
                         {BOM_COLUMNS.slice(2).map((column, index) => {
-                          const text = getCellText(row, column.key);
+                          const text = getCellText(row, column.key) || '-';
                           const stickyIndex = index + 2;
                           const isSticky = column.sticky;
 

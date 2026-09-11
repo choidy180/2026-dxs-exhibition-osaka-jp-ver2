@@ -16,8 +16,8 @@ export type BomRow = {
   level: number;
   itemNo: string;
   itemNm: string;
-  designBomNo: number;
-  purchaseBomNo: number;
+  designBomNo: number | null;
+  purchaseBomNo: number | null;
   pjtCode: string;
   productNo: string;
   productNm: string;
@@ -124,25 +124,25 @@ export type MesTransferResult = {
 
 /* ───────────────────────── API 원본 응답 (연결 시 교체) ───────────────────────── */
 
+/** DX_API000053: https://gapi.dxsplatform.com/docs 의 MES 완제품 BOM 현황 계약 */
 export type BomRowResponse = {
-  LVL: number | string;
-  ITEM_NO: string;
-  ITEM_NM: string;
-  DESIGN_BOM_NO: number | string;
-  PUR_BOM_NO: number | string;
-  PJT_CD: string;
-  PROD_NO: string;
-  PROD_NM: string;
-  UP_ITEM_NO: string;
-  UP_ITEM_NM: string;
-  SPEC: string;
-  MATERIAL: string;
-  UNIT: string;
-  PROC_GB?: string;
-  ORDER_GB?: string;
-  VENDOR?: string;
-  BUYER?: string;
-  MAT_MGR?: string;
+  /** MES 들여쓰기 포함 문자열: '0', '.1', '..2' (숫자 레벨도 허용) */
+  BomLevel: number | string;
+  CdGItem: string | null;
+  NmGItem?: string | null;
+  BomID?: number | string | null;
+  PurchaseID?: number | string | null;
+  PrjCode: string | null;
+  ItemCode: string | null;
+  CdGItUp?: string | null;
+  NmGItUp?: string | null;
+  SzStand?: string | null;
+  Ingrdnt?: string | null;
+  SzSUnit?: string | null;
+  NmProcGB?: string | null;
+  PurType?: string | null;
+  NmCustmIn?: string | null;
+  NmEmplo?: string | null;
 };
 
 export type OrderTargetResponse = {

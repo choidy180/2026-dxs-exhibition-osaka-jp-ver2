@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { USE_MOCK_BOM_DATA } from '@/constants/lab';
 import type { BomDataset, BomFilter } from '@/types/lab';
 import {
   EMPTY_BOM_FILTER, filterBomRows, getBomSummary, normalizeBomFilter, validateBomFilter,
 } from '@/utils/lab';
-import { BomQueryUnavailableError, fetchBomExplosion } from '@/utils/lab-api';
+import { BomQueryError, fetchBomExplosion } from '@/utils/lab-api';
 
 export function useBomExplosion() {
   const [dataset, setDataset] = useState<BomDataset | null>(null);
@@ -34,14 +35,14 @@ export function useBomExplosion() {
     setError(null);
 
     try {
-      const result = await fetchBomExplosion(controller.signal);
+      const result = await fetchBomExplosion(normalized, controller.signal);
       if (controller.signal.aborted || controllerRef.current !== controller) return;
       setDataset(result);
       setAppliedFilter(normalized);
     } catch (caught) {
       if (controller.signal.aborted || controllerRef.current !== controller) return;
       setDataset(null);
-      setError(caught instanceof BomQueryUnavailableError
+      setError(caught instanceof BomQueryError
         ? caught.message
         : 'BOM 정전개 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
     } finally {
@@ -49,11 +50,13 @@ export function useBomExplosion() {
     }
   }, []);
 
-  /** 전체 데이터 기준 지표 — 필터와 무관하게 원본 규모를 보여준다 */
+  /** 실제 조회는 서버에서 조건을 적용하므로 응답 전체가 조회 결과다. */
   const summary = useMemo(() => getBomSummary(dataset?.rows ?? []), [dataset]);
 
   const filteredRows = useMemo(
-    () => dataset && appliedFilter ? filterBomRows(dataset.rows, appliedFilter, dataset.baseDate) : [],
+    () => dataset && appliedFilter
+      ? USE_MOCK_BOM_DATA ? filterBomRows(dataset.rows, appliedFilter, dataset.baseDate) : dataset.rows
+      : [],
     [appliedFilter, dataset],
   );
 

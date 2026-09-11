@@ -75,9 +75,9 @@ export const filterBomRows = (rows: BomRow[], filter: BomFilter, baseDate: strin
 
 export const getBomSummary = (rows: BomRow[]): BomSummary => ({
   totalRows: rows.length,
-  uniqueItems: new Set(rows.map(row => row.itemNo)).size,
+  uniqueItems: new Set(rows.map(row => row.itemNo.trim()).filter(Boolean)).size,
   maxLevel: rows.reduce((max, row) => Math.max(max, row.level), 0),
-  vendorCount: new Set(rows.map(row => row.vendor)).size,
+  vendorCount: new Set(rows.map(row => row.vendor.trim()).filter(Boolean)).size,
 });
 
 /** Level 열 표시 — 0·1 은 숫자만, 2 이상은 전개 표시를 붙인다 */

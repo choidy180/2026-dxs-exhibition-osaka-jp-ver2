@@ -1,7 +1,8 @@
 /**
  * 실험실 화면 설정
  *
- * API 가 준비되면 `NEXT_PUBLIC_LAB_USE_MOCK=false` 로 두면 실제 엔드포인트를 호출한다.
+ * BOM은 실제 API가 기본이며, 발주대상 화면은 기존 목업 기본값을 유지한다.
+ * `NEXT_PUBLIC_LAB_USE_MOCK=true` 를 명시하면 두 화면 모두 목업으로 동작한다.
  */
 
 import { getDxApiUrl } from '@/utils/dx-api';
@@ -10,7 +11,7 @@ export const getApiBaseUrl = () => getDxApiUrl('/api');
 
 export const API_ENDPOINTS = {
   /** MES DB Link — BOM 정전개 전체 리스트 */
-  BOM_EXPLOSION: '/DX_API000201',
+  BOM_EXPLOSION: '/DX_API000053',
   /** 전체 BOM CSV — 화면의 목업/조회 조건과 별개인 엑셀 다운로드용 */
   BOM_EXPORT: '/DX_API000053/export',
   /** 발주대상 산출 */
@@ -22,6 +23,9 @@ export const API_ENDPOINTS = {
 } as const;
 
 export const USE_MOCK_DATA = (process.env.NEXT_PUBLIC_LAB_USE_MOCK ?? 'true').toLowerCase() !== 'false';
+
+/** 실제 MES 목록을 기본으로 조회한다. 목업은 명시적으로 설정한 경우에만 사용한다. */
+export const USE_MOCK_BOM_DATA = (process.env.NEXT_PUBLIC_LAB_USE_MOCK ?? 'false').toLowerCase() === 'true';
 
 export const MOCK_LATENCY_MS = 460;
 
