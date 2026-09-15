@@ -17,7 +17,7 @@ import type {
   CctvMonitoringApiResponse,
   CctvMonitoringSnapshot,
 } from '@/types/cctv-monitoring';
-import { classifyCctvCamera } from '@/utils/cctv-monitoring';
+import { classifyCctvCamera, deriveCctvCameraIpAddress } from '@/utils/cctv-monitoring';
 
 let mockRevision = 0;
 
@@ -129,7 +129,7 @@ const mapApiCamera = (value: CctvCameraApiItem, index: number): CctvCamera => {
     name: toText(item.name) || '이름 미지정 카메라',
     ...classification,
     location: '-',
-    ipAddress: toIpAddress(item),
+    ipAddress: deriveCctvCameraIpAddress(toText(item.number)) ?? toIpAddress(item),
     status,
     thumbnailUrl: hasThumbnail ? toThumbnailProxyUrl(rawThumbnailUrl) : null,
     thumbnailVersion,
@@ -152,6 +152,7 @@ const buildMockSnapshot = (generatedAt: string): CctvMonitoringSnapshot => {
     revision: mockRevision,
     cameras: DUMMY_CCTV_CAMERAS.map(camera => ({
       ...camera,
+      ipAddress: deriveCctvCameraIpAddress(camera.code) ?? camera.ipAddress,
       thumbnailVersion: mockRevision,
       thumbnailUpdatedAt: generatedAt,
       lastSeenAt: camera.status === 'online' ? generatedAt : camera.lastSeenAt,

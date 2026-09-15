@@ -6,6 +6,28 @@ import type {
 
 const cameraCollator = new Intl.Collator('ko-KR', { numeric: true, sensitivity: 'base' });
 
+/** 표시용 목록 순서가 아닌 실제 카메라 번호로 사내 IP를 계산한다. */
+export const deriveCctvCameraIpAddress = (
+  number: string | null | undefined,
+): string | null => {
+  const label = (number ?? '').normalize('NFKC').trim();
+  const match = label.match(/^(\D*?)(\d+)\s*(?:번|호)?$/u);
+  if (!match) return null;
+
+  const cameraNumber = Number(match[2]);
+  const prefix = match[1].replace(/[\s_:.-]/gu, '');
+  const isPlateReader = /^(?:차번인식|차량번호인식|번호판인식)기?(?:카메라)?$/u.test(prefix);
+  // 차번인식기 1~9는 171~179로 만들고, 이미 171~179인 번호는 그대로 사용한다.
+  const lastOctet = isPlateReader && cameraNumber >= 1 && cameraNumber <= 9
+    ? Number(`17${cameraNumber}`)
+    : cameraNumber;
+
+  if (!Number.isInteger(lastOctet) || lastOctet < 1 || lastOctet > 254) return null;
+  if (isPlateReader && (lastOctet < 171 || lastOctet > 179)) return null;
+
+  return `192.168.200.${lastOctet}`;
+};
+
 const getBuildingGroup = (buildingId: CctvBuildingId): CctvCameraGroup => ({
   id: `building:${buildingId}`,
   label: `${buildingId}동`,

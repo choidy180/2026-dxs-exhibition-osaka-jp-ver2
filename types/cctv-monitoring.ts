@@ -33,7 +33,7 @@ export interface CctvCamera {
   /** API 번호에서 읽은 분류. 기존 목업은 buildingId로 그룹을 구한다. */
   group?: CctvCameraGroup;
   location: string;
-  /** 카메라 IP. API 가 주지 않으면 null 이며 화면에는 '-' 로 표시한다 */
+  /** 번호 규칙으로 계산한 카메라 IP. 계산할 수 없으면 API 값을 쓰고, 둘 다 없으면 null */
   ipAddress: string | null;
   status: CctvCameraStatus;
   thumbnailUrl: string | null;
