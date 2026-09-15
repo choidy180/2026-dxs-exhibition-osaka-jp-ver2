@@ -1167,14 +1167,17 @@ export const LiveFrame = styled.div`
   inset: 0;
   overflow: hidden;
   background: ${color.ink};
-  display: grid;
-  place-items: center;
 `;
 
 /** WHEP(WebRTC) 미디어 스트림을 재생하는 영상 요소 */
 export const LiveVideo = styled.video`
+  /* 원본 해상도가 레이아웃을 늘리지 않도록 모달의 영상 영역에 직접 맞춘다. */
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
+  min-width: 0;
+  min-height: 0;
   object-fit: contain;
   display: block;
   background: ${color.ink};
