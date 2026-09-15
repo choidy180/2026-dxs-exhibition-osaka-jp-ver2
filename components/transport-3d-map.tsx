@@ -2,15 +2,20 @@
 
 import React, { useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { ContactShadows, Html, Line, OrbitControls, RoundedBox } from "@react-three/drei";
+import { Html, Line, OrbitControls } from "@react-three/drei";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import * as THREE from "three";
 import styled from "styled-components";
 import type { VWorldMarker } from "@/components/vworld-map-dev";
 import MapAttribution from "@/components/transport-map/MapAttribution";
 import MapTileStatus from "@/components/transport-map/MapTileStatus";
+import GmtTruckModel from "@/components/transport-map/GmtTruckModel";
+import TruckModelStatus from "@/components/transport-map/TruckModelStatus";
+import { useGmtTruckModel } from "@/hooks/use-gmt-truck-model";
 import { useTransportMapTexture } from "@/hooks/use-transport-map-texture";
-import { color as mapColor } from "@/styles/design-tokens";
+import { VectorMapTextureSurface } from "@/components/transport-map/VectorMapTextureSurface";
+import { TRANSPORT_VECTOR_BASEMAP } from "@/constants/transport-basemap";
+import { color as mapColor, focusRing, font, fontSize, fontWeight, gridLayer, motion as transition, radius, shadow, space, tone } from "@/styles/design-tokens";
 
 type MarkerInfoMode = "hidden" | "all" | "selected" | "auto";
 
@@ -103,27 +108,6 @@ const ROUTE_CURVE = new THREE.CatmullRomCurve3(
   0.35
 );
 
-const random01 = (seed: number) => {
-  const value = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
-  return value - Math.floor(value);
-};
-
-const BUILDINGS = Array.from({ length: 180 }, (_, index) => {
-  const column = index % 20;
-  const row = Math.floor(index / 20);
-  const x = -24.4 + column * 2.55 + (random01(index + 2) - 0.5) * 0.42;
-  const z = -11.4 + row * 2.75 + (random01(index + 9) - 0.5) * 0.42;
-  const height = 0.35 + random01(index + 17) * 1.75;
-  const width = 0.78 + random01(index + 31) * 0.72;
-  const depth = 0.78 + random01(index + 47) * 0.72;
-  const distanceFromRoute = ROUTE_POINTS.reduce(
-    (minimum, point) => Math.min(minimum, Math.hypot(point.x - x, point.z - z)),
-    Number.POSITIVE_INFINITY
-  );
-  const visible = random01(index + 61) > 0.5 && distanceFromRoute > 1.05;
-  return { id: index, x, z, height, width, depth, visible };
-}).filter((building) => building.visible);
-
 const getMarkerRouteProgress = (marker: VWorldMarker) => {
   const progress = Math.max(0, Math.min(1, marker.progress ?? 0));
   const startsAtLg = (marker.startLat ?? marker.lat) > 35.18;
@@ -140,41 +124,25 @@ const getMarkerPoint = (marker: VWorldMarker) => {
 function GroundMap({ texture }: { texture: THREE.CanvasTexture | null }) {
   return (
     <group>
-      <mesh position={[0, -0.16, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <mesh position={[0, -0.16, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[WORLD_WIDTH, WORLD_DEPTH]} />
-        <meshStandardMaterial
+        {/* 지도 글자와 도로 색상은 조명·톤 매핑·안개에 바래지 않도록 유지한다. */}
+        <meshBasicMaterial
+          key={texture?.uuid ?? 'loading-map'}
           color={texture ? mapColor.surface : mapColor.fill}
           map={texture}
-          roughness={0.96}
-          metalness={0}
+          toneMapped={false}
+          fog={false}
         />
+      </mesh>
+      <mesh position={[0, -0.155, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[WORLD_WIDTH, WORLD_DEPTH]} />
+        <shadowMaterial color={mapColor.ink3} opacity={0.18} depthWrite={false} toneMapped={false} fog={false} />
       </mesh>
       <mesh position={[0, -0.35, 0]} receiveShadow>
         <boxGeometry args={[WORLD_WIDTH + 0.6, 0.34, WORLD_DEPTH + 0.6]} />
-        <meshStandardMaterial color={mapColor.borderStrong} roughness={1} />
+        <meshStandardMaterial color={mapColor.fill} roughness={1} />
       </mesh>
-    </group>
-  );
-}
-
-function CityBlocks() {
-  return (
-    <group>
-      {BUILDINGS.map((building, index) => {
-        const palette = [mapColor.surface, mapColor.fill, mapColor.borderSoft, mapColor.border, mapColor.borderStrong];
-        const color = palette[index % palette.length];
-        return (
-          <mesh
-            key={building.id}
-            position={[building.x, building.height / 2, building.z]}
-            castShadow
-            receiveShadow
-          >
-            <boxGeometry args={[building.width, building.height, building.depth]} />
-            <meshStandardMaterial color={color} roughness={0.8} metalness={0.04} />
-          </mesh>
-        );
-      })}
     </group>
   );
 }
@@ -189,29 +157,37 @@ function RouteLayer() {
     <group>
       <Line
         points={routeLinePoints}
-        color="#ffffff"
+        color={mapColor.surface}
         lineWidth={9}
+        renderOrder={1}
+        depthWrite={false}
         transparent
         opacity={0.92}
       />
       <Line
         points={routeLinePoints}
-        color="#0f172a"
+        color={mapColor.ink}
         lineWidth={6}
+        renderOrder={2}
+        depthWrite={false}
         transparent
         opacity={0.84}
       />
       <Line
         points={routeLinePoints}
-        color="#38bdf8"
+        color={tone.info.fg}
         lineWidth={2.6}
+        renderOrder={3}
+        depthWrite={false}
         transparent
         opacity={0.98}
       />
       <Line
         points={routeLinePoints}
-        color="#e0f2fe"
+        color={tone.info.bg}
         lineWidth={1}
+        renderOrder={4}
+        depthWrite={false}
         dashed
         dashSize={0.35}
         gapSize={0.28}
@@ -220,59 +196,59 @@ function RouteLayer() {
   );
 }
 
+type FacilityKind = 'lg' | 'gmt';
+
+const FACILITY_PALETTE = {
+  lg: { background: mapColor.surface, accent: mapColor.brand, border: mapColor.brandBorder, text: mapColor.ink, code: mapColor.brand },
+  gmt: { background: mapColor.brand, accent: mapColor.ink, border: mapColor.ink, text: mapColor.surface, code: mapColor.surface },
+} as const;
+
 interface FacilityProps {
   point: THREE.Vector3;
-  name: string;
   shortName: string;
-  color: string;
+  kind: FacilityKind;
 }
 
-function Facility({ point, name, shortName, color }: FacilityProps) {
+function Facility({ point, shortName, kind }: FacilityProps) {
+  const palette = FACILITY_PALETTE[kind];
   return (
     <group position={[point.x, 0, point.z]}>
       <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[1.2, 1.58, 48]} />
-        <meshBasicMaterial color={color} transparent opacity={0.28} />
+        <meshBasicMaterial color={palette.accent} transparent opacity={0.55} depthWrite={false} />
       </mesh>
-      <RoundedBox args={[2.5, 1.3, 1.8]} radius={0.18} smoothness={4} position={[0, 0.7, 0]} castShadow>
-        <meshStandardMaterial color="#ffffff" roughness={0.55} />
-      </RoundedBox>
-      <RoundedBox args={[1.1, 1.42, 1.92]} radius={0.16} smoothness={4} position={[0.25, 0.8, 0]} castShadow>
-        <meshStandardMaterial color={color} roughness={0.44} />
-      </RoundedBox>
-      <mesh position={[0.25, 1.76, 0]} castShadow>
-        <cylinderGeometry args={[0.08, 0.08, 0.72, 14]} />
-        <meshStandardMaterial color="#475569" />
+      <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[1.2, 48]} />
+        <meshBasicMaterial color={palette.background} transparent opacity={0.9} depthWrite={false} />
       </mesh>
-      <mesh position={[0.25, 2.15, 0]}>
-        <sphereGeometry args={[0.13, 18, 18]} />
-        <meshBasicMaterial color="#22c55e" />
+      <mesh position={[0, 0.22, 0]}>
+        <sphereGeometry args={[0.2, 18, 18]} />
+        <meshBasicMaterial color={palette.accent} />
       </mesh>
-      <Html position={[0, 2.72, 0]} center style={{ pointerEvents: "none" }}>
-        <div className="transport-3d-facility-label">
-          <span style={{ background: color }}>{shortName}</span>
-          <strong>{name}</strong>
-        </div>
+      <Html position={[0, 0.9, 0]} center style={{ pointerEvents: "none" }}>
+        <FacilityLabel $kind={kind} className="transport-3d-facility-label">
+          <FacilityCode $kind={kind}>{shortName}</FacilityCode>
+        </FacilityLabel>
       </Html>
     </group>
   );
 }
 
 interface Vehicle3DProps {
+  model: THREE.Group | null;
   marker: VWorldMarker;
   showInfo: boolean;
   selected: boolean;
   onMarkerClick?: (marker: VWorldMarker) => void;
 }
 
-function Vehicle3D({ marker, showInfo, selected, onMarkerClick }: Vehicle3DProps) {
+function Vehicle3D({ model, marker, showInfo, selected, onMarkerClick }: Vehicle3DProps) {
   const pulseRef = useRef<THREE.Mesh>(null);
   const progress = getMarkerRouteProgress(marker);
   const point = ROUTE_CURVE.getPointAt(progress);
   const tangent = ROUTE_CURVE.getTangentAt(progress);
-  const rotationY = Math.atan2(tangent.x, tangent.z);
   const startsAtLg = (marker.startLat ?? marker.lat) > 35.18;
-  const color = startsAtLg ? "#ce0037" : "#0f172a";
+  const rotationY = Math.atan2(tangent.x, tangent.z) + (startsAtLg ? 0 : Math.PI);
   const progressPct = Math.round(Math.max(0, Math.min(1, marker.progress ?? 0)) * 100);
 
   useFrame(({ clock }) => {
@@ -292,33 +268,14 @@ function Vehicle3D({ marker, showInfo, selected, onMarkerClick }: Vehicle3DProps
     >
       {selected && (
         <mesh ref={pulseRef} position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.7, 0.94, 36]} />
-          <meshBasicMaterial color="#22c55e" transparent opacity={0.48} depthWrite={false} />
+          <ringGeometry args={[0.55, 0.63, 48]} />
+          <meshBasicMaterial color={tone.success.fg} transparent opacity={0.48} depthWrite={false} />
         </mesh>
       )}
-      <group position={[0, 0.46, 0]}>
-        <RoundedBox args={[0.92, 0.66, 1.7]} radius={0.16} smoothness={4} castShadow>
-          <meshStandardMaterial color={color} roughness={0.36} metalness={0.1} />
-        </RoundedBox>
-        <RoundedBox args={[0.96, 0.72, 0.7]} radius={0.14} smoothness={4} position={[0, 0.03, 0.78]} castShadow>
-          <meshStandardMaterial color="#f8fafc" roughness={0.3} metalness={0.08} />
-        </RoundedBox>
-        <mesh position={[0, 0.17, 1.14]} rotation={[Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[0.62, 0.28]} />
-          <meshStandardMaterial color="#93c5fd" roughness={0.15} metalness={0.2} />
-        </mesh>
-        {[-0.49, 0.49].map((wheelX) =>
-          [-0.52, 0.58].map((wheelZ) => (
-            <mesh key={`${wheelX}-${wheelZ}`} position={[wheelX, -0.3, wheelZ]} rotation={[0, 0, Math.PI / 2]}>
-              <cylinderGeometry args={[0.18, 0.18, 0.12, 16]} />
-              <meshStandardMaterial color="#111827" roughness={0.9} />
-            </mesh>
-          ))
-        )}
-      </group>
+      <GmtTruckModel model={model} />
 
       {showInfo && (
-        <Html position={[0, 2.45, 0]} center style={{ pointerEvents: "auto" }}>
+        <Html position={[0, 1.35, 0]} center style={{ pointerEvents: "auto" }}>
           <button
             type="button"
             className={`transport-3d-vehicle-label${selected ? " is-selected" : ""}`}
@@ -330,7 +287,7 @@ function Vehicle3D({ marker, showInfo, selected, onMarkerClick }: Vehicle3DProps
             <span className="status-dot" />
             <span className="copy">
               <strong>{marker.vehicleNo || marker.title || "차량"}</strong>
-              <small>{marker.driver || "기사 미지정"} · {progressPct}%</small>
+              <small>{marker.driver || "기사 미지정"} · {progressPct.toLocaleString('ko-KR')}%</small>
             </span>
             <span className="eta">{marker.eta || "이동 중"}</span>
           </button>
@@ -370,12 +327,13 @@ function CameraRig({ focusPoint, controlsRef }: CameraRigProps) {
 
 function Scene({
   texture,
+  truckModel,
   markers,
   focusedTitle,
   markerInfoMode,
   selectedMarkerIds,
   onMarkerClick,
-}: { texture: THREE.CanvasTexture | null } & Required<Pick<Transport3DMapProps, "markers" | "markerInfoMode" | "selectedMarkerIds">> &
+}: { texture: THREE.CanvasTexture | null; truckModel: THREE.Group | null } & Required<Pick<Transport3DMapProps, "markers" | "markerInfoMode" | "selectedMarkerIds">> &
   Pick<Transport3DMapProps, "focusedTitle" | "onMarkerClick">) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const cars = markers.filter((marker) => !marker.isFacility);
@@ -396,7 +354,7 @@ function Scene({
   return (
     <>
       <color attach="background" args={[mapColor.surfaceSubtle]} />
-      <fog attach="fog" args={[mapColor.surfaceSubtle, 38, 78]} />
+      <fog attach="fog" args={[mapColor.surfaceSubtle, 70, 120]} />
       <ambientLight color={mapColor.surface} intensity={1.15} />
       <hemisphereLight args={[mapColor.surface, mapColor.borderStrong, 1.0]} />
       <directionalLight
@@ -404,6 +362,8 @@ function Scene({
         intensity={1.75}
         color={mapColor.surface}
         castShadow
+        shadow-bias={-0.0002}
+        shadow-normalBias={0.025}
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
         shadow-camera-left={-30}
@@ -413,10 +373,9 @@ function Scene({
       />
 
       <GroundMap texture={texture} />
-      <CityBlocks />
       <RouteLayer />
-      <Facility point={ROUTE_CURVE.getPointAt(0)} name="LG전자" shortName="LG" color="#ce0037" />
-      <Facility point={ROUTE_CURVE.getPointAt(1)} name="고모텍 부산" shortName="GMT" color="#2563eb" />
+      <Facility point={ROUTE_CURVE.getPointAt(0)} shortName="LG" kind="lg" />
+      <Facility point={ROUTE_CURVE.getPointAt(1)} shortName="GMT" kind="gmt" />
 
       {cars.map((marker, index) => {
         const markerId = String(marker.id || index);
@@ -424,6 +383,7 @@ function Scene({
         return (
           <Vehicle3D
             key={markerId}
+            model={truckModel}
             marker={marker}
             showInfo={showInfo}
             selected={selectedSet.has(markerId) || showInfo}
@@ -432,22 +392,13 @@ function Scene({
         );
       })}
 
-      <ContactShadows
-        position={[0, -0.1, 0]}
-        opacity={0.14}
-        scale={62}
-        blur={2.4}
-        far={8}
-        resolution={512}
-        color={mapColor.ink3}
-      />
       <CameraRig focusPoint={focusPoint} controlsRef={controlsRef} />
       <OrbitControls
         ref={controlsRef}
         makeDefault
         enableDamping
         dampingFactor={0.08}
-        minDistance={12}
+        minDistance={6}
         maxDistance={58}
         minPolarAngle={0.48}
         maxPolarAngle={1.34}
@@ -468,12 +419,14 @@ export default function Transport3DMap({
   onMarkerClick,
   onMapBlankClick,
 }: Transport3DMapProps) {
-  const { texture, status, retry } = useTransportMapTexture({ zoom: TILE_ZOOM, tileSize: TILE_SIZE, ...TILE_RANGE });
+  const { texture, status, retry, surfaceRef, surfaceSize } = useTransportMapTexture({ zoom: TILE_ZOOM, tileSize: TILE_SIZE, ...TILE_RANGE });
+  const { model: truckModel, status: truckStatus, retry: retryTruck } = useGmtTruckModel();
 
   return (
     <MapContainer className="transport-3d-map">
+      <VectorMapTextureSurface targetRef={surfaceRef} {...surfaceSize} />
       <Canvas
-        dpr={[1, 1.5]}
+        dpr={[1, 2]}
         shadows
         camera={{ position: [2, 24, 31], fov: 36, near: 0.1, far: 120 }}
         gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
@@ -481,6 +434,7 @@ export default function Transport3DMap({
       >
         <Scene
           texture={texture}
+          truckModel={truckModel}
           markers={markers}
           focusedTitle={focusedTitle}
           markerInfoMode={markerInfoMode}
@@ -500,153 +454,30 @@ export default function Transport3DMap({
         드래그 회전 · 휠 줌 · 우클릭 이동
       </div>
       <MapTileStatus status={status} onRetry={retry} />
-      <MapAttribution />
+      {markers.some(marker => !marker.isFacility) && <TruckModelStatus status={truckStatus} onRetry={retryTruck} />}
+      <MapAttribution sources={TRANSPORT_VECTOR_BASEMAP.attributions} />
 
-      <style jsx global>{`
-        .transport-3d-map canvas {
-          display: block;
-          outline: none;
-        }
-        .transport-3d-status {
-          position: absolute;
-          left: 24px;
-          top: 20px;
-          z-index: 2;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          color: #0f172a;
-          border: 1px solid rgba(255,255,255,.76);
-          background: rgba(255,255,255,.72);
-          box-shadow: 0 10px 26px rgba(15,23,42,.12);
-          backdrop-filter: blur(12px);
-          border-radius: 14px;
-          padding: 9px 12px;
-          pointer-events: none;
-        }
-        .transport-3d-status .live-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: #22c55e;
-          box-shadow: 0 0 0 5px rgba(34,197,94,.14);
-        }
-        .transport-3d-status strong,
-        .transport-3d-status small {
-          display: block;
-          white-space: nowrap;
-        }
-        .transport-3d-status strong {
-          font-size: 11px;
-          letter-spacing: .12em;
-        }
-        .transport-3d-status small {
-          margin-top: 2px;
-          color: #64748b;
-          font-size: 10px;
-          font-weight: 700;
-        }
-        .transport-3d-help {
-          position: absolute;
-          z-index: 2;
-          bottom: 18px;
-          color: #475569;
-          background: rgba(255,255,255,.7);
-          border: 1px solid rgba(255,255,255,.78);
-          backdrop-filter: blur(10px);
-          border-radius: 999px;
-          padding: 6px 10px;
-          font-size: 10px;
-          font-weight: 700;
-          pointer-events: none;
-        }
-        .transport-3d-help { left: 24px; }
-        .transport-3d-facility-label {
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          border: 1px solid rgba(226,232,240,.92);
-          background: rgba(255,255,255,.94);
-          box-shadow: 0 8px 22px rgba(15,23,42,.16);
-          border-radius: 999px;
-          padding: 5px 9px 5px 5px;
-          color: #0f172a;
-          white-space: nowrap;
-        }
-        .transport-3d-facility-label span {
-          display: grid;
-          place-items: center;
-          min-width: 31px;
-          height: 25px;
-          padding: 0 5px;
-          border-radius: 999px;
-          color: white;
-          font-size: 10px;
-          font-weight: 800;
-        }
-        .transport-3d-facility-label strong {
-          font-size: 11px;
-          font-weight: 800;
-        }
-        .transport-3d-vehicle-label {
-          min-width: 178px;
-          display: grid;
-          grid-template-columns: 8px 1fr auto;
-          align-items: center;
-          gap: 8px;
-          border: 1px solid rgba(226,232,240,.96);
-          background: rgba(255,255,255,.95);
-          box-shadow: 0 9px 24px rgba(15,23,42,.16);
-          border-radius: 15px;
-          padding: 9px 10px;
-          color: #0f172a;
-          text-align: left;
-          font-family: inherit;
-          cursor: pointer;
-          white-space: nowrap;
-        }
-        .transport-3d-vehicle-label:hover,
-        .transport-3d-vehicle-label.is-selected {
-          border-color: #94a3b8;
-          transform: translateY(-1px);
-        }
-        .transport-3d-vehicle-label .status-dot {
-          width: 7px;
-          height: 7px;
-          border-radius: 50%;
-          background: #22c55e;
-          box-shadow: 0 0 0 4px rgba(34,197,94,.12);
-        }
-        .transport-3d-vehicle-label .copy {
-          display: block;
-          min-width: 0;
-        }
-        .transport-3d-vehicle-label strong,
-        .transport-3d-vehicle-label small {
-          display: block;
-        }
-        .transport-3d-vehicle-label strong {
-          font-size: 12px;
-          font-weight: 800;
-        }
-        .transport-3d-vehicle-label small {
-          margin-top: 2px;
-          color: #64748b;
-          font-size: 9px;
-          font-weight: 700;
-        }
-        .transport-3d-vehicle-label .eta {
-          color: #0369a1;
-          background: #e0f2fe;
-          border-radius: 999px;
-          padding: 4px 6px;
-          font-size: 9px;
-          font-weight: 800;
-        }
-      `}</style>
     </MapContainer>
   );
 }
+
+const FacilityLabel = styled.div<{ $kind: FacilityKind }>`
+  display: flex;
+  align-items: center;
+  padding: ${space.md}px ${space.xl}px;
+  border: 1px solid ${({ $kind }) => FACILITY_PALETTE[$kind].border};
+  border-radius: ${radius.card}px;
+  background: ${({ $kind }) => FACILITY_PALETTE[$kind].background};
+  color: ${({ $kind }) => FACILITY_PALETTE[$kind].text};
+  box-shadow: ${shadow.popover};
+  white-space: nowrap;
+`;
+
+const FacilityCode = styled.span<{ $kind: FacilityKind }>`
+  color: ${({ $kind }) => FACILITY_PALETTE[$kind].code};
+  font-size: ${fontSize.meta};
+  font-weight: ${fontWeight.semibold};
+`;
 
 const MapContainer = styled.div`
   position: relative;
@@ -654,4 +485,121 @@ const MapContainer = styled.div`
   height: 100%;
   overflow: hidden;
   background: ${mapColor.surfaceSubtle};
+  font-family: ${font.family};
+  *, *::before, *::after { font-family: inherit; }
+  canvas { display: block; }
+  canvas:focus-visible { outline: ${focusRing}; outline-offset: -3px; }
+  .transport-3d-status {
+    position: absolute;
+    left: ${space.huge + space.xs}px;
+    top: ${space.huge}px;
+    z-index: ${gridLayer.stickyColumn};
+    display: flex;
+    align-items: center;
+    gap: ${space.lg}px;
+    color: ${mapColor.ink};
+    border: 1px solid ${mapColor.border};
+    background: color-mix(in srgb, ${mapColor.surface} 72%, transparent);
+    box-shadow: ${shadow.popover};
+    backdrop-filter: blur(12px);
+    border-radius: ${radius.card}px;
+    padding: ${space.lg}px ${space.xl}px;
+    pointer-events: none;
+  }
+  .transport-3d-status .live-dot {
+    width: ${space.md}px;
+    height: ${space.md}px;
+    border-radius: ${radius.pill}px;
+    background: ${mapColor.live};
+    border: 1px solid ${tone.success.border};
+  }
+  .transport-3d-status strong,
+  .transport-3d-status small {
+    display: block;
+    white-space: nowrap;
+    font-weight: ${fontWeight.semibold};
+  }
+  .transport-3d-status strong {
+    font-size: ${fontSize.caption};
+    letter-spacing: .12em;
+  }
+  .transport-3d-status small {
+    margin-top: ${space.xs}px;
+    color: ${mapColor.ink3};
+    font-size: ${fontSize.caption};
+  }
+  .transport-3d-help {
+    position: absolute;
+    left: ${space.huge + space.xs}px;
+    bottom: ${space.xl + space.sm}px;
+    z-index: ${gridLayer.stickyColumn};
+    color: ${mapColor.ink2};
+    background: color-mix(in srgb, ${mapColor.surface} 70%, transparent);
+    border: 1px solid ${mapColor.border};
+    backdrop-filter: blur(10px);
+    border-radius: ${radius.control}px;
+    padding: ${space.sm}px ${space.lg}px;
+    font-size: ${fontSize.caption};
+    font-weight: ${fontWeight.semibold};
+    pointer-events: none;
+  }
+  .transport-3d-vehicle-label {
+    min-width: 178px;
+    display: grid;
+    grid-template-columns: ${space.md}px 1fr auto;
+    align-items: center;
+    gap: ${space.md}px;
+    border: 1px solid ${mapColor.border};
+    background: color-mix(in srgb, ${mapColor.surface} 95%, transparent);
+    box-shadow: ${shadow.popover};
+    border-radius: ${radius.control}px;
+    padding: ${space.md}px ${space.lg}px;
+    color: ${mapColor.ink};
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background ${transition.hover}, border-color ${transition.hover}, transform ${transition.hover};
+  }
+  .transport-3d-vehicle-label:hover {
+    background: ${mapColor.surfaceSubtle};
+    border-color: ${mapColor.borderStrong};
+    transform: translateY(-1px);
+  }
+  .transport-3d-vehicle-label.is-selected {
+    background: ${tone.info.bg};
+    border-color: ${tone.info.border};
+  }
+  .transport-3d-vehicle-label:focus-visible {
+    outline: ${focusRing};
+    outline-offset: 3px;
+  }
+  .transport-3d-vehicle-label .status-dot {
+    width: ${space.md}px;
+    height: ${space.md}px;
+    border-radius: ${radius.pill}px;
+    background: ${mapColor.live};
+    border: 1px solid ${tone.success.border};
+  }
+  .transport-3d-vehicle-label .copy { display: block; min-width: 0; }
+  .transport-3d-vehicle-label strong,
+  .transport-3d-vehicle-label small {
+    display: block;
+    font-weight: ${fontWeight.semibold};
+  }
+  .transport-3d-vehicle-label strong { font-size: ${fontSize.micro}; }
+  .transport-3d-vehicle-label small {
+    margin-top: ${space.xs}px;
+    color: ${mapColor.ink3};
+    font-size: ${fontSize.caption};
+  }
+  .transport-3d-vehicle-label .eta {
+    color: ${tone.info.fg};
+    background: ${tone.info.bg};
+    border: 1px solid ${tone.info.border};
+    border-radius: ${radius.row}px;
+    padding: ${space.xs}px ${space.sm}px;
+    font-size: ${fontSize.caption};
+    font-weight: ${fontWeight.semibold};
+  }
 `;

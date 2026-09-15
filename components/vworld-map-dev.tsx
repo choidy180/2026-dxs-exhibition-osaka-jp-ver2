@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import Map from "ol/Map";
 import View from "ol/View";
 import VectorTileLayer from "ol/layer/VectorTile";
@@ -58,7 +58,11 @@ interface VWorldMapProps {
   selectedMarkerIds?: string[];
   onMarkerClick?: (marker: VWorldMarker) => void;
   onMapBlankClick?: () => void;
+  viewPadding?: [number, number, number, number];
+  focusOnSelection?: boolean;
 }
+
+const DEFAULT_VIEW_PADDING: [number, number, number, number] = [110, 430, 190, 430];
 
 const escapeHtml = (value: unknown) => String(value ?? '')
   .replace(/&/g, '&amp;')
@@ -133,8 +137,11 @@ export default function VWorldMap({
   selectedMarkerIds = [],
   onMarkerClick,
   onMapBlankClick,
+  viewPadding = DEFAULT_VIEW_PADDING,
+  focusOnSelection = false,
 }: VWorldMapProps) {
   const basemap = useTransportBasemap();
+  const [paddingTop, paddingRight, paddingBottom, paddingLeft] = viewPadding;
   const mapElement = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const routeSourceRef = useRef<VectorSource<Feature<Geometry>> | null>(null);
@@ -157,7 +164,7 @@ export default function VWorldMap({
     onMapBlankClickRef.current = onMapBlankClick;
   }, [onMapBlankClick]);
 
-  const getMarkerCoordinate = (marker: VWorldMarker): Coordinate => {
+  const getMarkerCoordinate = useCallback((marker: VWorldMarker): Coordinate => {
     const routeGeom = routeGeomRef.current;
     if (routeGeom && typeof marker.progress === 'number') {
       const progress = Math.max(0, Math.min(1, marker.progress));
@@ -165,9 +172,9 @@ export default function VWorldMap({
       return isLgStart ? routeGeom.getCoordinateAt(progress) : routeGeom.getCoordinateAt(1 - progress);
     }
     return fromLonLat([marker.lng, marker.lat]);
-  };
+  }, []);
 
-  const focusMarkerOnMap = (marker: VWorldMarker) => {
+  const focusMarkerOnMap = useCallback((marker: VWorldMarker) => {
     const map = mapRef.current;
     if (!map) return;
 
@@ -181,7 +188,7 @@ export default function VWorldMap({
       zoom: Math.max(currentZoom, 11),
       duration: 380,
     });
-  };
+  }, [getMarkerCoordinate]);
 
   const markNextClickSuppressed = () => {
     suppressNextClickRef.current = true;
@@ -340,9 +347,6 @@ export default function VWorldMap({
     ]);
     routeSource.addFeature(routeFeature);
 
-    const extent = boundingExtent(projectedCoords);
-    map.getView().fit(extent, { padding: [110, 430, 190, 430], duration: 1000, maxZoom: 12 });
-
     if (onEtaUpdate) onEtaUpdate({ toBusan: 2400, toLG: 2400 });
 
     return () => {
@@ -354,6 +358,37 @@ export default function VWorldMap({
       markerHitSourceRef.current = null;
     };
   }, [basemap.source]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const routeGeom = routeGeomRef.current;
+    if (!map || !routeGeom) return;
+
+    let hasFitted = false;
+    const fitInitialRoute = () => {
+      if (hasFitted) return;
+      const size = map.getSize();
+      if (!size || size[0] <= 0 || size[1] <= 0) return;
+
+      // 좁은 패널에서도 여백이 지도 전체를 차지하지 않도록 축별로 비율을 줄인다.
+      const padding = [paddingTop, paddingRight, paddingBottom, paddingLeft]
+        .map(value => Number.isFinite(value) ? Math.max(0, value) : 0);
+      const horizontalScale = Math.min(1, (size[0] * 0.8) / (padding[1] + padding[3] || 1));
+      const verticalScale = Math.min(1, (size[1] * 0.8) / (padding[0] + padding[2] || 1));
+      map.getView().fit(boundingExtent(routeGeom.getCoordinates()), {
+        size,
+        padding: [padding[0] * verticalScale, padding[1] * horizontalScale, padding[2] * verticalScale, padding[3] * horizontalScale],
+        duration: 1000,
+        maxZoom: 12,
+      });
+      hasFitted = true;
+    };
+
+    // OpenLayers의 크기 관측을 이용해 최초 유효 크기를 기다리고, 이후 사용자 시점은 유지한다.
+    map.on('change:size', fitInitialRoute);
+    fitInitialRoute();
+    return () => map.un('change:size', fitInitialRoute);
+  }, [basemap.source, paddingTop, paddingRight, paddingBottom, paddingLeft]);
 
   useEffect(() => {
     const remainingRouteSource = remainingRouteSourceRef.current;
@@ -615,6 +650,13 @@ export default function VWorldMap({
       }
     });
   }, [markers, markerInfoMode, selectedMarkerIds, focusedTitle]);
+
+  useEffect(() => {
+    if (!focusOnSelection || !focusedTitle) return;
+    // 차량 좌표 갱신은 따라가지 않고 선택이 바뀔 때만 시점을 이동한다.
+    const marker = markerStoreRef.current.get(String(focusedTitle));
+    if (marker) focusMarkerOnMap(marker);
+  }, [focusOnSelection, focusedTitle, focusMarkerOnMap]);
 
   return (
     <>
