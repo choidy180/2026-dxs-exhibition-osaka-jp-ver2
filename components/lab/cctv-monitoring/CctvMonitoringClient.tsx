@@ -23,7 +23,6 @@ import {
   X,
 } from 'lucide-react';
 import {
-  CCTV_BUILDINGS,
   CCTV_STATUS_LABEL,
   THUMBNAIL_REFRESH_MS,
   USE_MOCK_DATA,
@@ -31,9 +30,10 @@ import {
   formatRemainingTime,
 } from '@/constants/cctv-monitoring';
 import { useCctvMonitoring } from '@/hooks/use-cctv-monitoring';
+import { getCctvCameraGroup, groupCctvCameras } from '@/utils/cctv-monitoring';
 import type {
-  CctvBuildingId,
   CctvCamera,
+  CctvCameraGroup,
   CctvCameraStatus,
 } from '@/types/cctv-monitoring';
 import type { ToneName } from '@/styles/design-tokens';
@@ -104,9 +104,7 @@ import {
 
 type ViewMode = 'list' | 'card';
 
-interface BuildingGroup {
-  id: CctvBuildingId;
-  label: string;
+interface CameraGroup extends CctvCameraGroup {
   cameras: CctvCamera[];
   onlineCount: number;
 }
@@ -144,9 +142,6 @@ const formatDateTime = (value: string | null): string => {
   return `${datePart} ${formatTime(value)}`;
 };
 
-const getBuildingLabel = (buildingId: CctvBuildingId) =>
-  CCTV_BUILDINGS.find(building => building.id === buildingId)?.label ?? '-';
-
 function CameraStatusBadge({ status }: { status: CctvCameraStatus }) {
   return (
     <StatusBadge $tone={STATUS_TONE[status]}>
@@ -156,14 +151,14 @@ function CameraStatusBadge({ status }: { status: CctvCameraStatus }) {
   );
 }
 
-interface BuildingToggleProps {
-  group: BuildingGroup;
+interface GroupToggleProps {
+  group: CameraGroup;
   collapsed: boolean;
-  onToggle: (buildingId: CctvBuildingId) => void;
+  onToggle: (groupId: string) => void;
   card?: boolean;
 }
 
-function BuildingToggle({ group, collapsed, onToggle, card = false }: BuildingToggleProps) {
+function GroupToggle({ group, collapsed, onToggle, card = false }: GroupToggleProps) {
   const HeaderComponent = card ? CardSectionHeader : BuildingHeader;
 
   return (
@@ -171,11 +166,13 @@ function BuildingToggle({ group, collapsed, onToggle, card = false }: BuildingTo
       type="button"
       onClick={() => onToggle(group.id)}
       aria-expanded={!collapsed}
-      aria-controls={`${card ? 'card' : 'list'}-building-${group.id}`}
+      aria-controls={`${card ? 'card' : 'list'}-group-${encodeURIComponent(group.id)}`}
     >
       <BuildingIdentity>
         {collapsed ? <ChevronRight size={16} aria-hidden="true" /> : <ChevronDown size={16} aria-hidden="true" />}
-        <Building2 size={17} aria-hidden="true" />
+        {group.kind === 'building'
+          ? <Building2 size={17} aria-hidden="true" />
+          : <Cctv size={17} aria-hidden="true" />}
         <strong>{group.label}</strong>
       </BuildingIdentity>
       <BuildingCounts>
@@ -245,20 +242,20 @@ function CameraViewer({ camera, revision, onExpand }: CameraViewerProps) {
 }
 
 interface CameraListProps {
-  groups: BuildingGroup[];
-  collapsedBuildings: Set<CctvBuildingId>;
+  groups: CameraGroup[];
+  collapsedGroups: Set<string>;
   selectedCameraId: string | null;
   revision: number;
-  onToggleBuilding: (buildingId: CctvBuildingId) => void;
+  onToggleGroup: (groupId: string) => void;
   onSelect: (camera: CctvCamera) => void;
 }
 
 function CameraList({
   groups,
-  collapsedBuildings,
+  collapsedGroups,
   selectedCameraId,
   revision,
-  onToggleBuilding,
+  onToggleGroup,
   onSelect,
 }: CameraListProps) {
   const totalCount = groups.reduce((sum, group) => sum + group.cameras.length, 0);
@@ -268,24 +265,24 @@ function CameraList({
       <PanelHeader>
         <div className="title">
           <List size={19} aria-hidden="true" />
-          <h2>동별 CCTV 목록</h2>
+          <h2>동·분류별 CCTV 목록</h2>
         </div>
         <CountBadge>{totalCount.toLocaleString('ko-KR')}대</CountBadge>
       </PanelHeader>
       <BuildingScroller>
         {groups.map(group => {
-          const collapsed = collapsedBuildings.has(group.id);
+          const collapsed = collapsedGroups.has(group.id);
           return (
             <BuildingBlock key={group.id}>
-              <BuildingToggle
+              <GroupToggle
                 group={group}
                 collapsed={collapsed}
-                onToggle={onToggleBuilding}
+                onToggle={onToggleGroup}
               />
               <AnimatePresence initial={false}>
                 {!collapsed && (
                   <CameraRowList
-                    id={`list-building-${group.id}`}
+                    id={`list-group-${encodeURIComponent(group.id)}`}
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
@@ -319,39 +316,39 @@ function CameraList({
 }
 
 interface CameraCardsProps {
-  groups: BuildingGroup[];
-  collapsedBuildings: Set<CctvBuildingId>;
+  groups: CameraGroup[];
+  collapsedGroups: Set<string>;
   selectedCameraId: string | null;
   revision: number;
-  onToggleBuilding: (buildingId: CctvBuildingId) => void;
+  onToggleGroup: (groupId: string) => void;
   onOpenCamera: (camera: CctvCamera) => void;
 }
 
 function CameraCards({
   groups,
-  collapsedBuildings,
+  collapsedGroups,
   selectedCameraId,
   revision,
-  onToggleBuilding,
+  onToggleGroup,
   onOpenCamera,
 }: CameraCardsProps) {
   return (
     <CardViewPanel>
       <CardScroller>
         {groups.map(group => {
-          const collapsed = collapsedBuildings.has(group.id);
+          const collapsed = collapsedGroups.has(group.id);
           return (
             <BuildingCardSection key={group.id}>
-              <BuildingToggle
+              <GroupToggle
                 group={group}
                 collapsed={collapsed}
-                onToggle={onToggleBuilding}
+                onToggle={onToggleGroup}
                 card
               />
               <AnimatePresence initial={false}>
                 {!collapsed && (
                   <CameraCardGrid
-                    id={`card-building-${group.id}`}
+                    id={`card-group-${encodeURIComponent(group.id)}`}
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
@@ -363,7 +360,7 @@ function CameraCards({
                         type="button"
                         $selected={selectedCameraId === camera.id}
                         onClick={() => onOpenCamera(camera)}
-                        aria-label={`${camera.name} 크게 보기`}
+                        aria-label={`${camera.code} ${camera.name} 크게 보기`}
                         aria-pressed={selectedCameraId === camera.id}
                       >
                         <CardThumbnail>
@@ -440,7 +437,7 @@ function CameraModal({ camera, closeButtonRef, onClose }: CameraModalProps) {
               </StageHint>
             </ModalStage>
             <ModalFooter>
-              <span className="meta">{getBuildingLabel(camera.buildingId)} · {camera.code}</span>
+              <span className="meta">{getCctvCameraGroup(camera).label} · {camera.code}</span>
               <span>최근 갱신 {formatDateTime(camera.thumbnailUpdatedAt)}</span>
             </ModalFooter>
           </ModalDialog>
@@ -468,7 +465,7 @@ export default function CctvMonitoringClient() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
   const [modalCameraId, setModalCameraId] = useState<string | null>(null);
-  const [collapsedBuildings, setCollapsedBuildings] = useState<Set<CctvBuildingId>>(new Set());
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const normalizedQuery = normalizeSearch(searchQuery);
@@ -480,7 +477,7 @@ export default function CctvMonitoringClient() {
         camera.code,
         camera.name,
         camera.ipAddress,
-        getBuildingLabel(camera.buildingId),
+        getCctvCameraGroup(camera).label,
         camera.stream.path,
         CCTV_STATUS_LABEL[camera.status],
       ]
@@ -490,27 +487,21 @@ export default function CctvMonitoringClient() {
     );
   }, [cameras, normalizedQuery]);
 
-  const groups = useMemo<BuildingGroup[]>(
-    () => CCTV_BUILDINGS
-      .map(building => {
-        const buildingCameras = filteredCameras.filter(camera => camera.buildingId === building.id);
-        return {
-          ...building,
-          cameras: buildingCameras,
-          onlineCount: buildingCameras.filter(camera => camera.status === 'online').length,
-        };
-      })
-      .filter(group => group.cameras.length > 0),
+  const groups = useMemo<CameraGroup[]>(
+    () => groupCctvCameras(filteredCameras).map(group => ({
+      ...group,
+      onlineCount: group.cameras.filter(camera => camera.status === 'online').length,
+    })),
     [filteredCameras],
   );
 
   const selectedCamera = useMemo(() => {
-    const selectableCameras = normalizedQuery ? filteredCameras : cameras;
+    const selectableCameras = groups.flatMap(group => group.cameras);
     return selectableCameras.find(camera => camera.id === selectedCameraId)
       ?? selectableCameras.find(camera => camera.status === 'online')
       ?? selectableCameras[0]
       ?? null;
-  }, [cameras, filteredCameras, normalizedQuery, selectedCameraId]);
+  }, [groups, selectedCameraId]);
   const effectiveSelectedCameraId = selectedCamera?.id ?? null;
   const modalCamera = useMemo(
     () => cameras.find(camera => camera.id === modalCameraId) ?? null,
@@ -538,11 +529,11 @@ export default function CctvMonitoringClient() {
     };
   }, [modalCameraId]);
 
-  const toggleBuilding = useCallback((buildingId: CctvBuildingId) => {
-    setCollapsedBuildings(current => {
+  const toggleGroup = useCallback((groupId: string) => {
+    setCollapsedGroups(current => {
       const next = new Set(current);
-      if (next.has(buildingId)) next.delete(buildingId);
-      else next.add(buildingId);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
       return next;
     });
   }, []);
@@ -625,9 +616,9 @@ export default function CctvMonitoringClient() {
                   value={searchQuery}
                   onChange={event => {
                     setSearchQuery(event.target.value);
-                    if (event.target.value) setCollapsedBuildings(new Set());
+                    if (event.target.value) setCollapsedGroups(new Set());
                   }}
-                  placeholder="설치 위치, IP, 카메라명, 동 검색"
+                  placeholder="설치 위치, IP, 카메라명, 동·분류 검색"
                   aria-label="CCTV 검색"
                 />
                 {searchQuery && (
@@ -654,7 +645,7 @@ export default function CctvMonitoringClient() {
             <StateBox role="status">
               <span className="icon-circle"><Loader2 className="spin" size={28} aria-hidden="true" /></span>
               <strong>CCTV 목록을 불러오는 중...</strong>
-              <p>동별 카메라와 최신 썸네일 정보를 준비하고 있습니다.</p>
+              <p>동·분류별 카메라와 최신 썸네일 정보를 준비하고 있습니다.</p>
             </StateBox>
           ) : error ? (
             <StateBox $tone="danger" role="alert">
@@ -672,7 +663,7 @@ export default function CctvMonitoringClient() {
             <StateBox>
               <span className="icon-circle"><CameraOff size={28} aria-hidden="true" /></span>
               <strong>등록된 CCTV가 없습니다</strong>
-              <p>API에 카메라가 등록되면 동별 목록과 카드가 이 영역에 표시됩니다.</p>
+              <p>API에 카메라가 등록되면 동·분류별 목록과 카드가 이 영역에 표시됩니다.</p>
               <StateActions>
                 <SoftButton type="button" onClick={retry}>
                   <RefreshCw size={15} aria-hidden="true" />
@@ -693,10 +684,10 @@ export default function CctvMonitoringClient() {
             <ListLayout>
               <CameraList
                 groups={groups}
-                collapsedBuildings={collapsedBuildings}
+                collapsedGroups={collapsedGroups}
                 selectedCameraId={effectiveSelectedCameraId}
                 revision={revision}
-                onToggleBuilding={toggleBuilding}
+                onToggleGroup={toggleGroup}
                 onSelect={selectCamera}
               />
               <CameraViewer camera={selectedCamera} revision={revision} onExpand={openCamera} />
@@ -704,10 +695,10 @@ export default function CctvMonitoringClient() {
           ) : (
             <CameraCards
               groups={groups}
-              collapsedBuildings={collapsedBuildings}
+              collapsedGroups={collapsedGroups}
               selectedCameraId={effectiveSelectedCameraId}
               revision={revision}
-              onToggleBuilding={toggleBuilding}
+              onToggleGroup={toggleGroup}
               onOpenCamera={openCamera}
             />
           )}

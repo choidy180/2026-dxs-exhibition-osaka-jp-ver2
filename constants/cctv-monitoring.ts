@@ -1,4 +1,4 @@
-import type { CctvBuildingId, CctvCameraStatus } from '@/types/cctv-monitoring';
+import type { CctvCameraStatus } from '@/types/cctv-monitoring';
 
 /** 썸네일 목록을 새로 받는 주기 (30분) */
 export const THUMBNAIL_REFRESH_MS = 30 * 60 * 1_000;
@@ -56,12 +56,6 @@ export const CCTV_WHEP_REQUEST_TIMEOUT_MS = 10_000;
 /** 실제 API가 기본이며, 화면 검증이 필요할 때만 환경변수로 목업을 켠다 */
 export const USE_MOCK_DATA =
   (process.env.NEXT_PUBLIC_CCTV_MONITORING_USE_MOCK ?? 'false').toLowerCase() === 'true';
-
-export const CCTV_BUILDINGS: ReadonlyArray<{ id: CctvBuildingId; label: string }> = [
-  { id: 'D', label: 'D동' },
-  { id: 'E', label: 'E동' },
-  { id: 'F', label: 'F동' },
-];
 
 export const CCTV_STATUS_LABEL: Record<CctvCameraStatus, string> = {
   online: '연결됨',

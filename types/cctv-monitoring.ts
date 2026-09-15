@@ -1,5 +1,15 @@
 /** CCTV가 설치된 건물 식별자 */
-export type CctvBuildingId = 'D' | 'E' | 'F';
+export type CctvBuildingId =
+  | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I'
+  | 'J' | 'K' | 'L' | 'M' | 'N' | 'O' | 'P' | 'Q' | 'R'
+  | 'S' | 'T' | 'U' | 'V' | 'W' | 'X' | 'Y' | 'Z';
+
+/** 건물, 카메라 용도 또는 미분류로 구분한 표시 그룹 */
+export interface CctvCameraGroup {
+  id: string;
+  label: string;
+  kind: 'building' | 'purpose' | 'unclassified';
+}
 
 /** 카메라 운영 상태 */
 export type CctvCameraStatus = 'online' | 'offline' | 'maintenance';
@@ -19,7 +29,9 @@ export interface CctvCamera {
   id: string;
   code: string;
   name: string;
-  buildingId: CctvBuildingId;
+  buildingId: CctvBuildingId | null;
+  /** API 번호에서 읽은 분류. 기존 목업은 buildingId로 그룹을 구한다. */
+  group?: CctvCameraGroup;
   location: string;
   /** 카메라 IP. API 가 주지 않으면 null 이며 화면에는 '-' 로 표시한다 */
   ipAddress: string | null;

@@ -11,13 +11,13 @@ import {
 } from '@/constants/cctv-monitoring';
 import { DUMMY_CCTV_CAMERAS } from '@/data/dummy-cctv-monitoring';
 import type {
-  CctvBuildingId,
   CctvCamera,
   CctvCameraApiItem,
   CctvCameraStatus,
   CctvMonitoringApiResponse,
   CctvMonitoringSnapshot,
 } from '@/types/cctv-monitoring';
+import { classifyCctvCamera } from '@/utils/cctv-monitoring';
 
 let mockRevision = 0;
 
@@ -40,9 +40,6 @@ const delay = (ms: number, signal?: AbortSignal): Promise<void> =>
 
     signal?.addEventListener('abort', handleAbort, { once: true });
   });
-
-const isBuildingId = (value: string | null | undefined): value is CctvBuildingId =>
-  value === 'D' || value === 'E' || value === 'F';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -117,9 +114,7 @@ const toIpAddress = (item: CctvCameraApiItem): string | null => {
 const mapApiCamera = (value: CctvCameraApiItem, index: number): CctvCamera => {
   const item = isRecord(value) ? value : {};
   const number = toText(item.number) || `카메라 ${String(index + 1).padStart(2, '0')}`;
-  const buildingMatch = number.match(/^\s*([DEF])\s*동(?:\s|$)/iu);
-  const rawBuildingId = buildingMatch?.[1]?.toUpperCase();
-  const buildingId = isBuildingId(rawBuildingId) ? rawBuildingId : 'F';
+  const classification = classifyCctvCamera(number);
   const apiId = toText(item.id);
   const streamPath = toWhepPath(item, apiId);
   const thumbnailVersion = toThumbnailVersion(item.thumbnailVersion);
@@ -132,7 +127,7 @@ const mapApiCamera = (value: CctvCameraApiItem, index: number): CctvCamera => {
     id,
     code: number,
     name: toText(item.name) || '이름 미지정 카메라',
-    buildingId,
+    ...classification,
     location: '-',
     ipAddress: toIpAddress(item),
     status,
