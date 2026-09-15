@@ -607,6 +607,7 @@ overflow-y: auto;
 
 | 위치 | 편차 | 처리 |
 | --- | --- | --- |
+| `components/lab/cctv-monitoring/styles.ts` | CCTV 미리보기는 6장의 이미지 `cover` 대신 `contain` 사용 | 카메라마다 비율이 달라도 전체 화면이 보여야 한다는 사용자 요청에 따라 원본 비율을 유지하고 확대·잘림 없이 표시. 남는 공간은 기존 배경으로 유지 |
 | `styles/styles.ts` | `Card` radius 8, 이중 그림자, `CardTitle` weight 800 | 신규 화면은 이 primitive 대신 5-1 레시피 사용. 부득이 쓰면 radius/shadow/weight 를 덮어쓴다 |
 | `styles/*.styles.ts` (검사 화면 5종) | 화면별 자체 테마 파일 | 유지. 신규 화면에서는 참조하지 않는다 |
 | `components/material-monitoring/MaterialMonitoringClient.tsx` | 폰트 스코프에 `!important` 사용 | 신규 화면은 `inherit` 만 사용 |

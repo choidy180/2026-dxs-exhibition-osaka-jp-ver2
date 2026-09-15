@@ -556,17 +556,14 @@ export const ThumbnailFrame = styled.div<{ $large?: boolean; $offline?: boolean 
   background: ${color.fill};
 
   .camera-image {
-    object-fit: cover;
     opacity: ${({ $offline }) => ($offline ? 0.5 : 1)};
     transition: opacity ${motion.value};
   }
 `;
 
 export const CameraImage = styled(Image)<{ $position: string }>`
-  object-fit: cover;
+  object-fit: contain;
   object-position: ${({ $position }) => $position};
-  transform: scale(1.14);
-  transform-origin: ${({ $position }) => $position};
 `;
 
 export const ThumbnailLoading = styled.div`
