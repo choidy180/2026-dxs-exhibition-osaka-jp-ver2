@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useLayoutEffect, useRef } from "react";
+import React, { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import styled, { keyframes } from "styled-components";
 import { Monitor, MousePointer2 } from "lucide-react";
@@ -9,6 +9,7 @@ import { AnimatePresence } from "framer-motion";
 import TopNavigation from "@/components/navigation/top-navigation";
 import { useViewContext } from "./view-context";
 import StartAnime from "@/components/start/start-anime";
+import { hasNativePushBridge, subscribeNativePushBridge } from "@/utils/push-test-native";
 
 // --------------------------------------------------------------------------
 // 1. Mobile Blocker Styles (모바일 차단 화면 스타일)
@@ -157,20 +158,23 @@ const MainContent = styled.main<{ $isHidden: boolean; $isFullWidth: boolean; $mo
 export default function ClientLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { isLoading, setIsLoading } = useViewContext();
+  const nativeBridgeAvailable = useSyncExternalStore(subscribeNativePushBridge, hasNativePushBridge, () => false);
+  const isPushTestPage = pathname === "/lab/push";
+  const isNativePushPage = isPushTestPage && nativeBridgeAvailable;
   
   // 💡 첫 접속 여부를 추적하는 상태 (경로 변경과 무관하게 유지됨)
   const isFirstAccess = useRef(true);
 
   // 로딩 애니메이션을 건너뛸 경로인지 확인
-  const isSkipLoading = pathname?.includes("master-dashboard");
+  const isSkipLoading = pathname?.includes("master-dashboard") || isNativePushPage;
   const isMasterDashboard = pathname?.includes("master-dashboard") ?? false;
   const isMaterialCheckPage = pathname?.startsWith("/material/inbound-inspection/material-check") ?? false;
   const isWarehouseManagementPage =
     pathname === "/transport/warehouse-management" ||
     pathname?.startsWith("/transport/warehouse-management/") ||
     false;
-  const isMobileAllowedPage = isMasterDashboard || isMaterialCheckPage || isWarehouseManagementPage;
-  const isFullWidthPage = isMasterDashboard || isMaterialCheckPage;
+  const isMobileAllowedPage = isMasterDashboard || isMaterialCheckPage || isWarehouseManagementPage || isPushTestPage;
+  const isFullWidthPage = isMasterDashboard || isMaterialCheckPage || isNativePushPage;
 
   useLayoutEffect(() => {
     // 💡 1. 서비스에 최초로 접속했을 때만 로딩을 띄웁니다.
@@ -223,7 +227,7 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
         </AnimatePresence>
 
         {!isFullWidthPage && (
-          <NavContainer $hideOnMobile={isWarehouseManagementPage}>
+          <NavContainer $hideOnMobile={isWarehouseManagementPage || isPushTestPage}>
             <TopNavigation isLoading={isLoading && !isSkipLoading} />
           </NavContainer>
         )}
@@ -232,7 +236,7 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
         <MainContent
           $isHidden={isLoading && !isSkipLoading}
           $isFullWidth={isFullWidthPage}
-          $mobileFullWidth={isWarehouseManagementPage}
+          $mobileFullWidth={isWarehouseManagementPage || isPushTestPage}
         >
             {children}
         </MainContent>

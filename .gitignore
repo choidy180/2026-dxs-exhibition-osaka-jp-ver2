@@ -39,3 +39,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 푸시 테스트 구독/예약 저장소 (서버 전용 영속 볼륨)
+/.data/
+/certificates/
+
+# Android 테스트 빌드와 기기별 공개 설정
+/android/**/.gradle/
+/android/**/build/
+/android/**/local.properties
+/android/**/google-services.json
+/android/**/src/main/res/values/firebase-config.xml
+/android/**/src/debug/res/raw/push_test_ca.crt
+*.keystore
+*.jks

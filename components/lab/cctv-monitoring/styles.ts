@@ -43,7 +43,7 @@ export const PageFontScope = styled.div`
   }
 `;
 
-export const Shell = styled.main`
+export const Shell = styled.main<{ $hasTestPanel?: boolean }>`
   width: 100%;
   height: 100vh;
   padding: 12px;
@@ -52,7 +52,7 @@ export const Shell = styled.main`
   background: ${color.pageBg};
   color: ${color.ink};
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: ${({ $hasTestPanel }) => $hasTestPanel ? 'auto auto auto minmax(0, 1fr)' : 'auto auto minmax(0, 1fr)'};
   gap: 12px;
 `;
 

@@ -1,0 +1,10 @@
+/.gradle/
+/build/
+/app/build/
+/local.properties
+/google-services.json
+/app/google-services.json
+/app/src/main/res/values/firebase-config.xml
+/app/src/debug/res/raw/push_test_ca.crt
+*.jks
+*.keystore

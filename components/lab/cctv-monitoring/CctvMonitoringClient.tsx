@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { RefObject } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import {
   AlertCircle,
@@ -447,7 +447,7 @@ function CameraModal({ camera, closeButtonRef, onClose }: CameraModalProps) {
   );
 }
 
-export default function CctvMonitoringClient() {
+export default function CctvMonitoringClient({ testPanel }: { testPanel?: ReactNode } = {}) {
   const {
     cameras,
     isLoading,
@@ -558,7 +558,8 @@ export default function CctvMonitoringClient() {
 
   return (
     <PageFontScope>
-      <Shell>
+      <Shell $hasTestPanel={!!testPanel}>
+        {testPanel}
         <Header>
           <TitleGroup>
             <TitleIcon><Cctv size={24} aria-hidden="true" /></TitleIcon>

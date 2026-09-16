@@ -1,0 +1,42 @@
+plugins {
+    id 'com.android.application'
+}
+
+def configuredOrigin = providers.gradleProperty('serverOrigin')
+    .orElse(providers.environmentVariable('PUSH_TEST_ORIGIN'))
+    .orElse('https://localhost:3000').get()
+def serverUri = new URI(configuredOrigin)
+if (serverUri.scheme != 'https' || !serverUri.host || serverUri.userInfo != null ||
+    serverUri.query != null || serverUri.fragment != null ||
+    !(serverUri.path in ['', '/']) || serverUri.port == 0 || serverUri.port > 65535) {
+    throw new GradleException('serverOrigin은 경로 없이 HTTPS 서버 주소만 지정해 주세요.')
+}
+def serverOrigin = new URI('https', null, serverUri.host, serverUri.port, null, null, null).toASCIIString()
+
+android {
+    namespace 'com.scct.dxs.pushtest'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.scct.dxs.pushtest'
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '0.1.0-test'
+        buildConfigField 'String', 'SERVER_ORIGIN', '"' + serverOrigin + '"'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.13.0'
+    implementation 'com.google.firebase:firebase-messaging:24.1.1'
+    testImplementation 'junit:junit:4.13.2'
+}
