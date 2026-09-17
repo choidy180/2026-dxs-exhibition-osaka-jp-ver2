@@ -47,6 +47,6 @@ async function request<T>(action: string, body: unknown): Promise<T> {
 
 export const fetchPushTestStatus = (endpoint: string | null) => request<PushTestStatus>('status', { endpoint });
 export const subscribePushTest = (subscription: PushSubscriptionJSON | { platform: 'android'; token: string }) => request<PushTestStatus>('subscribe', { subscription });
-export const schedulePushTest = (endpoint: string) => request<PushTestScheduleResult>('schedule', { endpoint });
+export const schedulePushTest = (endpoint: string, repeating = false) => request<PushTestScheduleResult>('schedule', { endpoint, repeating });
 export const unsubscribePushTest = (endpoint: string | null) => request<PushTestStatus>('unsubscribe', { endpoint });
 export const loginPushTest = (userId: string, password: string) => request<unknown>('login', { userId, password });

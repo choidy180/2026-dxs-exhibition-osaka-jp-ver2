@@ -26,7 +26,7 @@ function requestPermissionForAction(): Promise<PermissionOutcome> {
   try {
     const permission = Notification.permission === 'default'
       ? Notification.requestPermission() : Promise.resolve(Notification.permission);
-    // 인증 응답을 기다리는 동안 권한 요청이 실패해도 처리되지 않은 거절을 남기지 않는다.
+    // 사용자 동작에서 시작한 권한 요청의 예외도 모두 처리한다.
     return permission.then(
       allowed => ({ ok: true, permission: allowed }),
       error => ({ ok: false, error }),
@@ -118,6 +118,8 @@ async function getTestRegistration(): Promise<ServiceWorkerRegistration> {
     scope: SERVICE_WORKER_SCOPE,
     updateViaCache: 'none',
   });
+  // 앱 재진입 때 이전에 설치된 워커의 알림 로고·문구도 갱신한다.
+  if (existing) await registration.update();
   return waitForActive(registration);
 }
 
@@ -156,6 +158,7 @@ export function usePushTest() {
   const [message, setMessage] = useState<string | null>(null);
   const [requiresLogin, setRequiresLogin] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isStartUncertain, setIsStartUncertain] = useState(false);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [canPromptInstall, setCanPromptInstall] = useState(false);
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
@@ -166,15 +169,66 @@ export function usePushTest() {
   const revisionRef = useRef(0);
   const mountedRef = useRef(true);
 
-  const reportError = useCallback((caught: unknown) => {
+  const reportError = useCallback((caught: unknown, isStatusCheck = false) => {
     if (!mountedRef.current) return;
-    setError(errorMessage(caught));
-    // 요청 실패 뒤 이전 등록 상태로 다시 예약하지 않도록 서버 재확인을 요구한다.
-    setStatus(null);
+    // 첫 방문의 로그인 필요 응답은 오류 경고 없이 로그인 폼으로 안내한다.
+    setError(isStatusCheck && caught instanceof PushTestApiError && caught.status === 401 ? null : errorMessage(caught));
+    // 전송 실패가 이미 성공한 기기 등록까지 해제된 것으로 표시되지 않도록 유지한다.
     setMessage(null);
     if (caught instanceof PushTestApiError && caught.status === 401) {
       setRequiresLogin(true);
       setIsAuthenticated(false);
+      setStatus(null);
+      setIsStartUncertain(false);
+    }
+  }, []);
+
+  const readCurrentState = useCallback(async (revision: number) => {
+    let currentBrowser = hasNativePushBridge()
+      ? { ...initialBrowserState, checked: true, installed: true }
+      : inspectBrowser();
+    let subscription: PushSubscription | null = null;
+    let endpoint: string | null = null;
+    let deviceError: unknown = null;
+    try {
+      if (hasNativePushBridge()) {
+        // 재진입과 로그인은 기존 토큰 조회만 하며 권한 요청이나 등록을 하지 않는다.
+        const [nativeStatus, tokenResult] = await Promise.all([
+          requestNativePush('getStatus'), requestNativePush('getToken'),
+        ]);
+        endpoint = tokenResult.token ? nativePushEndpoint(tokenResult.token) : null;
+        currentBrowser = {
+          checked: true, installed: true, supported: nativeStatus.configured,
+          permission: nativeStatus.permission, hasSubscription: !!tokenResult.token,
+          installGuide: '', supportMessage: nativeStatus.configured
+            ? '이 기기의 앱 알림을 사용할 수 있습니다.' : '앱 알림 설정이 준비되지 않았습니다. 관리자에게 확인해주세요.',
+        };
+      } else if (currentBrowser.supported) {
+        const registration = registrationRef.current ?? await getTestRegistration();
+        subscription = await registration.pushManager.getSubscription();
+        if (revision === revisionRef.current) registrationRef.current = registration;
+        endpoint = subscription?.endpoint ?? null;
+        currentBrowser = { ...currentBrowser, hasSubscription: !!subscription };
+      }
+    } catch (caught) {
+      // 인증서·서비스 워커 문제가 있어도 인증 확인과 CCTV 화면 진입은 진행한다.
+      deviceError = caught;
+    }
+    if (!mountedRef.current || revision !== revisionRef.current) return;
+    setBrowser(currentBrowser);
+    if (hasNativePushBridge()) nativeEndpointRef.current = endpoint;
+    const result = await fetchPushTestStatus(endpoint);
+    if (!mountedRef.current || revision !== revisionRef.current) return;
+    const needsNewKey = subscription && !subscriptionMatchesKey(subscription, result.publicKey);
+    setStatus(needsNewKey ? { ...result, registered: false } : result);
+    setIsStartUncertain(false);
+    setIsAuthenticated(true);
+    setRequiresLogin(false);
+    setError(deviceError ? errorMessage(deviceError) : null);
+    if (needsNewKey) setMessage('서버의 푸시 설정이 변경되었습니다. 알림 켜기로 현재 기기를 다시 등록해주세요. 기존 미발송 예약은 재등록할 때 취소됩니다.');
+    else if (!result.pending && result.lastJob?.status === 'sent') setMessage('CCTV 알림을 발송했습니다. 기기의 알림 센터를 확인해주세요.');
+    else if (!result.pending && ['failed', 'expired', 'unknown'].includes(result.lastJob?.status ?? '')) {
+      setMessage('최근 알림의 발송을 확인하지 못했습니다. 기기 등록과 서버 연결을 확인한 뒤 다시 시도해주세요.');
     }
   }, []);
 
@@ -184,59 +238,14 @@ export function usePushTest() {
     const revision = revisionRef.current;
     if (showLoading) setIsLoading(true);
     try {
-      if (hasNativePushBridge()) {
-        // 앱 재진입 시 캐시된 토큰만 조회하며 권한 요청이나 토큰 발급은 하지 않는다.
-        const [nativeStatus, tokenResult] = await Promise.all([
-          requestNativePush('getStatus'), requestNativePush('getToken'),
-        ]);
-        if (!mountedRef.current || revision !== revisionRef.current) return;
-        nativeEndpointRef.current = tokenResult.token ? nativePushEndpoint(tokenResult.token) : null;
-        setBrowser({
-          checked: true, installed: true, supported: nativeStatus.configured,
-          permission: nativeStatus.permission, hasSubscription: !!tokenResult.token,
-          installGuide: '', supportMessage: nativeStatus.configured
-            ? '이 기기의 앱 알림을 사용할 수 있습니다.' : '앱 알림 설정이 준비되지 않았습니다. 관리자에게 확인해주세요.',
-        });
-        const result = await fetchPushTestStatus(nativeEndpointRef.current);
-        if (!mountedRef.current || revision !== revisionRef.current) return;
-        setStatus(result);
-        setIsAuthenticated(true);
-        setRequiresLogin(false);
-        setError(null);
-        if (!result.pending && result.lastJob?.status === 'sent') setMessage('테스트 알림을 발송했습니다. 휴대폰의 알림 센터를 확인해주세요.');
-        else if (!result.pending && ['failed', 'expired', 'unknown'].includes(result.lastJob?.status ?? '')) {
-          setMessage('최근 테스트 알림의 발송을 확인하지 못했습니다. 기기 등록과 서버 연결을 확인한 뒤 다시 테스트해주세요.');
-        }
-        return;
-      }
-      const currentBrowser = inspectBrowser();
-      if (mountedRef.current) setBrowser(current => ({ ...currentBrowser, hasSubscription: current.hasSubscription }));
-      let subscription: PushSubscription | null = null;
-      if (currentBrowser.supported) {
-        registrationRef.current = await getTestRegistration();
-        subscription = await registrationRef.current.pushManager.getSubscription();
-      }
-      if (!mountedRef.current || revision !== revisionRef.current) return;
-      setBrowser({ ...currentBrowser, hasSubscription: !!subscription });
-      const result = await fetchPushTestStatus(subscription?.endpoint ?? null);
-      if (!mountedRef.current || revision !== revisionRef.current) return;
-      const needsNewKey = subscription && !subscriptionMatchesKey(subscription, result.publicKey);
-      setStatus(needsNewKey ? { ...result, registered: false } : result);
-      setIsAuthenticated(true);
-      setRequiresLogin(false);
-      setError(null);
-      if (needsNewKey) setMessage('서버의 푸시 설정이 변경되었습니다. 알림 켜기로 현재 기기를 다시 등록해주세요. 기존 미발송 예약은 재등록할 때 취소됩니다.');
-      else if (!result.pending && result.lastJob?.status === 'sent') setMessage('테스트 푸시를 발송했습니다. 기기의 알림 센터에서 수신을 확인해주세요.');
-      else if (!result.pending && ['failed', 'expired', 'unknown'].includes(result.lastJob?.status ?? '')) {
-        setMessage('최근 테스트 푸시의 발송을 확인하지 못했습니다. 기기 등록과 서버 발송 상태를 확인한 뒤 다시 테스트해주세요.');
-      }
+      await readCurrentState(revision);
     } catch (caught) {
-      if (revision === revisionRef.current) reportError(caught);
+      if (revision === revisionRef.current) reportError(caught, true);
     } finally {
       refreshRef.current = false;
       if (mountedRef.current) setIsLoading(false);
     }
-  }, [reportError]);
+  }, [readCurrentState, reportError]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -270,13 +279,13 @@ export function usePushTest() {
   }, [refresh]);
 
   useEffect(() => {
-    if (!status?.pending) return;
+    if (!status?.pending && !isStartUncertain) return;
     // 이 타이머는 상태 조회 전용이며, 예약 발송은 독립적인 서버 작업자가 수행한다.
     const poll = window.setInterval(() => {
       if (document.visibilityState === 'visible') void refresh();
     }, 5_000);
     return () => window.clearInterval(poll);
-  }, [refresh, status?.pending]);
+  }, [isStartUncertain, refresh, status?.pending]);
 
   const runAction = useCallback(async (nextAction: NonNullable<typeof action>, work: () => Promise<void>) => {
     if (busyRef.current) return;
@@ -295,19 +304,18 @@ export function usePushTest() {
     }
   }, [reportError]);
 
-  const finishPermissionRequest = useCallback(async (request: Promise<PermissionOutcome>, afterLogin = false) => {
+  const finishPermissionRequest = useCallback(async (request: Promise<PermissionOutcome>) => {
     const outcome = await request;
-    const prefix = afterLogin ? '로그인했습니다. ' : '';
     if (!outcome.ok) {
       setError(errorMessage(outcome.error));
-      setMessage(`${prefix}알림 켜기를 눌러 다시 시도해주세요.`);
+      setMessage('알림 켜기를 눌러 다시 시도해주세요.');
       return false;
     }
     setBrowser(current => ({ ...current, permission: outcome.permission }));
     if (outcome.permission !== 'granted') {
       setMessage(outcome.permission === 'denied'
-        ? `${prefix}알림이 차단되어 있습니다. 기기와 브라우저 설정에서 허용한 뒤 알림 켜기를 눌러주세요.`
-        : `${prefix}알림 켜기를 눌러 허용하면 현재 기기가 등록됩니다.`);
+        ? '알림이 차단되어 있습니다. 기기와 브라우저 설정에서 허용한 뒤 알림 켜기를 눌러주세요.'
+        : '알림 켜기를 눌러 허용하면 현재 기기가 등록됩니다.');
       return false;
     }
     return true;
@@ -321,7 +329,7 @@ export function usePushTest() {
       if (!nativeStatus.configured) throw new PushTestBrowserError('앱 알림 설정이 준비되지 않았습니다. 관리자에게 확인해주세요.');
       if (nativeStatus.permission !== 'granted') {
         setMessage('알림이 허용되지 않았습니다. 휴대폰 설정에서 이 앱의 알림을 허용한 뒤 알림 켜기를 눌러주세요.');
-        return;
+        return null;
       }
       const { token } = await requestNativePush('register');
       const endpoint = nativePushEndpoint(token);
@@ -330,12 +338,12 @@ export function usePushTest() {
       if (currentStatus.registered && endpoint === registeredEndpoint) {
         setStatus(currentStatus);
         setMessage('현재 기기는 이미 알림을 사용 중입니다. 테스트 푸시로 수신을 확인해주세요.');
-        return;
+        return { status: currentStatus, endpoint };
       }
       const result = await subscribePushTest({ platform: 'android', token });
       setStatus(result);
       setMessage('현재 기기에 앱 알림을 등록했습니다. 테스트 푸시로 수신을 확인해주세요.');
-      return;
+      return { status: result, endpoint };
     }
     const registration = registrationRef.current ?? await getTestRegistration();
     registrationRef.current = registration;
@@ -360,98 +368,133 @@ export function usePushTest() {
     if (currentStatus.registered && subscription.endpoint === registeredEndpoint) {
       setStatus(currentStatus);
       setMessage('현재 기기는 이미 알림을 사용 중입니다. 테스트 푸시로 수신을 확인해주세요.');
-      return;
+      return { status: currentStatus, endpoint: subscription.endpoint };
     }
     const result = await subscribePushTest(subscription.toJSON());
     setStatus(result);
     setMessage('현재 기기에 알림을 등록했습니다. 테스트 푸시로 수신을 확인해주세요.');
+    return { status: result, endpoint: subscription.endpoint };
   }, []);
 
-  const enable = useCallback(() => {
-    if (busyRef.current || !browser.supported || !status || requiresLogin) return;
-    if (hasNativePushBridge()) return runAction('enable', () => registerCurrentDevice(status, nativeEndpointRef.current));
-    if (!status.publicKey) return;
+  const requestTestNotification = useCallback(async (currentStatus: PushTestStatus, endpoint: string, repeating = false) => {
+    if (!repeating && currentStatus.pending) return;
+    if (!currentStatus.workerReady) throw new PushTestBrowserError('서버의 알림 발송 준비가 완료되지 않았습니다. 잠시 후 다시 시도해주세요.');
+    const result = await schedulePushTest(endpoint, repeating);
+    setStatus(current => current ? { ...current, pending: result.pending, repeating: result.repeating } : current);
+    setIsStartUncertain(false);
+    setMessage(repeating
+      ? 'CCTV 알림을 켰습니다. 지금부터 10초마다 테스트 알림을 보냅니다.'
+      : '테스트 알림을 바로 발송합니다. 알림 센터를 확인해주세요.');
+  }, []);
+
+  const turnOn = useCallback(async (sendTest: boolean) => {
+    if (busyRef.current || !isAuthenticated || requiresLogin || isStartUncertain) return;
     return runAction('enable', async () => {
-      const permission = requestPermissionForAction();
-      if (await finishPermissionRequest(permission)) await registerCurrentDevice(status);
+      if (!browser.supported) throw new PushTestBrowserError(browser.supportMessage || '이 기기에서는 푸시 알림을 사용할 수 없습니다.');
+      if (!status) throw new PushTestBrowserError('알림 상태를 다시 확인한 뒤 시도해주세요.');
+      if (!hasNativePushBridge()) {
+        if (!status.publicKey) throw new PushTestBrowserError('서버의 푸시 설정을 확인해주세요.');
+        // ON 클릭의 사용자 제스처 안에서, 다른 비동기 작업보다 먼저 권한을 요청한다.
+        const permission = requestPermissionForAction();
+        if (!await finishPermissionRequest(permission)) return;
+      }
+      const device = await registerCurrentDevice(status, nativeEndpointRef.current);
+      if (!device || !sendTest) return;
+      try {
+        await requestTestNotification(device.status, device.endpoint, true);
+      } catch (caught) {
+        if (caught instanceof PushTestApiError && caught.status === 401) throw caught;
+        if (caught instanceof PushTestApiError && (caught.status === 0 || caught.code === 'INVALID_RESPONSE'
+          || (caught.status >= 500 && caught.status < 600))) {
+          // 응답만 유실된 경우 서버에서 반복이 시작됐을 수 있어 등록 상태로 추측하지 않는다.
+          setIsStartUncertain(true);
+          try {
+            const confirmed = await fetchPushTestStatus(device.endpoint);
+            setStatus(confirmed);
+            setIsStartUncertain(false);
+            if (confirmed.repeating) {
+              setError(null);
+              setMessage('서버에서 CCTV 알림이 켜진 것을 확인했습니다. OFF를 누르면 알림이 멈춥니다.');
+              return;
+            }
+          } catch (confirmationError) {
+            if (confirmationError instanceof PushTestApiError && confirmationError.status === 401) throw confirmationError;
+            setError('알림 시작 요청의 결과를 확인하지 못했습니다. 서버에서 알림이 발송 중일 수 있습니다. 상태를 다시 확인하거나 알림 중단을 눌러주세요.');
+            setMessage(null);
+            return;
+          }
+        }
+        // 기기 등록과 반복 발송 시작을 구분하여 실패 시 ON으로 오인하지 않게 한다.
+        setError(`기기는 등록했지만 CCTV 알림을 시작하지 못했습니다. ${errorMessage(caught)}`);
+        setMessage(null);
+      }
     });
-  }, [browser.supported, finishPermissionRequest, registerCurrentDevice, requiresLogin, runAction, status]);
+  }, [browser.supportMessage, browser.supported, finishPermissionRequest, isAuthenticated, isStartUncertain, registerCurrentDevice, requestTestNotification, requiresLogin, runAction, status]);
+
+  const enable = useCallback(() => turnOn(false), [turnOn]);
 
   const disable = useCallback(() => runAction('disable', async () => {
     if (hasNativePushBridge()) {
       const result = await unsubscribePushTest(nativeEndpointRef.current);
       setStatus(result);
-      await requestNativePush('unregister');
+      setIsStartUncertain(false);
+      try {
+        await requestNativePush('unregister');
+      } catch (caught) {
+        throw new PushTestBrowserError(`서버의 CCTV 알림은 껐습니다. 기기 알림 설정을 정리하지 못했습니다. ${errorMessage(caught)}`);
+      }
       nativeEndpointRef.current = null;
       setBrowser(current => ({ ...current, hasSubscription: false }));
       setMessage('현재 기기의 앱 알림을 끄고 미발송 테스트 예약을 취소했습니다.');
       return;
     }
-    const subscription = await registrationRef.current?.pushManager.getSubscription() ?? null;
-    // 서버 예약 취소가 성공한 뒤 브라우저 구독을 해제해야 실패 시 재시도가 가능하다.
-    const result = await unsubscribePushTest(subscription?.endpoint ?? null);
+    // 서버는 인증된 기기의 모든 예약을 취소한다. 로컬 구독을 읽지 못해도 OFF를 보장한다.
+    const result = await unsubscribePushTest(null);
     setStatus(result);
-    if (subscription) {
-      await subscription.unsubscribe();
-      const remaining = await registrationRef.current?.pushManager.getSubscription();
-      if (remaining) throw new PushTestBrowserError('서버 알림과 예약은 해제했습니다. 기기 구독 해제를 위해 알림 끄기를 다시 눌러주세요.');
+    setIsStartUncertain(false);
+    try {
+      const subscription = await registrationRef.current?.pushManager.getSubscription() ?? null;
+      if (subscription) {
+        await subscription.unsubscribe();
+        const remaining = await registrationRef.current?.pushManager.getSubscription();
+        if (remaining) throw new PushTestBrowserError('기기 구독이 남아 있습니다. 브라우저의 알림 설정을 확인해주세요.');
+      }
+    } catch (caught) {
+      throw new PushTestBrowserError(`서버의 CCTV 알림은 껐습니다. 기기 알림 설정을 정리하지 못했습니다. ${errorMessage(caught)}`);
     }
     setBrowser(current => ({ ...current, hasSubscription: false }));
     setMessage('현재 기기의 알림을 끄고 미발송 테스트 예약을 취소했습니다.');
   }), [runAction]);
 
+  // 수신 권한·로컬 토큰을 잃어도 서버 반복이 켜져 있으면 OFF 동작을 제공해야 한다.
+  const isEnabled = isAuthenticated && status?.repeating === true;
+
+  const setEnabled = useCallback(async (enabled: boolean): Promise<void> => {
+    if (busyRef.current || !isAuthenticated || requiresLogin) return;
+    if (enabled) {
+      if (!isEnabled) await turnOn(true);
+    } else {
+      await disable();
+    }
+  }, [disable, isAuthenticated, isEnabled, requiresLogin, turnOn]);
+
   const schedule = useCallback(() => {
-    if (!status?.registered || status.pending || !status.workerReady) return;
+    if (!isAuthenticated || requiresLogin || !status?.registered || status.pending) return;
     return runAction('schedule', async () => {
-      if (hasNativePushBridge()) {
-        if (status.fcmReady !== true || !nativeEndpointRef.current) throw new PushTestBrowserError('현재 기기의 앱 알림 등록을 확인한 뒤 다시 시도해주세요.');
-        const result = await schedulePushTest(nativeEndpointRef.current);
-        setStatus(current => current ? { ...current, pending: result.pending } : current);
-        setMessage('30초 후 발송됩니다. 화면을 닫고 확인해보세요.');
-        return;
-      }
-      const subscription = await registrationRef.current?.pushManager.getSubscription();
-      if (!subscription) throw new PushTestBrowserError('현재 기기에 등록된 구독이 없습니다. 알림 켜기로 다시 등록해주세요.');
-      const result = await schedulePushTest(subscription.endpoint);
-      setStatus(current => current ? { ...current, pending: result.pending } : current);
-      setMessage('30초 후 발송됩니다. 화면을 닫고 확인해보세요.');
+      const endpoint = hasNativePushBridge() ? nativeEndpointRef.current
+        : (await registrationRef.current?.pushManager.getSubscription())?.endpoint;
+      if (!endpoint) throw new PushTestBrowserError('현재 기기의 알림 등록을 확인한 뒤 다시 시도해주세요.');
+      await requestTestNotification(status, endpoint);
     });
-  }, [runAction, status]);
+  }, [isAuthenticated, requestTestNotification, requiresLogin, runAction, status]);
 
   const login = useCallback((userId: string, password: string) => runAction('login', async () => {
-    if (hasNativePushBridge()) {
-      // 네이티브 토큰 발급과 서버 구독 등록은 사용자 인증 성공 뒤에만 진행한다.
-      await loginPushTest(userId, password);
-      setRequiresLogin(false);
-      setIsAuthenticated(true);
-      const result = await fetchPushTestStatus(nativeEndpointRef.current);
-      setStatus(result);
-      await registerCurrentDevice(result, nativeEndpointRef.current);
-      return;
-    }
-    const currentBrowser = inspectBrowser();
-    setBrowser(current => ({ ...currentBrowser, hasSubscription: current.hasSubscription }));
-    // 로그인 클릭의 사용자 제스처가 끝나기 전에 권한 요청만 시작한다. 등록은 인증 후에 한다.
-    const permission = currentBrowser.supported ? requestPermissionForAction() : null;
     await loginPushTest(userId, password);
     setRequiresLogin(false);
     setIsAuthenticated(true);
-    const registration = currentBrowser.supported ? registrationRef.current ?? await getTestRegistration() : null;
-    if (registration) registrationRef.current = registration;
-    const subscription = await registration?.pushManager.getSubscription() ?? null;
-    const result = await fetchPushTestStatus(subscription?.endpoint ?? null);
-    const needsNewKey = subscription && !subscriptionMatchesKey(subscription, result.publicKey);
-    const currentStatus = needsNewKey ? { ...result, registered: false } : result;
-    setStatus(currentStatus);
-    setBrowser(current => ({ ...current, hasSubscription: !!subscription }));
-    if (!permission) {
-      setMessage(`로그인했습니다. ${currentBrowser.supportMessage}`);
-      return;
-    }
-    if (await finishPermissionRequest(permission, true)) {
-      await registerCurrentDevice(currentStatus, subscription?.endpoint ?? null);
-    }
-  }), [finishPermissionRequest, registerCurrentDevice, runAction]);
+    // 로그인은 인증과 기존 상태 확인만 수행한다. 알림은 ON을 누를 때 시작한다.
+    await readCurrentState(revisionRef.current);
+  }), [readCurrentState, runAction]);
 
   const install = useCallback(async () => {
     if (hasNativePushBridge()) return;
@@ -470,9 +513,9 @@ export function usePushTest() {
   }, []);
 
   return {
-    mode, isNative, isAuthenticated, browser, status, isLoading, action, error, message, requiresLogin,
+    mode, isNative, isAuthenticated, isEnabled, isStartUncertain, browser, status, isLoading, action, error, message, requiresLogin,
     showInstallGuide, canPromptInstall,
-    refresh: () => refresh(true), enable, disable, schedule, login, install,
+    refresh: () => refresh(true), setEnabled, enable, disable, schedule, login, install,
     closeInstallGuide: () => setShowInstallGuide(false),
   };
 }

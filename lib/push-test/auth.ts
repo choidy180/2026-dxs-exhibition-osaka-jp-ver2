@@ -51,7 +51,7 @@ function accounts(): Record<string, string> {
 }
 
 export function verifyTestPassword(userId: unknown, password: unknown): string | null {
-  if (typeof userId !== 'string' || !/^[a-zA-Z0-9_-]{1,64}$/.test(userId) || typeof password !== 'string' || password.length > 256) return null;
+  if (typeof userId !== 'string' || !/^[a-zA-Z0-9_-]{1,64}$/.test(userId) || typeof password !== 'string' || !password) return null;
   const users = accounts();
   const hash = Object.hasOwn(users, userId) ? users[userId] : undefined;
   // 없는 계정도 같은 비용으로 계산해 계정 존재 여부를 응답 시간으로 드러내지 않는다.

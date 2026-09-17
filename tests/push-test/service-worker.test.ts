@@ -56,8 +56,8 @@ function createWorker(windows: { url: string; focus: () => Promise<void> }[] = [
 test('푸시 데이터만으로 시스템 알림을 표시하고 CCTV 요청을 가로채지 않는다', async () => {
   const worker = createWorker();
   const payload = {
-    title: '[테스트] TEST-CAM-03 영상 수신 중단',
-    body: '푸시 수신 확인용 가상 이벤트입니다. 실제 장애가 아닙니다.',
+    title: '고모텍 CCTV',
+    body: '3번 CCTV 영상 수신 오류가 발생했습니다. (test)',
     tag: 'test-job-123',
     url: 'https://external.example/untrusted',
   };
@@ -67,7 +67,8 @@ test('푸시 데이터만으로 시스템 알림을 표시하고 CCTV 요청을 
   assert.equal(worker.notifications[0].options.body, payload.body);
   assert.equal(worker.notifications[0].options.tag, payload.tag);
   assert.equal(worker.notifications[0].options.data.url, '/lab/push');
-  assert.equal(worker.notifications[0].options.icon, undefined, '수신 시 내부 아이콘 서버에도 의존하지 않는다');
+  assert.match(worker.notifications[0].options.icon ?? '', /^data:image\/png;base64,/, '로고는 내부 서버 조회 없이 포함한다');
+  assert.match(worker.notifications[0].options.badge ?? '', /^data:image\/png;base64,/, '상태 표시줄의 단색 심벌도 함께 포함한다');
   assert.equal(worker.networkCalls, 0);
   assert.equal(worker.listeners.has('fetch'), false);
 });
@@ -86,8 +87,8 @@ test('비정상 데이터는 서버 조회 없이 안전한 테스트 안내로 
   await worker.dispatch('push', { data: { json: () => ({ title: 10, body: null, tag: [] }) } });
   await worker.dispatch('push');
   for (const notification of worker.notifications) {
-    assert.equal(notification.title, '[테스트] PWA 푸시 수신 확인');
-    assert.match(notification.options.body ?? '', /실제 CCTV 상태와 무관/);
+    assert.equal(notification.title, '고모텍 CCTV');
+    assert.equal(notification.options.body, 'CCTV 알림이 도착했습니다. (test)');
     assert.equal(notification.options.tag, 'dxs-push-test');
   }
   assert.equal(worker.networkCalls, 0);

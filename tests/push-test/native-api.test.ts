@@ -59,12 +59,15 @@ test('네이티브 API는 FCM 준비상태·인증·기기격리·중복예약·
     assert.equal((await handlePushTest('subscribe', request({ subscription: androidSubscription }, two))).status, 409);
     assert.equal((await handlePushTest('schedule', request({ endpoint: androidSubscription.endpoint }, two))).status, 404);
     assert.equal((await handlePushTest('subscribe', request({ subscription: androidSubscription }, one, 'https://attacker.example'))).status, 403);
-    const first = await (await handlePushTest('schedule', request({ endpoint: androidSubscription.endpoint }, one))).json();
-    const duplicate = await (await handlePushTest('schedule', request({ endpoint: androidSubscription.endpoint }, one))).json();
+    const first = await (await handlePushTest('schedule', request({ endpoint: androidSubscription.endpoint, repeating: true }, one))).json();
+    const duplicate = await (await handlePushTest('schedule', request({ endpoint: androidSubscription.endpoint, repeating: true }, one))).json();
     assert.equal(first.pending.id, duplicate.pending.id);
+    assert.equal(first.repeating, true);
+    assert.equal((await (await handlePushTest('status', request({ endpoint: androidSubscription.endpoint }, one))).json()).repeating, true);
     process.env.PUSH_TEST_FCM_SERVICE_ACCOUNT_JSON = '';
     const cleared = await (await handlePushTest('unsubscribe', request({ endpoint: null }, one))).json();
     assert.equal(cleared.registered, false);
+    assert.equal(cleared.repeating, false);
     assert.equal(cleared.pending, null);
     const webStatus = await (await handlePushTest('status', request({ endpoint: web.endpoint }, two))).json();
     assert.equal(webStatus.registered, true);

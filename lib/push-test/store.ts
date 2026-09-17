@@ -4,7 +4,8 @@ import { mkdirSync, chmodSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { PushTestError, validatePushTargetEndpoint, validatePushTarget, type ValidatedPushTarget } from './validation';
 
-export const PUSH_TEST_DELAY_MS = 30_000;
+export const PUSH_TEST_DELAY_MS = 0;
+export const PUSH_TEST_REPEAT_INTERVAL_MS = 10_000;
 export const WORKER_HEARTBEAT_MAX_AGE_MS = 10_000;
 export const SENDING_UNKNOWN_AFTER_MS = 30_000;
 
@@ -31,6 +32,7 @@ export interface ClaimedPushJob extends PushJob {
 }
 export interface DevicePushStatus {
   registered: boolean;
+  repeating: boolean;
   workerReady: boolean;
   pending: PushJob | null;
   lastJob: PushJob | null;
@@ -49,11 +51,10 @@ const toJob = (row: JobRow): PushJob => ({
 });
 
 function createPayload(id: string): PushPayload {
-  const camera = `TEST-CAM-${String(randomInt(1, 7)).padStart(2, '0')}`;
-  const recovery = randomInt(2) === 1;
+  const camera = randomInt(1, 201).toLocaleString('ko-KR');
   return {
-    title: `[테스트] ${camera} 영상 수신 ${recovery ? '복구' : '중단'}`,
-    body: `푸시 수신 확인용 가상 이벤트입니다. 실제 ${recovery ? '복구' : '장애'}가 아닙니다.`,
+    title: '고모텍 CCTV',
+    body: `${camera}번 CCTV 영상 수신 오류가 발생했습니다. (test)`,
     url: '/lab/push', tag: `push-test-${id}`,
   };
 }
@@ -81,6 +82,9 @@ export class PushTestStore {
       CREATE INDEX IF NOT EXISTS push_jobs_due ON push_jobs(status, due_at);
       CREATE INDEX IF NOT EXISTS push_jobs_device ON push_jobs(user_id, subscription_id, created_at DESC);
       CREATE TABLE IF NOT EXISTS push_workers (id TEXT PRIMARY KEY, heartbeat_at INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS push_repeating (
+        subscription_id TEXT PRIMARY KEY, user_id TEXT NOT NULL
+      );
       CREATE TABLE IF NOT EXISTS push_login_attempts (key TEXT PRIMARY KEY, window_start INTEGER NOT NULL, attempts INTEGER NOT NULL);
     `);
   }
@@ -98,6 +102,7 @@ export class PushTestStore {
       // 같은 브라우저에서 구독 주소가 바뀌면 이전 기기 예약까지 함께 정리한다.
       this.database.prepare(`UPDATE push_jobs SET status = 'cancelled', finished_at = ?
         WHERE user_id = ? AND subscription_id != ? AND status = 'queued'`).run(this.now(), userId, id);
+      this.database.prepare('DELETE FROM push_repeating WHERE user_id = ? AND subscription_id != ?').run(userId, id);
       this.database.prepare('DELETE FROM push_subscriptions WHERE user_id = ? AND id != ?').run(userId, id);
       this.database.prepare(`INSERT INTO push_subscriptions (id, user_id, subscription_json, updated_at) VALUES (?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET subscription_json = excluded.subscription_json, updated_at = excluded.updated_at`)
@@ -126,10 +131,12 @@ export class PushTestStore {
       .get(userId, id, id) as JobRow | undefined;
     const last = this.database.prepare('SELECT * FROM push_jobs WHERE user_id = ? AND (? IS NULL OR subscription_id = ?) ORDER BY created_at DESC, rowid DESC LIMIT 1')
       .get(userId, id, id) as JobRow | undefined;
-    return { registered, workerReady, pending: pending ? toJob(pending) : null, lastJob: last ? toJob(last) : null };
+    const repeating = Boolean(this.database.prepare('SELECT 1 FROM push_repeating WHERE user_id = ? AND (? IS NULL OR subscription_id = ?) LIMIT 1')
+      .get(userId, id, id));
+    return { registered, repeating, workerReady, pending: pending ? toJob(pending) : null, lastJob: last ? toJob(last) : null };
   }
 
-  scheduleTestPush(userId: string, endpoint: string): { job: PushJob; duplicate: boolean } {
+  scheduleTestPush(userId: string, endpoint: string, repeating = false): { job: PushJob; duplicate: boolean } {
     const subscriptionId = endpointId(endpoint);
     return this.database.transaction(() => {
       if (!this.getSubscription(userId, endpoint)) {
@@ -137,22 +144,30 @@ export class PushTestStore {
       }
       const pending = this.database.prepare("SELECT * FROM push_jobs WHERE user_id = ? AND subscription_id = ? AND status IN ('queued','sending') LIMIT 1")
         .get(userId, subscriptionId) as JobRow | undefined;
-      if (pending) return { job: toJob(pending), duplicate: true };
+      if (pending && !repeating) return { job: toJob(pending), duplicate: true };
       if (!this.isWorkerReady()) {
         throw new PushTestError('WORKER_UNAVAILABLE', '푸시 발송 워커가 실행 중이 아닙니다. 서버 실행 상태를 확인해 주세요.', 503);
       }
-      const id = randomUUID();
-      const createdAt = this.now();
-      const dueAt = createdAt + PUSH_TEST_DELAY_MS;
-      this.database.prepare(`INSERT INTO push_jobs (id, user_id, subscription_id, status, payload_json, created_at, due_at)
-        VALUES (?, ?, ?, 'queued', ?, ?, ?)`).run(id, userId, subscriptionId, JSON.stringify(createPayload(id)), createdAt, dueAt);
-      return { job: { id, status: 'queued' as const, createdAt, dueAt, finishedAt: null, errorCode: null }, duplicate: false };
+      if (repeating) this.database.prepare('INSERT OR IGNORE INTO push_repeating (subscription_id, user_id) VALUES (?, ?)')
+        .run(subscriptionId, userId);
+      if (pending) return { job: toJob(pending), duplicate: true };
+      return { job: this.enqueue(userId, subscriptionId, PUSH_TEST_DELAY_MS), duplicate: false };
     }).immediate();
+  }
+
+  private enqueue(userId: string, subscriptionId: string, delayMs: number): PushJob {
+    const id = randomUUID();
+    const createdAt = this.now();
+    const dueAt = createdAt + delayMs;
+    this.database.prepare(`INSERT INTO push_jobs (id, user_id, subscription_id, status, payload_json, created_at, due_at)
+      VALUES (?, ?, ?, 'queued', ?, ?, ?)`).run(id, userId, subscriptionId, JSON.stringify(createPayload(id)), createdAt, dueAt);
+    return { id, status: 'queued', createdAt, dueAt, finishedAt: null, errorCode: null };
   }
 
   unsubscribe(userId: string, endpoint: string): { removed: boolean; cancelled: number } {
     const id = endpointId(endpoint);
     return this.database.transaction(() => {
+      this.database.prepare('DELETE FROM push_repeating WHERE user_id = ? AND subscription_id = ?').run(userId, id);
       const cancelled = this.database.prepare("UPDATE push_jobs SET status = 'cancelled', finished_at = ? WHERE user_id = ? AND subscription_id = ? AND status = 'queued'")
         .run(this.now(), userId, id).changes;
       const removed = this.database.prepare('DELETE FROM push_subscriptions WHERE id = ? AND user_id = ?').run(id, userId).changes > 0;
@@ -162,6 +177,7 @@ export class PushTestStore {
 
   unsubscribeDevice(userId: string): { removed: boolean; cancelled: number } {
     return this.database.transaction(() => {
+      this.database.prepare('DELETE FROM push_repeating WHERE user_id = ?').run(userId);
       const cancelled = this.database.prepare("UPDATE push_jobs SET status = 'cancelled', finished_at = ? WHERE user_id = ? AND status = 'queued'")
         .run(this.now(), userId).changes;
       const removed = this.database.prepare('DELETE FROM push_subscriptions WHERE user_id = ?').run(userId).changes > 0;
@@ -181,8 +197,14 @@ export class PushTestStore {
 
   markStaleSending(): number {
     // 중단된 시도도 이미 푸시 서비스에 도착했을 수 있으므로 재발송하지 않는다.
-    return this.database.prepare("UPDATE push_jobs SET status = 'unknown', finished_at = ?, error_code = 'INTERRUPTED_SEND' WHERE status = 'sending' AND claimed_at <= ?")
-      .run(this.now(), this.now() - SENDING_UNKNOWN_AFTER_MS).changes;
+    return this.database.transaction(() => {
+      const cutoff = this.now() - SENDING_UNKNOWN_AFTER_MS;
+      this.database.prepare(`DELETE FROM push_repeating WHERE subscription_id IN (
+        SELECT subscription_id FROM push_jobs WHERE status = 'sending' AND claimed_at <= ?
+      )`).run(cutoff);
+      return this.database.prepare("UPDATE push_jobs SET status = 'unknown', finished_at = ?, error_code = 'INTERRUPTED_SEND' WHERE status = 'sending' AND claimed_at <= ?")
+        .run(this.now(), cutoff).changes;
+    }).immediate();
   }
 
   claimDueJob(workerId: string): ClaimedPushJob | null {
@@ -202,8 +224,22 @@ export class PushTestStore {
   }
 
   finishJob(id: string, status: 'sent' | 'failed' | 'unknown', errorCode: string | null = null): void {
-    this.database.prepare("UPDATE push_jobs SET status = ?, finished_at = ?, error_code = ? WHERE id = ? AND status = 'sending'")
-      .run(status, this.now(), errorCode, id);
+    this.database.transaction(() => {
+      const job = this.database.prepare("SELECT * FROM push_jobs WHERE id = ? AND status = 'sending'").get(id) as JobRow | undefined;
+      if (!job) return;
+      this.database.prepare("UPDATE push_jobs SET status = ?, finished_at = ?, error_code = ? WHERE id = ? AND status = 'sending'")
+        .run(status, this.now(), errorCode, id);
+      if (status !== 'sent') {
+        // 실패하거나 수신 여부가 불명확하면 반복을 멈춰 오류 알림이 누적되지 않게 한다.
+        this.database.prepare('DELETE FROM push_repeating WHERE user_id = ? AND subscription_id = ?').run(job.user_id, job.subscription_id);
+        return;
+      }
+      const repeat = this.database.prepare(`SELECT 1 FROM push_repeating r JOIN push_subscriptions s
+        ON s.id = r.subscription_id AND s.user_id = r.user_id WHERE r.user_id = ? AND r.subscription_id = ?`)
+        .get(job.user_id, job.subscription_id);
+      // 완료 기준으로 다음 1건만 예약하여 장시간 중단 후에도 밀린 알림을 한꺼번에 보내지 않는다.
+      if (repeat) this.enqueue(job.user_id, job.subscription_id, PUSH_TEST_REPEAT_INTERVAL_MS);
+    }).immediate();
   }
 
   consumeLoginAttempt(key: string, now = this.now(), limit = 10): boolean {

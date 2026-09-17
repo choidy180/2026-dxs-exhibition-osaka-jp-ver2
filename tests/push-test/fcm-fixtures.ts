@@ -22,7 +22,7 @@ export function fcmFixture(projectId = 'push-test-project') {
 export const androidToken = 'fixture-device-token_abcdefghijklmnopqrstuvwxyz:0123456789';
 export const androidSubscription = { platform: 'android' as const, token: androidToken, endpoint: `fcm:${androidToken}` };
 export const androidPayload = {
-  title: '[테스트] TEST-CAM-03 영상 수신 중단',
-  body: '푸시 수신 확인용 가상 이벤트입니다. 실제 장애가 아닙니다.',
+  title: '고모텍 CCTV',
+  body: '3번 CCTV 영상 수신 오류가 발생했습니다. (test)',
   url: '/lab/push' as const, tag: 'push-test-fixture-job',
 };

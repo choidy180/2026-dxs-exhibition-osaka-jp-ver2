@@ -11,9 +11,9 @@ export function GET() {
 
   const manifest: MetadataRoute.Manifest = {
     id: '/lab/push',
-    name: 'DXS PWA 푸시 테스트',
-    short_name: '푸시 테스트',
-    description: '실제 CCTV 상태와 무관한 PWA 푸시 수신 테스트',
+    name: '고모텍 CCTV',
+    short_name: '고모텍 CCTV',
+    description: '고모텍 CCTV 목록과 푸시 알림 테스트',
     start_url: '/lab/push',
     scope: '/lab/push',
     display: 'standalone',

@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.BitmapFactory;
 import android.os.Build;
 
 import com.google.firebase.messaging.FirebaseMessagingService;
@@ -31,9 +32,9 @@ public final class PushTestMessagingService extends FirebaseMessagingService {
 
         RemoteMessage.Notification remote = message.getNotification();
         String title = text(message.getData().get("title"), remote == null ? null : remote.getTitle(),
-            "[테스트] CCTV 푸시 알림", 160);
+            "고모텍 CCTV", 160);
         String body = text(message.getData().get("body"), remote == null ? null : remote.getBody(),
-            "푸시 수신 확인용 가상 이벤트입니다. 실제 CCTV 상태와 무관합니다.", 500);
+            "CCTV 알림이 도착했습니다. (test)", 500);
         String tag = text(message.getData().get("tag"), remote == null ? null : remote.getTag(),
             "push-test", 128);
 
@@ -43,7 +44,8 @@ public final class PushTestMessagingService extends FirebaseMessagingService {
         PendingIntent click = PendingIntent.getActivity(this, 0, intent,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification notification = new Notification.Builder(this, PushTestApplication.CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_gomotec_notification)
+            .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.drawable.ic_gomotec))
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(new Notification.BigTextStyle().bigText(body))

@@ -27,7 +27,7 @@ test('기존 Web Push rows를 보존한 DB에 Android 기기·예약을 저장�
     store.registerSubscription('android-owner', androidSubscription);
     store.workerHeartbeat('worker');
     const job = store.scheduleTestPush('android-owner', androidSubscription.endpoint);
-    assert.equal(job.job.dueAt - job.job.createdAt, 30_000);
+    assert.equal(job.job.dueAt, now);
     assert.equal(store.scheduleTestPush('android-owner', androidSubscription.endpoint).job.id, job.job.id);
     assert.throws(() => store.registerSubscription('another-owner', androidSubscription),
       (error: unknown) => error instanceof PushTestError && error.code === 'SUBSCRIPTION_OWNED');

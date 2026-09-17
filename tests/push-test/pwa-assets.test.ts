@@ -34,6 +34,7 @@ test('PWA 자산은 명시적으로 활성화한 테스트 환경에서만 제�
   assert.equal(manifest.scope, '/lab/push');
   assert.equal(manifest.id, '/lab/push');
   assert.equal(manifest.display, 'standalone');
+  assert.equal(manifest.name, '고모텍 CCTV');
 
   for (const size of [180, 192, 512]) {
     const icon = await getIcon(new Request(`https://internal.example/lab/push/icon/${size}`), {

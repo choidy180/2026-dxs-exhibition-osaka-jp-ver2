@@ -59,6 +59,7 @@ test('FCM payload에는 앱 종료 중 표시할 notification과 고정 앱 경�
   assert.equal(message.android.priority, 'HIGH');
   assert.equal(message.android.ttl, '300s');
   assert.equal(message.android.notification.channel_id, 'push_test');
+  assert.equal(message.android.notification.icon, 'ic_gomotec_notification');
   assert.equal(message.android.notification.tag, androidPayload.tag);
   assert.equal(JSON.stringify(message).includes('image'), false);
 });

@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { openPushTestStore, PUSH_TEST_DELAY_MS, SENDING_UNKNOWN_AFTER_MS } from '../../lib/push-test/store';
+import { openPushTestStore, PUSH_TEST_DELAY_MS, PUSH_TEST_REPEAT_INTERVAL_MS, SENDING_UNKNOWN_AFTER_MS } from '../../lib/push-test/store';
 import { PushDeliveryError } from '../../lib/push-test/send';
 import { processNextPushJob } from '../../lib/push-test/worker';
 import { PushTestError, type ValidatedPushSubscription } from '../../lib/push-test/validation';
@@ -41,10 +41,10 @@ test('a reservation requires a live worker and another owner cannot inspect, sch
   } finally { store.close(); }
 });
 
-test('duplicate requests reuse one persisted 30-second reservation through a connection restart', () => {
+test('duplicate requests reuse one immediately due job through a connection restart', () => {
   const directory = mkdtempSync(join(tmpdir(), 'dxs-push-test-'));
   const dbPath = join(directory, 'queue.sqlite');
-  let now = 1_000_000;
+  const now = 1_000_000;
   let store = openPushTestStore(dbPath, () => now);
   try {
     const device = subscription();
@@ -52,6 +52,7 @@ test('duplicate requests reuse one persisted 30-second reservation through a con
     store.workerHeartbeat('worker-one');
     const first = store.scheduleTestPush('owner', device.endpoint);
     assert.equal(first.job.dueAt - first.job.createdAt, PUSH_TEST_DELAY_MS);
+    assert.equal(first.job.dueAt, now);
     const concurrentStore = openPushTestStore(dbPath, () => now);
     try {
       const second = concurrentStore.scheduleTestPush('owner', device.endpoint);
@@ -61,19 +62,106 @@ test('duplicate requests reuse one persisted 30-second reservation through a con
     store.close();
     store = openPushTestStore(dbPath, () => now);
     assert.equal(store.getDeviceStatus('owner', device.endpoint).pending?.id, first.job.id);
-    assert.equal(store.claimDueJob('worker-two'), null);
-    now += PUSH_TEST_DELAY_MS;
     const claimed = store.claimDueJob('worker-two');
     assert.equal(claimed?.id, first.job.id);
     assert.equal(claimed?.payload.url, '/lab/push');
-    assert.match(claimed?.payload.title ?? '', /^\[테스트\] TEST-CAM-0[1-6] 영상 수신 (복구|중단)$/);
-    assert.match(claimed?.payload.body ?? '', /^푸시 수신 확인용 가상 이벤트입니다\. 실제 (복구|장애)가 아닙니다\.$/);
+    assert.equal(claimed?.payload.title, '고모텍 CCTV');
+    assert.match(claimed?.payload.body ?? '', /^(?:[1-9]|[1-9]\d|1\d\d|200)번 CCTV 영상 수신 오류가 발생했습니다\. \(test\)$/);
     assert.equal(store.claimDueJob('worker-three'), null);
     assert.equal(store.scheduleTestPush('owner', device.endpoint).job.id, first.job.id);
     store.finishJob(first.job.id, 'sent');
     assert.equal(store.getDeviceStatus('owner', device.endpoint).pending, null);
     assert.equal(store.getDeviceStatus('owner', device.endpoint).lastJob?.status, 'sent');
   } finally { store.close(); rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('반복 ON은 즉시 한 건을 처리하고 재시작 후 10초마다 한 건만 예약한다', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'dxs-push-repeating-'));
+  const dbPath = join(directory, 'queue.sqlite');
+  let now = 1_000_000;
+  let store = openPushTestStore(dbPath, () => now);
+  try {
+    const device = subscription();
+    store.registerSubscription('owner', device);
+    store.workerHeartbeat('worker');
+    const first = store.scheduleTestPush('owner', device.endpoint, true);
+    assert.equal(first.job.dueAt, now);
+    assert.equal(store.getDeviceStatus('owner', device.endpoint).repeating, true);
+    assert.equal(store.getDeviceStatus('other-owner', device.endpoint).repeating, false);
+    assert.equal(store.scheduleTestPush('owner', device.endpoint, true).job.id, first.job.id);
+    assert.equal(store.claimDueJob('worker')?.id, first.job.id);
+    store.finishJob(first.job.id, 'sent');
+    const next = store.getDeviceStatus('owner', device.endpoint).pending;
+    assert.ok(next);
+    assert.equal(next.dueAt, now + PUSH_TEST_REPEAT_INTERVAL_MS);
+    assert.equal(store.scheduleTestPush('owner', device.endpoint, true).job.id, next.id, '반복 ON 재요청은 이미 예약된 다음 알림을 유지한다');
+    store.finishJob(first.job.id, 'sent');
+    assert.equal(store.getDeviceStatus('owner', device.endpoint).pending?.id, next.id, '완료 중복 처리도 다음 예약을 중복 생성하지 않는다');
+    store.close();
+    store = openPushTestStore(dbPath, () => now);
+    assert.equal(store.getDeviceStatus('owner', null).repeating, true);
+    now += PUSH_TEST_REPEAT_INTERVAL_MS - 1;
+    assert.equal(store.claimDueJob('worker'), null);
+    now += 1;
+    const second = store.claimDueJob('worker');
+    assert.equal(second?.id, next.id);
+    assert.match(second?.payload.body ?? '', /^(?:[1-9]|[1-9]\d|1\d\d|200)번 CCTV 영상 수신 오류가 발생했습니다\. \(test\)$/);
+    assert.equal(store.claimDueJob('another-worker'), null);
+    now += 60_000;
+    store.finishJob(next.id, 'sent');
+    assert.equal(store.getDeviceStatus('owner', device.endpoint).pending?.dueAt, now + PUSH_TEST_REPEAT_INTERVAL_MS);
+    assert.equal(store.claimDueJob('worker'), null, '밀린 반복 알림을 한꺼번에 만들지 않는다');
+  } finally { store.close(); rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('반복 OFF·기기 교체는 현재 기기의 반복만 중단하고 전송 중 완료 뒤에도 다시 예약하지 않는다', () => {
+  let now = 1_000_000;
+  const store = openPushTestStore(':memory:', () => now);
+  try {
+    const one = subscription('one');
+    const two = subscription('two');
+    store.registerSubscription('one', one);
+    store.registerSubscription('two', two);
+    store.workerHeartbeat('worker');
+    const first = store.scheduleTestPush('one', one.endpoint, true);
+    store.scheduleTestPush('two', two.endpoint, true);
+    assert.equal(store.claimDueJob('worker')?.id, first.job.id);
+    store.unsubscribeDevice('one');
+    assert.equal(store.getDeviceStatus('one', one.endpoint).repeating, false);
+    assert.equal(store.getDeviceStatus('two', two.endpoint).repeating, true);
+    store.finishJob(first.job.id, 'sent');
+    assert.equal(store.getDeviceStatus('one', one.endpoint).pending, null);
+    const second = store.claimDueJob('worker');
+    assert.ok(second);
+    store.finishJob(second.id, 'sent');
+    store.registerSubscription('two', subscription('replacement'));
+    assert.equal(store.getDeviceStatus('two', null).repeating, false);
+    now += PUSH_TEST_REPEAT_INTERVAL_MS;
+    assert.equal(store.claimDueJob('worker'), null);
+  } finally { store.close(); }
+});
+
+test('반복 발송 실패·불명확한 전송·워커 중단은 반복을 멈추고 자동 재전송하지 않는다', () => {
+  for (const outcome of ['failed', 'unknown', 'interrupted'] as const) {
+    let now = 1_000_000;
+    const store = openPushTestStore(':memory:', () => now);
+    try {
+      const device = subscription();
+      store.registerSubscription('owner', device);
+      store.workerHeartbeat('worker');
+      store.scheduleTestPush('owner', device.endpoint, true);
+      const sending = store.claimDueJob('worker');
+      assert.ok(sending);
+      if (outcome === 'interrupted') {
+        now += SENDING_UNKNOWN_AFTER_MS;
+        assert.equal(store.markStaleSending(), 1);
+      } else store.finishJob(sending.id, outcome, 'TEST_FAILURE');
+      assert.equal(store.getDeviceStatus('owner', device.endpoint).repeating, false);
+      now += PUSH_TEST_REPEAT_INTERVAL_MS;
+      assert.equal(store.claimDueJob('worker'), null);
+      assert.equal(store.getDeviceStatus('owner', device.endpoint).lastJob?.status, outcome === 'interrupted' ? 'unknown' : outcome);
+    } finally { store.close(); }
+  }
 });
 
 test('unsubscribe atomically cancels a queued job without touching another device', () => {

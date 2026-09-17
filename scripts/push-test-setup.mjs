@@ -19,12 +19,12 @@ try {
   if (origin.protocol !== 'https:' || origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash) throw new Error('경로 없는 HTTPS origin을 입력해주세요.');
   const userId = (await prompt.question('테스트 계정 ID (영문/숫자/_/-): ')).trim();
   if (!/^[a-zA-Z0-9_-]{1,64}$/.test(userId)) throw new Error('계정 ID 형식을 확인해주세요.');
-  process.stdout.write('테스트 비밀번호 (12자 이상, 입력 숨김): ');
+  process.stdout.write('테스트 비밀번호 (입력 숨김): ');
   hidden = true;
   const password = await prompt.question('');
   hidden = false;
   process.stdout.write('\n');
-  if (password.length < 12 || password.length > 256) throw new Error('비밀번호는 12~256자로 입력해주세요.');
+  if (!password) throw new Error('비밀번호를 입력해주세요.');
   const subject = (await prompt.question('VAPID 연락처 (mailto:관리자메일): ')).trim();
   if (!/^mailto:[^\s@]+@[^\s@]+$/.test(subject)) throw new Error('mailto: 연락처를 확인해주세요.');
   const salt = randomBytes(16).toString('hex');

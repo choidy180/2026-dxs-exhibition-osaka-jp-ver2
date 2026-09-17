@@ -73,10 +73,13 @@ export async function handlePushTest(action: Action, request: NextRequest): Prom
     }
     const currentEndpoint = typeof endpoint === 'string' ? validatePushTargetEndpoint(endpoint) : null;
     if (action === 'schedule') {
+      if (body.repeating !== undefined && typeof body.repeating !== 'boolean') {
+        throw new PushTestError('INVALID_BODY', '알림 반복 설정을 확인해주세요.');
+      }
       if (!currentEndpoint) throw new PushTestError('NOT_REGISTERED', '먼저 현재 기기의 알림을 켜주세요.', 409);
       if (currentEndpoint.startsWith('fcm:')) getFcmConfig();
-      const { job } = store.scheduleTestPush(owner, currentEndpoint);
-      return json({ pending: { id: job.id, dueAt: job.dueAt } });
+      const { job } = store.scheduleTestPush(owner, currentEndpoint, body.repeating === true);
+      return json({ pending: { id: job.id, dueAt: job.dueAt }, repeating: store.getDeviceStatus(owner, currentEndpoint).repeating });
     }
     if (action === 'unsubscribe') store.unsubscribeDevice(owner);
     return json({ ...store.getDeviceStatus(owner, currentEndpoint), publicKey: config.vapidPublicKey, fcmReady: isFcmReady() });

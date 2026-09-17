@@ -1,0 +1,2 @@
+# Preserve PDF byte offsets and treat generated guides as binary artifacts.
+output/pdf/*.pdf binary

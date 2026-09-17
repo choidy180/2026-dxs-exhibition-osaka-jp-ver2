@@ -10,6 +10,7 @@ export interface PushTestCertificateSetup {
 
 export interface PushTestStatus {
   registered: boolean;
+  repeating?: boolean;
   publicKey: string;
   pending: PushTestPendingJob | null;
   lastJob: { status: string } | null;
@@ -19,6 +20,7 @@ export interface PushTestStatus {
 
 export interface PushTestScheduleResult {
   pending: PushTestPendingJob;
+  repeating?: boolean;
 }
 
 export interface PushTestInstallPrompt extends Event {

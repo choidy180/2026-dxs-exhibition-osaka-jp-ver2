@@ -65,7 +65,7 @@ export function buildAndroidFcmMessage(token: string, payload: PushPayload) {
       android: {
         priority: 'HIGH',
         ttl: '300s',
-        notification: { channel_id: 'push_test', tag: payload.tag, default_sound: true },
+        notification: { channel_id: 'push_test', icon: 'ic_gomotec_notification', tag: payload.tag, default_sound: true },
       },
     },
   };

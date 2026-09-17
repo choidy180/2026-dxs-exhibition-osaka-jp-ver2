@@ -20,7 +20,7 @@
     "@react-three/fiber": "^9.5.0",
     "@types/three": "^0.182.0",
     "axios": "^1.13.2",
-    "better-sqlite3": "^13.0.3",
+    "better-sqlite3": "12.11.1",
     "chart.js": "^4.5.1",
     "date-fns": "^4.1.0",
     "fflate": "0.8.2",

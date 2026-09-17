@@ -4,10 +4,10 @@ import { isPushTestEnabled } from '@/lib/push-test/config';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
-  title: 'PWA 푸시 테스트',
+  title: '고모텍 CCTV',
   manifest: '/lab/push/manifest.webmanifest',
   icons: { apple: '/lab/push/icon/180' },
-  appleWebApp: { capable: true, title: 'PWA 푸시 테스트', statusBarStyle: 'default' },
+  appleWebApp: { capable: true, title: '고모텍 CCTV', statusBarStyle: 'default' },
   robots: { index: false, follow: false },
 };
 

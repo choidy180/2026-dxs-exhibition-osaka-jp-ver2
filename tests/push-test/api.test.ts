@@ -59,15 +59,19 @@ test('API 인증·기기 격리·CSRF·중복 예약·취소·환경 차단', as
   try {
     workerStore.workerHeartbeat('test-worker');
     const before = Date.now();
-    const firstJob = await (await handlePushTest('schedule', request({ endpoint }, first))).json();
-    const duplicate = await (await handlePushTest('schedule', request({ endpoint }, first))).json();
+    assert.equal((await handlePushTest('schedule', request({ endpoint, repeating: 'yes' }, first))).status, 400);
+    const firstJob = await (await handlePushTest('schedule', request({ endpoint, repeating: true }, first))).json();
+    const duplicate = await (await handlePushTest('schedule', request({ endpoint, repeating: true }, first))).json();
     assert.equal(firstJob.pending.id, duplicate.pending.id);
-    assert.ok(firstJob.pending.dueAt >= before + 30_000);
+    assert.ok(firstJob.pending.dueAt >= before && firstJob.pending.dueAt <= Date.now());
+    assert.equal(firstJob.repeating, true);
     await handlePushTest('unsubscribe', request({ endpoint }, second));
     assert.equal((await (await handlePushTest('status', request({ endpoint }, first))).json()).registered, true);
+    assert.equal((await (await handlePushTest('status', request({ endpoint }, first))).json()).repeating, true);
     assert.equal((await handlePushTest('unsubscribe', request({ endpoint: null }, first))).status, 200);
     const disabled = await (await handlePushTest('status', request({ endpoint }, first))).json();
     assert.equal(disabled.registered, false);
+    assert.equal(disabled.repeating, false);
     assert.equal(disabled.pending, null);
   } finally { workerStore.close(); }
 
