@@ -6,6 +6,8 @@
 
 회사 현장에서 전달할 안내서는 다음 두 파일이다. **Windows PC 서버 실행 + 갤럭시 Chrome 웹앱(PWA) 설치**를 기준으로 하며, CA 인증서 설치 오류와 해결 절차를 포함한다. 별도 APK 설치 안내서가 아니다.
 
+PDF v2.1은 **2026-09-17에 확인한 현재 PC 환경**에 맞춘 안내서다. 프로젝트 폴더는 `C:\dev\2026-mode-dxs`, Wi-Fi 주소는 `192.168.22.211`이며, 실행 명령은 `npm.cmd run push:phone -- --host=192.168.22.211`이다. 이미 설정·실행을 마친 PC에서는 서버를 중복 실행하지 않는다. `push:phone`은 개발용 HTTPS 서버와 워커를 함께 실행하며, 별도 운영 빌드·공인 도메인 배포로 전환한 안내서는 아니다. 네트워크 변경 후에는 현재 PC 주소를 다시 확인한다.
+
 - [PC 서버 운영자 안내서 (PDF)](../output/pdf/dxs-cctv-pc-operator-guide.pdf)
 - [갤럭시 사용자 안내서 (PDF)](../output/pdf/dxs-cctv-galaxy-user-guide.pdf)
 
