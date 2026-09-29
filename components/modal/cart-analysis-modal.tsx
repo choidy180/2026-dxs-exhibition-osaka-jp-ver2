@@ -17,7 +17,7 @@ const theme = {
 };
 
 // 미니 통계 카드 (모달 내부용)
-const ModalStatCard = ({ label, value, color, icon }: any) => (
+const ModalStatCard = ({ label, value, color, icon }: { label: string; value: React.ReactNode; color: string; icon: React.ReactNode }) => (
   <div style={{
     flex: 1, backgroundColor: '#F9FAFB', borderRadius: '12px',
     border: `1px solid ${theme.border}`, padding: '16px',
@@ -36,7 +36,7 @@ const ModalStatCard = ({ label, value, color, icon }: any) => (
   </div>
 );
 
-export const CartAnalysisModal = ({ isOpen, onClose, data }: { isOpen: boolean, onClose: () => void, data: any }) => {
+export const CartAnalysisModal = ({ isOpen, onClose, data }: { isOpen: boolean, onClose: () => void, data: { id: string; status: string; image: string; upperAvg: number; lowerAvg: number; boxes: { top: number; left: number; width: number; height: number; color: string }[] } | null }) => {
   if (!isOpen || !data) return null;
 
   const isNormal = data.status === 'Normal';
@@ -95,7 +95,7 @@ export const CartAnalysisModal = ({ isOpen, onClose, data }: { isOpen: boolean, 
             border: `1px solid ${theme.border}`
           }}>
             <img src={data.image} alt="Analysis" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            {data.boxes.map((box: any, idx: number) => (
+            {data.boxes.map((box, idx: number) => (
               <div key={idx} style={{
                 position: 'absolute',
                 top: `${box.top}%`, left: `${box.left}%`,

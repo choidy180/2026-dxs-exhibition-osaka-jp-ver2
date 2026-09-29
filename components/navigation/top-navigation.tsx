@@ -37,6 +37,9 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import AIAgentSystem from "../chatbot-widget";
+import ExhibitionSettings from './ExhibitionSettings';
+import { useLocale } from '@/components/i18n/LocaleProvider';
+import { color, controlHeight, focusRing, radius, shadow, space, tone, zIndex } from '@/styles/design-tokens';
 
 type NavKey =
   | "dashboard"
@@ -238,6 +241,7 @@ interface TopNavigationProps {
 }
 
 export default function TopNavigation({ isLoading = false }: TopNavigationProps) {
+  const { t } = useLocale();
   const pathname = usePathname();
   const router = useRouter();
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -264,27 +268,31 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
       .map((group) => ({
         ...group,
         children: group.children?.filter((child) =>
-          [group.label, group.description, child.label, child.detail, child.href]
+          [group.label, group.description, child.label, child.detail, child.href, t(group.label), t(child.label), t(child.detail)]
             .join(" ")
             .toLowerCase()
             .includes(trimmedSearch),
         ),
       }))
       .filter((group) => group.children?.length);
-  }, [openPanel, selectedEntry, trimmedSearch]);
+  }, [openPanel, selectedEntry, trimmedSearch, t]);
 
   useEffect(() => {
     document.documentElement.style.setProperty("--app-sidebar-offset", isSidebarCollapsed ? "0px" : `${RAIL_WIDTH}px`);
+    document.documentElement.style.setProperty("--app-guide-offset", isSidebarCollapsed ? "0px" : `${openPanel ? RAIL_WIDTH + SUB_SIDEBAR_WIDTH : RAIL_WIDTH}px`);
     document.documentElement.dataset.sidebarMode = isSidebarCollapsed ? "collapsed" : openPanel ? "expanded" : "rail";
 
     return () => {
       document.documentElement.style.removeProperty("--app-sidebar-offset");
+      document.documentElement.style.removeProperty("--app-guide-offset");
       delete document.documentElement.dataset.sidebarMode;
     };
   }, [isSidebarCollapsed, openPanel]);
 
   useEffect(() => {
-    if (openPanel) window.setTimeout(() => searchInputRef.current?.focus(), 120);
+    if (!openPanel) return;
+    const timer = window.setTimeout(() => searchInputRef.current?.focus(), 120);
+    return () => window.clearTimeout(timer);
   }, [openPanel]);
 
   useEffect(() => {
@@ -489,6 +497,7 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
                   <span>다른 메뉴명이나 업무 키워드를 입력해 주세요.</span>
                 </EmptySearch>
               )}
+              {openPanel === 'lab' && <ExhibitionSettings />}
             </SubContent>
           </>
         )}
@@ -532,28 +541,15 @@ const SidebarHoverZone = styled.div`
   top: 0;
   left: 0;
   bottom: 0;
-  z-index: 10050;
+  z-index: ${zIndex.navHover};
   width: 14px;
   height: 100vh;
   height: 100dvh;
   cursor: pointer;
 
-  &::after {
-    content: "";
-    position: absolute;
-    top: 16px;
-    bottom: 16px;
-    left: 0;
-    width: 3px;
-    border-radius: 0 3px 3px 0;
-    background: rgba(211, 17, 69, 0.34);
-    opacity: 0;
-    transition: opacity 140ms ease;
-  }
-
-  &:hover::after {
-    opacity: 1;
-  }
+  border: 1px solid transparent;
+  border-radius: ${radius.row}px;
+  &:hover { background: ${color.brandSoft}; border-color: ${color.brand}; }
 `;
 
 const RailShell = styled.nav<{ $disabled: boolean; $collapsed: boolean }>`
@@ -561,7 +557,7 @@ const RailShell = styled.nav<{ $disabled: boolean; $collapsed: boolean }>`
   top: 0;
   left: 0;
   bottom: 0;
-  z-index: 10020;
+  z-index: ${zIndex.navRail};
   width: ${RAIL_WIDTH}px;
   height: 100vh;
   height: 100dvh;
@@ -569,9 +565,9 @@ const RailShell = styled.nav<{ $disabled: boolean; $collapsed: boolean }>`
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #ffffff;
-  border-top: 1px solid #d9dee7;
-  border-right: 1px solid #d9dee7;
+  background: ${color.surface};
+  border-top: 1px solid ${color.border};
+  border-right: 1px solid ${color.border};
   opacity: ${({ $disabled, $collapsed }) => ($collapsed ? 0 : $disabled ? 0.55 : 1)};
   pointer-events: ${({ $disabled, $collapsed }) => ($disabled || $collapsed ? "none" : "auto")};
   transform: translateX(${({ $collapsed }) => ($collapsed ? "-100%" : "0")});
@@ -582,6 +578,10 @@ const RailShell = styled.nav<{ $disabled: boolean; $collapsed: boolean }>`
 
 const RailMain = styled.div`
   width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -592,15 +592,15 @@ const DashboardButton = styled.button`
   height: 83px;
   flex: 0 0 83px;
   border: 0;
-  background: #ffffff;
+  background: ${color.surface};
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
 
   @media (max-height: 920px) {
-    height: 70px;
-    flex-basis: 70px;
+    height: ${controlHeight.lg + space.huge}px;
+    flex-basis: ${controlHeight.lg + space.huge}px;
   }
 `;
 
@@ -627,12 +627,12 @@ const RailMenu = styled.div`
 const RailButton = styled.button<{ $state: "idle" | "active" | "open" }>`
   position: relative;
   width: 100%;
-  height: 89px;
-  flex: 0 0 89px;
+  height: ${controlHeight.lg + space.huge + space.xxxl}px;
+  flex: 0 0 ${controlHeight.lg + space.huge + space.xxxl}px;
   border: 0;
-  background: #ffffff;
+  background: ${color.surface};
   color: ${({ $state }) =>
-    $state === "active" || $state === "open" ? "#d50045" : "#344054"};
+    $state === "active" || $state === "open" ? color.brand : color.ink2};
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -661,30 +661,31 @@ const RailButton = styled.button<{ $state: "idle" | "active" | "open" }>`
     height: 22px;
     box-sizing: content-box;
     padding: 14px;
-    border-radius: 50%;
+    border-radius: ${radius.control}px;
+    border: 1px solid ${({ $state }) => $state === "active" || $state === "open" ? color.brand : color.border};
     background: ${({ $state }) =>
-      $state === "active" || $state === "open" ? "#fff0f4" : "#f4f5f7"};
+      $state === "active" || $state === "open" ? color.brandSoft : color.surfaceSubtle};
     stroke-width: 1.65;
     transition: background 160ms ease, color 160ms ease;
   }
 
   &:hover {
-    color: #d50045;
+    color: ${color.brand};
 
     svg {
-      background: #fff0f4;
+      background: ${color.brandSoft};
     }
   }
 
   @media (max-height: 920px) {
-    height: 70px;
-    flex-basis: 70px;
+    height: ${controlHeight.lg + space.huge}px;
+    flex-basis: ${controlHeight.lg + space.huge}px;
     gap: 4px;
 
     svg {
       width: 20px;
       height: 20px;
-      padding: 11px;
+      padding: ${space.md}px;
     }
 
     span {
@@ -694,21 +695,18 @@ const RailButton = styled.button<{ $state: "idle" | "active" | "open" }>`
 `;
 
 const RailTools = styled.div`
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  flex: 0 0 auto;
   width: 100%;
-  padding: 22px 0 106px;
-  border-top: 1px solid #d9dee7;
+  padding: ${space.xl}px 0 ${controlHeight.lg + space.huge * 2}px;
+  border-top: 1px solid ${color.border};
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: ${space.lg}px;
 
   @media (max-height: 920px) {
-    padding-top: 15px;
-    gap: 8px;
+    padding-top: ${space.md}px;
+    gap: ${space.md}px;
   }
 `;
 
@@ -719,7 +717,7 @@ const UtilityButton = styled.button<{ $state: "idle" | "open" }>`
   padding: 0;
   border: 0;
   background: transparent;
-  color: ${({ $state }) => ($state === "open" ? "#d50045" : "#344054")};
+  color: ${({ $state }) => ($state === "open" ? color.brand : color.ink2)};
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -731,7 +729,7 @@ const UtilityButton = styled.button<{ $state: "idle" | "open" }>`
   }
 
   &:hover {
-    color: #d50045;
+    color: ${color.brand};
   }
 `;
 
@@ -740,15 +738,15 @@ const SubSidebar = styled.aside<{ $open: boolean }>`
   top: 0;
   bottom: 0;
   left: ${RAIL_WIDTH}px;
-  z-index: 10010;
+  z-index: ${zIndex.navPanel};
   width: ${SUB_SIDEBAR_WIDTH}px;
   height: 100vh;
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: #ffffff;
-  border-right: 1px solid #dfe3e8;
-  box-shadow: 10px 0 28px rgba(15, 23, 42, 0.06);
+  background: ${color.surface};
+  border-right: 1px solid ${color.border};
+  box-shadow: ${shadow.panel};
   transform: translateX(${({ $open }) => ($open ? "0" : "-12px")});
   opacity: ${({ $open }) => ($open ? 1 : 0)};
   pointer-events: ${({ $open }) => ($open ? "auto" : "none")};
@@ -760,7 +758,7 @@ const SubSidebar = styled.aside<{ $open: boolean }>`
 const SubSidebarScrim = styled.button`
   position: fixed;
   inset: 0;
-  z-index: 10000;
+  z-index: ${zIndex.navScrim};
   border: 0;
   background: transparent;
   cursor: default;
@@ -774,7 +772,7 @@ const SubHeader = styled.div`
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid #e6e9ee;
+  border-bottom: 1px solid ${color.border};
 `;
 
 const SubTitleBlock = styled.div`
@@ -783,7 +781,7 @@ const SubTitleBlock = styled.div`
   span {
     display: block;
     margin-bottom: 5px;
-    color: #d50045;
+    color: ${color.brand};
     font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.12em;
@@ -792,7 +790,7 @@ const SubTitleBlock = styled.div`
 
   strong {
     display: block;
-    color: #202939;
+    color: ${color.ink};
     font-size: 20px;
     font-weight: 600;
     letter-spacing: -0.05em;
@@ -800,7 +798,7 @@ const SubTitleBlock = styled.div`
 
   p {
     margin: 5px 0 0;
-    color: #697586;
+    color: ${color.ink3};
     font-size: 12px;
     font-weight: 500;
     line-height: 1.45;
@@ -812,10 +810,10 @@ const CloseButton = styled.button`
   width: 38px;
   height: 38px;
   flex: 0 0 auto;
-  border-radius: 50%;
+  border-radius: ${radius.control}px;
   border: 0;
-  background: #f4f5f7;
-  color: #475467;
+  background: ${color.surfaceSubtle};
+  color: ${color.ink2};
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -823,8 +821,8 @@ const CloseButton = styled.button`
   transition: background 150ms ease, color 150ms ease;
 
   &:hover {
-    background: #fff0f4;
-    color: #d50045;
+    background: ${color.brandSoft};
+    color: ${color.brand};
   }
 `;
 
@@ -832,10 +830,10 @@ const SearchBox = styled.label`
   flex: 0 0 auto;
   margin: 15px 16px 10px;
   height: 44px;
-  border-radius: 22px;
+  border-radius: ${radius.control}px;
   border: 1px solid transparent;
-  background: #f4f5f7;
-  color: #98a2b3;
+  background: ${color.surfaceSubtle};
+  color: ${color.ink4};
   display: flex;
   align-items: center;
   gap: 10px;
@@ -843,9 +841,9 @@ const SearchBox = styled.label`
   transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 
   &:focus-within {
-    border-color: rgba(213, 0, 69, 0.24);
-    background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(213, 0, 69, 0.07);
+    border-color: ${color.brand};
+    background: ${color.surface};
+    outline: ${focusRing};
   }
 
   input {
@@ -854,23 +852,23 @@ const SearchBox = styled.label`
     border: 0;
     outline: 0;
     background: transparent;
-    color: #111827;
+    color: ${color.ink};
     font-size: 13px;
     font-weight: 500;
   }
 
   input::placeholder {
-    color: #98a2b3;
+    color: ${color.ink4};
   }
 `;
 
 const ClearSearchButton = styled.button`
   width: 26px;
   height: 26px;
-  border-radius: 50%;
+  border-radius: ${radius.control}px;
   border: 0;
-  background: #ffffff;
-  color: #98a2b3;
+  background: ${color.surface};
+  color: ${color.ink4};
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -894,34 +892,34 @@ const ResultGroup = styled.div`
 const ResultButton = styled.button<{ $active: boolean }>`
   width: 100%;
   min-height: 64px;
-  border-radius: 12px;
-  border: 1px solid ${({ $active }) => ($active ? "rgba(213, 0, 69, 0.34)" : "#e3e7ed")};
-  background: ${({ $active }) => ($active ? "#fff9fb" : "#ffffff")};
-  color: ${({ $active }) => ($active ? "#d50045" : "#344054")};
+  border-radius: ${radius.card}px;
+  border: 1px solid ${({ $active }) => ($active ? color.brand : color.border)};
+  background: ${({ $active }) => ($active ? color.brandSoft : color.surface)};
+  color: ${({ $active }) => ($active ? color.brand : color.ink2)};
   display: flex;
   align-items: center;
   gap: 11px;
   padding: 8px 9px;
   text-align: left;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow: ${shadow.card};
   transition: color 150ms ease, background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 
   &:hover {
-    border-color: rgba(213, 0, 69, 0.24);
-    background: #fffafb;
-    color: #d50045;
-    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.07);
+    border-color: ${color.brand};
+    background: ${color.brandSoft};
+    color: ${color.brand};
+    box-shadow: ${shadow.card};
   }
 
   &:hover > span:first-of-type {
-    background: #fff0f4;
-    color: #d50045;
+    background: ${color.brandSoft};
+    color: ${color.brand};
   }
 
   > svg {
     flex: 0 0 auto;
-    color: #98a2b3;
+    color: ${color.ink4};
   }
 `;
 
@@ -929,9 +927,9 @@ const ResultIcon = styled.span<{ $active: boolean }>`
   width: 48px;
   height: 48px;
   flex: 0 0 48px;
-  border-radius: 50%;
-  background: ${({ $active }) => ($active ? "#fff0f4" : "#f4f5f7")};
-  color: ${({ $active }) => ($active ? "#d50045" : "#475467")};
+  border-radius: ${radius.control}px;
+  background: ${({ $active }) => ($active ? color.brandSoft : color.surfaceSubtle)};
+  color: ${({ $active }) => ($active ? color.brand : color.ink2)};
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -953,7 +951,7 @@ const ResultText = styled.span`
   }
 
   span {
-    color: #697586;
+    color: ${color.ink3};
     font-size: 12px;
     font-weight: 500;
     line-height: 1.35;
@@ -970,10 +968,10 @@ const EmptySearch = styled.div`
   justify-content: center;
   gap: 9px;
   text-align: center;
-  color: #98a2b3;
+  color: ${color.ink4};
 
   strong {
-    color: #344054;
+    color: ${color.ink2};
     font-size: 15px;
     font-weight: 600;
   }
@@ -988,16 +986,16 @@ const NotificationPanel = styled.aside`
   position: fixed;
   top: 74px;
   right: 20px;
-  z-index: 10030;
+  z-index: ${zIndex.advisorLauncher};
   width: 386px;
   max-height: min(620px, 80dvh);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 12px;
-  border: 1px solid rgba(15, 23, 42, 0.10);
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 28px 90px rgba(15, 23, 42, 0.18);
+  border-radius: ${radius.card}px;
+  border: 1px solid ${color.border};
+  background: ${color.surface};
+  box-shadow: ${shadow.popover};
 `;
 
 const NotificationHeader = styled.div`
@@ -1006,22 +1004,22 @@ const NotificationHeader = styled.div`
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  border-bottom: 1px solid ${color.border};
 
   span {
     display: block;
     margin-bottom: 5px;
-    color: #d31145;
+    color: ${color.brand};
     font-size: 10px;
-    font-weight: 900;
+    font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
   }
 
   strong {
-    color: #111827;
+    color: ${color.ink};
     font-size: 20px;
-    font-weight: 850;
+    font-weight: 600;
     letter-spacing: -0.05em;
   }
 `;
@@ -1035,21 +1033,16 @@ const NotificationList = styled.div`
   gap: 10px;
 `;
 
-const toneColor = (tone: NoticeTone) => {
-  if (tone === "danger") return "#d31145";
-  if (tone === "warning") return "#f59e0b";
-  if (tone === "success") return "#12b76a";
-  return "#3b82f6";
-};
+const toneColor = (name: NoticeTone) => tone[name].fg;
 
 const NoticeCard = styled.div<{ $tone: NoticeTone; $unread: boolean }>`
   position: relative;
   display: flex;
   gap: 11px;
   padding: 13px;
-  border-radius: 12px;
-  border: 1px solid ${({ $tone, $unread }) => ($unread ? `${toneColor($tone)}35` : "rgba(15, 23, 42, 0.08)")};
-  background: ${({ $tone, $unread }) => ($unread ? `${toneColor($tone)}0F` : "#ffffff")};
+  border-radius: ${radius.card}px;
+  border: 1px solid ${({ $tone, $unread }) => ($unread ? tone[$tone].border : color.border)};
+  background: ${({ $tone, $unread }) => ($unread ? tone[$tone].bg : color.surface)};
 `;
 
 const NoticeDot = styled.span<{ $tone: NoticeTone }>`
@@ -1057,9 +1050,9 @@ const NoticeDot = styled.span<{ $tone: NoticeTone }>`
   height: 9px;
   flex: 0 0 9px;
   margin-top: 7px;
-  border-radius: 5px;
+  border-radius: ${radius.bar}px;
   background: ${({ $tone }) => toneColor($tone)};
-  box-shadow: 0 0 0 5px ${({ $tone }) => `${toneColor($tone)}16`};
+  border: 1px solid ${({ $tone }) => tone[$tone].border};
 `;
 
 const NoticeBody = styled.div`
@@ -1074,24 +1067,24 @@ const NoticeBody = styled.div`
   }
 
   strong {
-    color: #111827;
+    color: ${color.ink};
     font-size: 13px;
-    font-weight: 850;
+    font-weight: 600;
     letter-spacing: -0.04em;
   }
 
   span {
     flex: 0 0 auto;
-    color: #98a2b3;
+    color: ${color.ink4};
     font-size: 11px;
-    font-weight: 750;
+    font-weight: 600;
   }
 
   p {
     margin: 7px 0 9px;
-    color: #667085;
+    color: ${color.ink3};
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.45;
     word-break: keep-all;
   }
@@ -1101,11 +1094,11 @@ const NoticeBody = styled.div`
     height: 24px;
     align-items: center;
     padding: 0 9px;
-    border-radius: 12px;
-    background: #f2f4f7;
-    color: #667085;
+    border-radius: ${radius.card}px;
+    background: ${color.fill};
+    color: ${color.ink3};
     font-size: 11px;
     font-style: normal;
-    font-weight: 850;
+    font-weight: 600;
   }
 `;

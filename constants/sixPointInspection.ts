@@ -1,9 +1,8 @@
 import type { AnchorMap, CornerKey, TypeOption } from '@/types/sixPointInspection';
 
-import { getDxApiUrl, resolveDxResourceUrl } from '@/utils/dx-api';
+import { resolveDxResourceUrl } from '@/utils/dx-api';
 
-export const getInspectionApiUrl = () => getDxApiUrl('/api/DX_API000025');
-export const GUIDE_IMAGE_PATH = '/images/DX_API000102/guide_2.jpg';
+export const GUIDE_IMAGE_PATH = '/demo/inspection-door.png';
 export const HOTSPOT_STORAGE_KEY = 'six-point-inspection-hotspot-anchors-v1';
 export const POLLING_INTERVAL_MS = 3000;
 

@@ -3,600 +3,301 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
-import type { PushTestStatus } from '../../types/push-test';
 
 type Hook = ReturnType<typeof import('../../hooks/use-push-test').usePushTest>;
-type Options = {
-  permission?: NotificationPermission;
-  outcome?: NotificationPermission | 'reject' | 'throw';
-  existing?: 'matching' | 'old-key';
-  failLogin?: boolean;
-  loginWait?: Promise<void>;
-  native?: boolean;
-  restoredSession?: boolean;
-  fcmReady?: boolean;
-  failUnsubscribe?: boolean;
-  failSubscribe?: boolean;
-  failSchedule?: boolean;
-  lostScheduleResponse?: boolean;
-  lostScheduleStatus?: number;
-  lostScheduleCode?: string;
-  statusFailureAfterSchedule?: 0 | 401;
-  failServiceWorker?: boolean;
-  failServiceWorkerUpdate?: boolean;
-  missingLocalSubscription?: boolean;
-  failLocalCleanup?: boolean;
-  scheduleWait?: Promise<void>;
-  repeating?: boolean;
-  workerReady?: boolean;
-};
-const publicKey = Buffer.from([4, ...Array<number>(64).fill(1)]).toString('base64url');
-const oldKey = Buffer.from([4, ...Array<number>(64).fill(2)]).toString('base64url');
-const pending = { id: 'existing-reservation', dueAt: 12345 };
+type EffectCleanup = void | (() => void);
+type EffectSlot = { dependencies?: readonly unknown[]; cleanup?: EffectCleanup };
+type CallbackSlot<T> = { dependencies: readonly unknown[]; callback: T };
+type Timer = { at: number; repeat: number | null; callback: () => void };
+
 const compiled = ts.transpileModule(readFileSync('hooks/use-push-test.ts', 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText;
-const settle = () => new Promise<void>(resolve => setImmediate(resolve));
 
-// 실제 훅을 실행하되 React 렌더러 대신 상태 슬롯과 브라우저/API 경계만 대체한다.
-function createHarness(options: Options = {}) {
-  const calls: string[] = [];
+const equalDependencies = (a: readonly unknown[] | undefined, b: readonly unknown[] | undefined) =>
+  a !== undefined && b !== undefined && a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
+
+// 실제 훅의 상태·effect 생명주기를 실행한다. 시간만 수동으로 진행하고 외부 API는 호출 즉시 실패시킨다.
+function createHarness(permission: NotificationPermission | 'unsupported' = 'default') {
   const slots: unknown[] = [];
-  const effects: Array<() => void | (() => void)> = [];
+  const pendingEffects: Array<() => void> = [];
+  const timers = new Map<number, Timer>();
+  const externalCalls: string[] = [];
   let cursor = 0;
-  let captureEffects = true;
-  let authenticated = !!options.restoredSession;
-  let permission = options.permission ?? 'default';
-  let serverRegistered = !!options.existing;
-  let repeating = options.repeating ?? false;
-  let localReadBlocked = false;
-  let scheduleResponseLost = false;
-  let statusFailure = options.statusFailureAfterSchedule;
-  let workerUpdates = 0;
-  let reservation: PushTestStatus['pending'] = options.existing ? pending : null;
-  let nativeToken = options.existing && !options.missingLocalSubscription ? 'native-existing-token' : null;
-  function makeSubscription(key: string, endpoint: string) {
-    return {
-      endpoint,
-      options: { applicationServerKey: Uint8Array.from(Buffer.from(key, 'base64url')).buffer },
-      toJSON: () => ({ endpoint }),
-      unsubscribe: async () => { calls.push('browser-unsubscribe'); subscription = null; return true; },
-    };
-  }
-  let subscription: ReturnType<typeof makeSubscription> | null = options.existing && !options.missingLocalSubscription
-    ? makeSubscription(options.existing === 'matching' ? publicKey : oldKey, 'https://push.test/existing') : null;
-  const registration = {
-    scope: 'https://app.test/lab/push',
-    active: { scriptURL: 'https://app.test/lab/push/sw.js' },
-    update: async () => {
-      workerUpdates += 1;
-      if (options.failServiceWorkerUpdate) throw new DOMException('fixture', 'SecurityError');
-    },
-    pushManager: {
-      getSubscription: async () => {
-        if (localReadBlocked || (options.failLocalCleanup && !serverRegistered)) throw new DOMException('fixture', 'SecurityError');
-        return subscription;
-      },
-      subscribe: async ({ applicationServerKey }: { applicationServerKey: Uint8Array }) => {
-        calls.push('browser-subscribe');
-        assert.equal(authenticated, true);
-        assert.equal(Buffer.from(applicationServerKey).toString('base64url'), publicKey);
-        subscription = makeSubscription(publicKey, 'https://push.test/new');
-        return subscription;
-      },
-    },
+  let clock = 0;
+  let nextTimerId = 0;
+  let dirty = true;
+  let mounted = true;
+  let current: Hook;
+  const forbid = (name: string) => () => {
+    externalCalls.push(name);
+    throw new Error(`External action is unavailable in exhibition tests: ${name}`);
   };
-  class ApiError extends Error {
-    constructor(message: string, public status: number, public code = 'FIXTURE_ERROR') { super(message); }
-  }
-  const status = (): PushTestStatus => ({ registered: serverRegistered, repeating, publicKey, pending: reservation, lastJob: null, workerReady: options.workerReady ?? true, fcmReady: options.fcmReady ?? true });
-  const api = {
-    PushTestApiError: ApiError,
-    loginPushTest: async () => {
-      calls.push('login');
-      await options.loginWait;
-      if (options.failLogin) throw new ApiError('테스트 계정 또는 비밀번호를 확인해주세요.', 401);
-      authenticated = true;
-      calls.push('authenticated');
-    },
-    fetchPushTestStatus: async (endpoint: string | null) => {
-      calls.push('status');
-      if (!authenticated) throw new ApiError('테스트 계정으로 로그인해주세요.', 401);
-      if (scheduleResponseLost && statusFailure !== undefined) throw new ApiError('상태를 확인하지 못했습니다.', statusFailure);
-      return { ...status(), registered: !!endpoint && serverRegistered };
-    },
-    subscribePushTest: async (value: unknown) => {
-      calls.push('server-subscribe');
-      assert.equal(authenticated, true);
-      if (options.native) assert.equal(JSON.stringify(value), JSON.stringify({ platform: 'android', token: nativeToken }));
-      if (options.failSubscribe) throw new ApiError('기기 등록에 실패했습니다.', 503);
-      serverRegistered = true;
-      return status();
-    },
-    unsubscribePushTest: async () => {
-      calls.push('server-unsubscribe');
-      if (options.failUnsubscribe) throw new ApiError('예약 취소를 확인하지 못했습니다.', 503);
-      serverRegistered = false;
-      repeating = false;
-      reservation = null;
-      return status();
-    },
-    schedulePushTest: async (endpoint: string, repeat: boolean) => {
-      calls.push(repeat ? 'schedule-repeat' : 'schedule-once');
-      assert.equal(authenticated, true);
-      assert.equal(serverRegistered, true);
-      assert.equal(endpoint, options.native ? `fcm:${nativeToken}` : subscription?.endpoint);
-      await options.scheduleWait;
-      if (options.failSchedule) throw new ApiError('발송 요청에 실패했습니다.', 503);
-      repeating = repeat;
-      reservation = { id: 'new-reservation', dueAt: 12345 };
-      if (options.lostScheduleResponse) {
-        scheduleResponseLost = true;
-        throw new ApiError('서버 응답을 확인하지 못했습니다.', options.lostScheduleStatus ?? 0, options.lostScheduleCode);
-      }
-      return { pending: reservation, repeating };
-    },
+  const createTimer = (callback: () => void, delay: number, repeat: boolean) => {
+    const id = ++nextTimerId;
+    timers.set(id, { at: clock + delay, repeat: repeat ? delay : null, callback });
+    return id;
   };
   const react = {
-    useState<T>(initial: T) {
+    useState<T>(initial: T | (() => T)) {
       const index = cursor++;
-      if (!(index in slots)) slots[index] = initial;
-      return [slots[index] as T, (value: T | ((previous: T) => T)) => {
-        slots[index] = typeof value === 'function' ? (value as (previous: T) => T)(slots[index] as T) : value;
+      if (!(index in slots)) slots[index] = typeof initial === 'function' ? (initial as () => T)() : initial;
+      return [slots[index] as T, (next: T | ((previous: T) => T)) => {
+        const value = typeof next === 'function' ? (next as (previous: T) => T)(slots[index] as T) : next;
+        if (!Object.is(slots[index], value)) {
+          slots[index] = value;
+          dirty = true;
+        }
       }];
     },
-    useRef<T>(initial: T) {
+    useCallback<T>(callback: T, dependencies: readonly unknown[]) {
       const index = cursor++;
-      if (!(index in slots)) slots[index] = { current: initial };
-      return slots[index] as { current: T };
+      const previous = slots[index] as CallbackSlot<T> | undefined;
+      if (!previous || !equalDependencies(previous.dependencies, dependencies)) {
+        slots[index] = { callback, dependencies };
+      }
+      return (slots[index] as CallbackSlot<T>).callback;
     },
-    useCallback: <T,>(callback: T) => callback,
-    useSyncExternalStore: (_subscribe: unknown, snapshot: () => unknown) => snapshot(),
-    useEffect: (effect: () => void | (() => void)) => { if (captureEffects) effects.push(effect); },
-  };
-  const native = {
-    hasNativePushBridge: () => !!options.native,
-    subscribeNativePushBridge: () => () => undefined,
-    nativePushEndpoint: (token: string) => `fcm:${token}`,
-    NativePushError: class extends Error {},
-    requestNativePush: async (method: string) => {
-      calls.push(`native-${method}`);
-      if (method === 'getStatus') return { permission, configured: true };
-      if (method === 'getToken') return { token: nativeToken };
-      if (method === 'requestPermission') {
-        assert.equal(authenticated, true, '앱 권한 요청도 인증 성공 뒤에만 시작한다.');
-        permission = options.outcome === 'denied' || options.outcome === 'default' ? options.outcome : 'granted';
-        return { permission, configured: true };
+    useEffect(effect: () => EffectCleanup, dependencies?: readonly unknown[]) {
+      const index = cursor++;
+      const previous = slots[index] as EffectSlot | undefined;
+      if (!previous || !equalDependencies(previous.dependencies, dependencies)) {
+        const slot: EffectSlot = { dependencies };
+        slots[index] = slot;
+        pendingEffects.push(() => {
+          if (typeof previous?.cleanup === 'function') previous.cleanup();
+          slot.cleanup = effect();
+        });
       }
-      if (method === 'register') {
-        assert.equal(authenticated, true);
-        assert.equal(permission, 'granted');
-        nativeToken ??= 'native-new-token';
-        return { token: nativeToken };
-      }
-      if (method === 'unregister') {
-        if (options.failLocalCleanup) throw new Error('fixture');
-        nativeToken = null;
-        return { unregistered: true };
-      }
-      throw new Error(`Unexpected native method: ${method}`);
     },
   };
   const notification = {
-    get permission() { return permission; },
-    requestPermission() {
-      calls.push('permission');
-      assert.equal(authenticated, true, '알림 권한은 로그인 후 ON을 눌러야 요청한다.');
-      if (options.outcome === 'throw') throw new DOMException('fixture', 'SecurityError');
-      if (options.outcome === 'reject') return Promise.reject(new DOMException('fixture', 'SecurityError'));
-      permission = options.outcome ?? 'granted';
-      return Promise.resolve(permission);
-    },
-  };
-  const events = new Map<string, () => void>();
-  const eventTarget = {
-    addEventListener: (name: string, callback: () => void) => events.set(name, callback),
-    removeEventListener: (name: string) => events.delete(name),
+    permission,
+    requestPermission: forbid('notification permission'),
   };
   const hookModule = { exports: {} as { usePushTest: () => Hook } };
   runInNewContext(compiled, {
     module: hookModule, exports: hookModule.exports,
     require: (name: string) => {
       if (name === 'react') return react;
-      if (name === '@/utils/push-test-api') return api;
-      if (name === '@/utils/push-test-native') return native;
-      throw new Error(`Unexpected hook dependency: ${name}`);
+      return forbid(`dependency ${name}`)();
     },
-    URL, Uint8Array, Promise, DOMException, Notification: notification,
+    fetch: forbid('fetch'),
+    Notification: permission === 'unsupported' ? undefined : notification,
     window: {
-      ...eventTarget, isSecureContext: true, Notification: notification, PushManager: {},
-      location: { origin: 'https://app.test' }, matchMedia: () => ({ matches: true }),
-      atob: (value: string) => Buffer.from(value, 'base64').toString('binary'),
-      setTimeout, clearTimeout, setInterval, clearInterval,
+      Notification: permission === 'unsupported' ? undefined : notification,
+      isSecureContext: false,
+      AndroidPush: { postMessage: forbid('native push') },
+      setTimeout: (callback: () => void, delay: number) => createTimer(callback, delay, false),
+      clearTimeout: (id: number) => timers.delete(id),
+      setInterval: (callback: () => void, delay: number) => createTimer(callback, delay, true),
+      clearInterval: (id: number) => timers.delete(id),
+      addEventListener: forbid('browser event subscription'),
+      removeEventListener: forbid('browser event subscription'),
     },
-    document: { ...eventTarget, visibilityState: 'visible' },
     navigator: {
-      userAgent: 'Android', platform: 'Linux', maxTouchPoints: 5,
-      serviceWorker: { getRegistrations: async () => {
-        assert.notEqual(options.native, true, '앱에서는 서비스 워커를 사용하지 않는다.');
-        if (options.failServiceWorker) throw new DOMException('fixture', 'SecurityError');
-        return [registration];
-      } },
+      serviceWorker: { register: forbid('service worker'), getRegistrations: forbid('service worker') },
+      permissions: { query: forbid('permission query') },
     },
-  });
-  const render = () => { cursor = 0; return hookModule.exports.usePushTest(); };
-  return {
-    calls, render,
-    workerUpdateCount: () => workerUpdates,
-    restoreStatusReads: () => { statusFailure = undefined; },
-    blockLocalSubscriptionReads: () => { localReadBlocked = true; },
-    async mount() {
-      render();
-      captureEffects = false;
-      effects.forEach(effect => effect());
-      await settle();
-      return render();
-    },
-    async focus() { events.get('focus')?.(); await settle(); return render(); },
-  };
-}
-
-for (const native of [false, true]) {
-  const platform = native ? 'APK' : '웹';
-  const reads = native ? ['native-getStatus', 'native-getToken', 'status'] : ['status'];
-  const registrationCalls = native
-    ? ['native-requestPermission', 'native-register', 'server-subscribe']
-    : ['permission', 'browser-subscribe', 'server-subscribe'];
-
-  test(`${platform} 로그인은 인증과 기존 상태 확인만 수행하며 알림을 켜지 않는다`, async () => {
-    const harness = createHarness({ native });
-    const mounted = await harness.mount();
-    assert.equal(mounted.requiresLogin, true);
-    await mounted.setEnabled(true);
-    assert.deepEqual(harness.calls, reads);
-    harness.calls.length = 0;
-    const login = mounted.login('fixture-user', 'fixture-password');
-    assert.deepEqual(harness.calls, ['login']);
-    await login;
-    assert.deepEqual(harness.calls, ['login', 'authenticated', ...reads]);
-    assert.equal(harness.render().isAuthenticated, true);
-    assert.equal(harness.render().requiresLogin, false);
-    assert.equal(harness.render().isEnabled, false);
-    assert.equal(harness.render().browser.hasSubscription, false);
+    document: { visibilityState: 'visible' },
   });
 
-  test(`${platform} ON은 기기를 등록한 다음 즉시 반복 발송을 한 번 요청한다`, async () => {
-    const harness = createHarness({ native });
-    await (await harness.mount()).login('fixture-user', 'fixture-password');
-    harness.calls.length = 0;
-    const enable = harness.render().setEnabled(true);
-    assert.deepEqual(harness.calls, [native ? 'native-requestPermission' : 'permission']);
-    await enable;
-    assert.deepEqual(harness.calls, [...registrationCalls, 'schedule-repeat']);
-    assert.equal(harness.render().status?.registered, true);
-    assert.equal(harness.render().isEnabled, true);
-    harness.calls.length = 0;
-    await harness.render().setEnabled(true);
-    assert.deepEqual(harness.calls, []);
-  });
-
-  test(`${platform} 로그인 실패는 권한·기기 등록·발송을 모두 시작하지 않는다`, async () => {
-    const harness = createHarness({ native, failLogin: true });
-    const mounted = await harness.mount();
-    harness.calls.length = 0;
-    await mounted.login('fixture-user', 'fixture-password');
-    await harness.render().setEnabled(true);
-    assert.deepEqual(harness.calls, ['login']);
-    assert.equal(harness.render().isAuthenticated, false);
-    assert.equal(harness.render().isEnabled, false);
-  });
-
-  test(`${platform} ON 권한 거절 후에도 로그인과 CCTV 화면을 유지한다`, async () => {
-    for (const outcome of ['denied', 'default'] as const) {
-      const harness = createHarness({ native, outcome });
-      await (await harness.mount()).login('fixture-user', 'fixture-password');
-      harness.calls.length = 0;
-      await harness.render().setEnabled(true);
-      assert.deepEqual(harness.calls, [native ? 'native-requestPermission' : 'permission']);
-      const current = harness.render();
-      assert.equal(current.isAuthenticated, true);
-      assert.equal(current.browser.permission, outcome);
-      assert.equal(current.isEnabled, false);
-      assert.match(current.message ?? '', /알림 켜기/);
+  const flush = () => {
+    let renders = 0;
+    while (dirty && mounted) {
+      assert.ok(renders++ < 20, 'Hook must settle without a render loop');
+      dirty = false;
+      cursor = 0;
+      current = hookModule.exports.usePushTest();
+      pendingEffects.splice(0).forEach(effect => effect());
     }
-  });
-
-  test(`${platform} 반복 발송 시작 실패는 등록을 유지하고 ON으로 표시하지 않는다`, async () => {
-    const harness = createHarness({ native, failSchedule: true });
-    await (await harness.mount()).login('fixture-user', 'fixture-password');
-    await harness.render().setEnabled(true);
-    assert.equal(harness.render().status?.registered, true);
-    assert.equal(harness.render().browser.hasSubscription, true);
-    assert.equal(harness.render().isEnabled, false);
-    assert.match(harness.render().error ?? '', /기기는 등록했지만 CCTV 알림을 시작하지 못했습니다/);
-  });
-
-  test(`${platform} 기기 등록 실패 후에는 발송을 요청하지 않는다`, async () => {
-    const harness = createHarness({ native, failSubscribe: true });
-    await (await harness.mount()).login('fixture-user', 'fixture-password');
-    harness.calls.length = 0;
-    await harness.render().setEnabled(true);
-    assert.deepEqual(harness.calls, registrationCalls);
-    assert.equal(harness.render().status?.registered, false);
-    assert.equal(harness.render().isEnabled, false);
-  });
-
-  test(`${platform} ON 중복 클릭과 포커스 복귀가 중복 발송을 만들지 않는다`, async () => {
-    let completeSchedule!: () => void;
-    const scheduleWait = new Promise<void>(resolve => { completeSchedule = resolve; });
-    const harness = createHarness({ native, scheduleWait });
-    await (await harness.mount()).login('fixture-user', 'fixture-password');
-    harness.calls.length = 0;
-    const first = harness.render().setEnabled(true);
-    const second = harness.render().setEnabled(true);
-    await settle();
-    await harness.focus();
-    assert.deepEqual(harness.calls, [...registrationCalls, 'schedule-repeat']);
-    completeSchedule();
-    await Promise.all([first, second]);
-    assert.equal(harness.render().isEnabled, true);
-  });
-
-  test(`${platform} 기존 반복 발송은 재접속과 포커스 복귀에서 조회만 한다`, async () => {
-    const harness = createHarness({ native, restoredSession: true, permission: 'granted', existing: 'matching', repeating: true });
-    const current = await harness.mount();
-    assert.equal(current.isEnabled, true);
-    await harness.focus();
-    await harness.render().refresh();
-    assert.deepEqual(harness.calls, [...reads, ...reads, ...reads]);
-    assert.equal(harness.render().status?.pending?.id, pending.id);
-  });
-
-  test(`${platform} 기존 단일 구독은 OFF이며 ON을 눌러야 반복 발송을 시작한다`, async () => {
-    const harness = createHarness({ native, restoredSession: true, permission: 'granted', existing: 'matching' });
-    const current = await harness.mount();
-    assert.equal(current.status?.registered, true);
-    assert.equal(current.isEnabled, false);
-    harness.calls.length = 0;
-    await current.setEnabled(true);
-    assert.equal(harness.calls.filter(call => call === 'schedule-repeat').length, 1);
-    assert.equal(harness.render().isEnabled, true);
-  });
-
-  test(`${platform} OFF는 서버 반복 발송을 취소한 후 기기 구독을 해제한다`, async () => {
-    const harness = createHarness({ native, restoredSession: true, permission: 'granted', existing: 'matching', repeating: true });
-    const current = await harness.mount();
-    harness.calls.length = 0;
-    await current.setEnabled(false);
-    await harness.focus();
-    await harness.render().refresh();
-    assert.deepEqual(harness.calls, ['server-unsubscribe', native ? 'native-unregister' : 'browser-unsubscribe', ...reads, ...reads]);
-    assert.equal(harness.render().status?.registered, false);
-    assert.equal(harness.render().status?.pending, null);
-    assert.equal(harness.render().isEnabled, false);
-  });
-
-  test(`${platform} OFF 서버 취소 실패는 토큰과 ON 상태를 유지해 재시도할 수 있다`, async () => {
-    const harness = createHarness({ native, restoredSession: true, permission: 'granted', existing: 'matching', repeating: true, failUnsubscribe: true });
-    const current = await harness.mount();
-    harness.calls.length = 0;
-    await current.setEnabled(false);
-    assert.deepEqual(harness.calls, ['server-unsubscribe']);
-    assert.equal(harness.render().browser.hasSubscription, true);
-    assert.equal(harness.render().isEnabled, true);
-    assert.equal(harness.render().isAuthenticated, true);
-  });
-
-  test(`${platform} 수신 권한을 잃어도 서버 반복 알림을 OFF로 전환할 수 있다`, async () => {
-    const harness = createHarness({ native, restoredSession: true, permission: 'denied', existing: 'matching', repeating: true });
-    const current = await harness.mount();
-    assert.equal(current.browser.permission, 'denied');
-    assert.equal(current.isEnabled, true);
-    harness.calls.length = 0;
-    await current.setEnabled(false);
-    assert.deepEqual(harness.calls, ['server-unsubscribe', native ? 'native-unregister' : 'browser-unsubscribe']);
-    assert.equal(harness.render().isEnabled, false);
-    assert.equal(harness.render().status?.pending, null);
-  });
-
-  test(`${platform} 로컬 구독을 잃어도 서버에 남은 반복 알림을 표시하고 끌 수 있다`, async () => {
-    const harness = createHarness({ native, restoredSession: true, permission: 'granted', existing: 'matching', repeating: true, missingLocalSubscription: true });
-    const current = await harness.mount();
-    assert.equal(current.browser.hasSubscription, false);
-    assert.equal(current.status?.registered, false);
-    assert.equal(current.isEnabled, true);
-    harness.calls.length = 0;
-    await current.setEnabled(false);
-    assert.deepEqual(harness.calls, native ? ['server-unsubscribe', 'native-unregister'] : ['server-unsubscribe']);
-    assert.equal(harness.render().isEnabled, false);
-    await harness.focus();
-    assert.equal(harness.render().isEnabled, false);
-  });
-
-  test(`${platform} 로컬 구독 정리에 실패해도 서버 반복 취소가 먼저 완료된다`, async () => {
-    const harness = createHarness({ native, restoredSession: true, permission: 'granted', existing: 'matching', repeating: true, failLocalCleanup: true });
-    const current = await harness.mount();
-    harness.calls.length = 0;
-    harness.blockLocalSubscriptionReads();
-    await current.setEnabled(false);
-    assert.deepEqual(harness.calls, native ? ['server-unsubscribe', 'native-unregister'] : ['server-unsubscribe']);
-    assert.equal(harness.render().isEnabled, false);
-    assert.equal(harness.render().status?.pending, null);
-    assert.match(harness.render().error ?? '', /서버의 CCTV 알림은 껐습니다/);
-  });
-
-  test(`${platform} ON 응답이 유실되어도 상태 재조회로 서버 반복 시작을 확인한다`, async () => {
-    const harness = createHarness({ native, lostScheduleResponse: true });
-    await (await harness.mount()).login('fixture-user', 'fixture-password');
-    harness.calls.length = 0;
-    await harness.render().setEnabled(true);
-    assert.deepEqual(harness.calls, [...registrationCalls, 'schedule-repeat', 'status']);
-    assert.equal(harness.render().isEnabled, true);
-    assert.equal(harness.render().isStartUncertain, false);
-    assert.equal(harness.render().error, null);
-    assert.equal(harness.render().status?.pending?.id, 'new-reservation');
-  });
-
-  for (const failure of [
-    { label: '성공 응답의 JSON 손상', status: 200, code: 'INVALID_RESPONSE' },
-    { label: '상위 프록시 502 응답', status: 502, code: 'REQUEST_FAILED' },
-  ]) {
-    test(`${platform} ${failure.label}도 시작 실패로 추측하지 않고 서버 상태로 확인한다`, async () => {
-      const harness = createHarness({ native, lostScheduleResponse: true, lostScheduleStatus: failure.status, lostScheduleCode: failure.code });
-      await (await harness.mount()).login('fixture-user', 'fixture-password');
-      harness.calls.length = 0;
-      await harness.render().setEnabled(true);
-      assert.deepEqual(harness.calls, [...registrationCalls, 'schedule-repeat', 'status']);
-      assert.equal(harness.render().isEnabled, true);
-      assert.equal(harness.render().isStartUncertain, false);
-      assert.equal(harness.render().error, null);
-      assert.equal(harness.render().status?.pending?.id, 'new-reservation');
+    return current;
+  };
+  const advance = (milliseconds: number) => {
+    const target = clock + milliseconds;
+    let fired = 0;
+    while (true) {
+      const next = [...timers.entries()].filter(([, timer]) => timer.at <= target)
+        .sort((left, right) => left[1].at - right[1].at || left[0] - right[0])[0];
+      if (!next) break;
+      assert.ok(fired++ < 1000, 'Timer loop must be bounded');
+      const [id, timer] = next;
+      clock = timer.at;
+      if (timer.repeat === null) timers.delete(id);
+      else timer.at += timer.repeat;
+      timer.callback();
+      flush();
+    }
+    clock = target;
+    return flush();
+  };
+  const unmount = () => {
+    slots.forEach(slot => {
+      if (slot && typeof slot === 'object' && 'cleanup' in slot && typeof slot.cleanup === 'function') {
+        slot.cleanup();
+      }
     });
-  }
+    mounted = false;
+  };
+  flush();
+  return { view: flush, advance, unmount, externalCalls, activeTimers: () => timers.size };
+}
 
-  test(`${platform} ON 응답과 재조회 모두 실패하면 상태 확인 필요로 표시하고 중단할 수 있다`, async () => {
-    const harness = createHarness({ native, lostScheduleResponse: true, statusFailureAfterSchedule: 0, failLocalCleanup: native });
-    await (await harness.mount()).login('fixture-user', 'fixture-password');
-    await harness.render().setEnabled(true);
-    assert.equal(harness.render().isEnabled, false);
-    assert.equal(harness.render().isStartUncertain, true);
-    assert.match(harness.render().error ?? '', /알림 중단/);
-    harness.calls.length = 0;
-    await harness.render().setEnabled(true);
-    assert.deepEqual(harness.calls, []);
-    harness.blockLocalSubscriptionReads();
-    await harness.render().setEnabled(false);
-    assert.deepEqual(harness.calls, native ? ['server-unsubscribe', 'native-unregister'] : ['server-unsubscribe']);
-    assert.equal(harness.render().status?.repeating, false);
-    assert.equal(harness.render().isStartUncertain, false);
-    assert.match(harness.render().error ?? '', /서버의 CCTV 알림은 껐습니다/);
-  });
-
-  test(`${platform} 불확실한 ON 상태는 성공한 상태 조회로 해소한다`, async () => {
-    const harness = createHarness({ native, lostScheduleResponse: true, statusFailureAfterSchedule: 0 });
-    await (await harness.mount()).login('fixture-user', 'fixture-password');
-    await harness.render().setEnabled(true);
-    assert.equal(harness.render().isStartUncertain, true);
-    harness.restoreStatusReads();
-    await harness.render().refresh();
-    assert.equal(harness.render().isStartUncertain, false);
-    assert.equal(harness.render().isEnabled, true);
-  });
-
-  test(`${platform} ON 결과 재조회에서 인증이 만료되면 불확실 상태를 정리한다`, async () => {
-    const harness = createHarness({ native, lostScheduleResponse: true, statusFailureAfterSchedule: 401 });
-    await (await harness.mount()).login('fixture-user', 'fixture-password');
-    await harness.render().setEnabled(true);
-    assert.equal(harness.render().isAuthenticated, false);
-    assert.equal(harness.render().requiresLogin, true);
-    assert.equal(harness.render().isStartUncertain, false);
-    assert.equal(harness.render().isEnabled, false);
+for (const permission of ['default', 'denied', 'granted', 'unsupported'] as const) {
+  test(`전시 진입은 OS 알림 상태(${permission})와 관계없이 로그인·설치·기기 등록 없이 준비된다`, () => {
+    const harness = createHarness(permission);
+    const state = harness.view();
+    assert.equal(state.isAuthenticated, true);
+    assert.equal(state.requiresLogin, false);
+    assert.equal(state.isEnabled, false);
+    assert.equal(state.mode, 'web');
+    assert.equal(state.isNative, false);
+    assert.equal(state.isLoading, false);
+    assert.equal(state.action, null);
+    assert.equal(state.error, null);
+    assert.equal(state.status?.fcmReady, false);
+    assert.equal(state.status?.pending, null);
+    assert.equal(state.status?.lastJob, null);
+    assert.equal(state.browser.supported, true);
+    assert.match(state.browser.supportMessage, /로컬 알림 시뮬레이션/);
+    assert.equal(harness.activeTimers(), 0);
+    assert.deepEqual(harness.externalCalls, []);
+    harness.unmount();
   });
 }
 
-test('웹 권한 요청 예외를 처리하고 로그인 상태를 유지한다', async () => {
-  for (const outcome of ['reject', 'throw'] as const) {
-    const harness = createHarness({ outcome });
-    await (await harness.mount()).login('fixture-user', 'fixture-password');
-    harness.calls.length = 0;
-    await harness.render().setEnabled(true);
-    await settle();
-    assert.deepEqual(harness.calls, ['permission']);
-    assert.equal(harness.render().isAuthenticated, true);
-    assert.equal(harness.render().isEnabled, false);
-    assert.match(harness.render().error ?? '', /HTTPS 인증서/);
-  }
-});
-
-test('웹 키 변경은 로그인에서 유지하고 ON에서 기존 예약 취소 후 교체한다', async () => {
-  const harness = createHarness({ permission: 'granted', existing: 'old-key' });
-  const mounted = await harness.mount();
-  harness.calls.length = 0;
-  await mounted.login('fixture-user', 'fixture-password');
-  assert.deepEqual(harness.calls, ['login', 'authenticated', 'status']);
-  assert.equal(harness.render().isEnabled, false);
-  harness.calls.length = 0;
-  await harness.render().setEnabled(true);
-  assert.deepEqual(harness.calls, ['server-unsubscribe', 'browser-unsubscribe', 'browser-subscribe', 'server-subscribe', 'schedule-repeat']);
-  assert.equal(harness.render().isEnabled, true);
-});
-
-test('인증서나 서비스 워커 오류가 있어도 로그인 화면과 인증 상태를 정상 처리한다', async () => {
-  const harness = createHarness({ failServiceWorker: true });
-  const current = await harness.mount();
-  assert.equal(current.requiresLogin, true);
-  await current.login('fixture-user', 'fixture-password');
-  assert.equal(harness.render().isAuthenticated, true);
-  assert.equal(harness.render().requiresLogin, false);
-  assert.equal(harness.render().status?.publicKey, publicKey);
-  assert.match(harness.render().error ?? '', /HTTPS 인증서/);
-  await harness.focus();
-  assert.equal(harness.render().isAuthenticated, true);
-});
-
-test('로그인 중복 클릭을 직렬화하고 알림 요청 없이 완료한다', async () => {
-  let completeLogin!: () => void;
-  const loginWait = new Promise<void>(resolve => { completeLogin = resolve; });
-  const harness = createHarness({ loginWait });
-  const current = await harness.mount();
-  harness.calls.length = 0;
-  const first = current.login('fixture-user', 'fixture-password');
-  const second = current.login('fixture-user', 'fixture-password');
-  await current.setEnabled(true);
-  assert.deepEqual(harness.calls, ['login']);
-  completeLogin();
-  await Promise.all([first, second]);
-  assert.deepEqual(harness.calls, ['login', 'authenticated', 'status']);
-});
-
-test('APK 서버 전송 설정이 없으면 로그인은 성공하고 ON에서 준비 오류를 안내한다', async () => {
-  const harness = createHarness({ native: true, fcmReady: false });
-  await (await harness.mount()).login('fixture-user', 'fixture-password');
-  assert.equal(harness.render().isAuthenticated, true);
-  assert.equal(harness.render().error, null);
-  harness.calls.length = 0;
-  await harness.render().setEnabled(true);
-  assert.deepEqual(harness.calls, []);
-  assert.match(harness.render().error ?? '', /서버의 앱 알림 설정/);
-});
-
-test('발송 작업자가 준비되지 않으면 등록은 유지하고 반복 발송은 켜지 않는다', async () => {
-  const harness = createHarness({ workerReady: false });
-  await (await harness.mount()).login('fixture-user', 'fixture-password');
-  await harness.render().setEnabled(true);
-  assert.equal(harness.calls.includes('schedule-repeat'), false);
-  assert.equal(harness.render().status?.registered, true);
-  assert.equal(harness.render().isEnabled, false);
-  assert.match(harness.render().error ?? '', /발송 준비/);
-});
-
-test('기존 enable과 schedule은 단일 테스트 발송 기능을 유지한다', async () => {
+test('전시 로그인 호환 동작은 자격증명이나 서버 인증을 사용하지 않는다', async () => {
   const harness = createHarness();
-  await (await harness.mount()).login('fixture-user', 'fixture-password');
-  harness.calls.length = 0;
-  await harness.render().enable();
-  assert.deepEqual(harness.calls, ['permission', 'browser-subscribe', 'server-subscribe']);
-  await harness.render().schedule();
-  assert.equal(harness.calls.at(-1), 'schedule-once');
-  assert.equal(harness.render().isEnabled, false);
+  await harness.view().login('', '');
+  await harness.view().login('exhibition', 'ignored-demo-value');
+  assert.equal(harness.view().isAuthenticated, true);
+  assert.equal(harness.view().isEnabled, false);
+  assert.equal(harness.activeTimers(), 0);
+  assert.deepEqual(harness.externalCalls, []);
+  harness.unmount();
 });
 
-test('기존 서비스 워커는 첫 진입에서만 갱신하고 로그인·포커스·조회는 재사용한다', async () => {
+test('알림 ON은 300ms 뒤 화면 내 알림을 표시하고 10초 주기로 반복한다', async () => {
+  const harness = createHarness('denied');
+  await harness.view().setEnabled(true);
+  const enabled = harness.view();
+  assert.equal(enabled.isEnabled, true);
+  assert.equal(enabled.status?.registered, true);
+  assert.equal(enabled.status?.repeating, true);
+  assert.equal(enabled.browser.hasSubscription, true);
+  assert.equal(harness.activeTimers(), 2);
+  assert.equal(harness.advance(299).message, null);
+  assert.equal(harness.advance(1).message, '전시회 데모 · CCTV 검사 알림이 도착했습니다.');
+  assert.equal(harness.view().status?.lastJob?.status, 'sent');
+  assert.equal(harness.activeTimers(), 1);
+  await harness.view().refresh();
+  assert.equal(harness.view().message, '전시회 데모 준비 완료');
+  assert.equal(harness.advance(9699).message, '전시회 데모 준비 완료');
+  assert.equal(harness.advance(1).message, '전시회 데모 · CCTV 검사 알림이 도착했습니다.');
+  assert.deepEqual(harness.externalCalls, []);
+  harness.unmount();
+});
+
+test('중복 ON과 새로고침은 반복 타이머나 알림 발송 경로를 중복 생성하지 않는다', async () => {
   const harness = createHarness();
-  const current = await harness.mount();
-  assert.equal(harness.workerUpdateCount(), 1);
-  await current.login('fixture-user', 'fixture-password');
-  await harness.focus();
-  await harness.render().refresh();
-  assert.equal(harness.workerUpdateCount(), 1);
+  await harness.view().enable();
+  harness.view();
+  await harness.view().enable();
+  await harness.view().setEnabled(true);
+  await harness.view().refresh();
+  assert.equal(harness.activeTimers(), 2);
+  harness.advance(300);
+  assert.equal(harness.activeTimers(), 1);
+  await harness.view().refresh();
+  harness.advance(9700);
+  assert.equal(harness.view().message, '전시회 데모 · CCTV 검사 알림이 도착했습니다.');
+  assert.equal(harness.activeTimers(), 1);
+  assert.deepEqual(harness.externalCalls, []);
+  harness.unmount();
 });
 
-test('기존 서비스 워커 갱신 실패도 인증을 가로막지 않는다', async () => {
-  const harness = createHarness({ failServiceWorkerUpdate: true });
-  const current = await harness.mount();
-  assert.equal(current.requiresLogin, true);
-  await current.login('fixture-user', 'fixture-password');
-  assert.equal(harness.render().isAuthenticated, true);
-  assert.equal(harness.render().requiresLogin, false);
-  assert.match(harness.render().error ?? '', /HTTPS 인증서/);
+test('알림 OFF는 첫 알림이 도착하기 전에도 모든 예약을 취소한다', async () => {
+  const harness = createHarness();
+  await harness.view().enable();
+  harness.view();
+  harness.advance(100);
+  await harness.view().disable();
+  assert.equal(harness.view().isEnabled, false);
+  assert.equal(harness.view().status?.registered, false);
+  assert.equal(harness.view().status?.repeating, false);
+  assert.equal(harness.view().browser.hasSubscription, false);
+  assert.equal(harness.activeTimers(), 0);
+  assert.equal(harness.advance(30000).message, '데모 알림이 중지되었습니다.');
+  assert.equal(harness.view().status?.lastJob, null);
+  assert.deepEqual(harness.externalCalls, []);
+  harness.unmount();
+});
+
+test('알림 OFF는 반복을 중단하고 이미 표시한 발송 이력을 보존한다', async () => {
+  const harness = createHarness();
+  await harness.view().setEnabled(true);
+  harness.view();
+  harness.advance(300);
+  await harness.view().setEnabled(false);
+  assert.equal(harness.view().status?.lastJob?.status, 'sent');
+  assert.equal(harness.activeTimers(), 0);
+  await harness.view().refresh();
+  assert.equal(harness.advance(30000).message, '전시회 데모 준비 완료');
+  assert.deepEqual(harness.externalCalls, []);
+  harness.unmount();
+});
+
+test('알림을 다시 켜면 새로운 첫 알림 예약 하나만 생성된다', async () => {
+  const harness = createHarness();
+  await harness.view().enable();
+  harness.view();
+  harness.advance(300);
+  await harness.view().disable();
+  harness.view();
+  await harness.view().refresh();
+  await harness.view().enable();
+  harness.view();
+  assert.equal(harness.activeTimers(), 2);
+  assert.equal(harness.advance(299).message, '전시회 데모 준비 완료');
+  assert.equal(harness.advance(1).message, '전시회 데모 · CCTV 검사 알림이 도착했습니다.');
+  assert.equal(harness.activeTimers(), 1);
+  assert.deepEqual(harness.externalCalls, []);
+  harness.unmount();
+});
+
+test('단일 알림 체험은 반복 알림을 켜지 않고 즉시 화면에 표시한다', async () => {
+  const harness = createHarness('unsupported');
+  await harness.view().schedule();
+  assert.equal(harness.view().message, '전시회 데모 · CCTV 검사 알림이 도착했습니다.');
+  assert.equal(harness.view().status?.lastJob?.status, 'sent');
+  assert.equal(harness.view().isEnabled, false);
+  assert.equal(harness.view().status?.repeating, false);
+  assert.equal(harness.activeTimers(), 0);
+  assert.deepEqual(harness.externalCalls, []);
+  harness.unmount();
+});
+
+test('화면을 닫으면 첫 알림과 반복 알림 타이머를 모두 해제한다', async () => {
+  const harness = createHarness();
+  await harness.view().enable();
+  harness.view();
+  assert.equal(harness.activeTimers(), 2);
+  harness.unmount();
+  assert.equal(harness.activeTimers(), 0);
+  harness.advance(30000);
+  assert.deepEqual(harness.externalCalls, []);
+});
+
+test('설치 체험은 브라우저 설치나 권한 요청 없이 안내창만 열고 닫는다', async () => {
+  const harness = createHarness();
+  assert.equal(harness.view().canPromptInstall, false);
+  assert.equal(harness.view().showInstallGuide, false);
+  await harness.view().install();
+  assert.equal(harness.view().showInstallGuide, true);
+  assert.match(harness.view().browser.installGuide, /설치 없이 이 화면/);
+  harness.view().closeInstallGuide();
+  assert.equal(harness.view().showInstallGuide, false);
+  assert.equal(harness.activeTimers(), 0);
+  assert.deepEqual(harness.externalCalls, []);
+  harness.unmount();
 });

@@ -241,7 +241,7 @@ export default function FloatingLines({
     renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
     containerRef.current.appendChild(renderer.domElement);
 
-    const uniforms: any = {
+    const uniforms = {
       iTime: { value: 0 },
       iResolution: { value: new Vector3(1, 1, 1) },
       animationSpeed: { value: animationSpeed },
@@ -279,7 +279,8 @@ export default function FloatingLines({
     }
 
     const material = new ShaderMaterial({ uniforms, vertexShader, fragmentShader });
-    const mesh = new Mesh(new PlaneGeometry(2, 2), material);
+    const geometry = new PlaneGeometry(2, 2);
+    const mesh = new Mesh(geometry, material);
     scene.add(mesh);
 
     const clock = new Clock();
@@ -346,7 +347,6 @@ export default function FloatingLines({
     };
   }, [linesGradient, enabledWaves, lineCount, lineDistance, topWavePosition, middleWavePosition, bottomWavePosition, animationSpeed, interactive, bendRadius, bendStrength, mouseDamping, parallax, parallaxStrength]);
 
-  const geometry = new PlaneGeometry(2, 2); // Temp for closure
 
   return <Container ref={containerRef} />;
 }

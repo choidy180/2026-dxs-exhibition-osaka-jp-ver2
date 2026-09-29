@@ -81,6 +81,7 @@ export default function CameraTile({
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    const frame = window.requestAnimationFrame(() => {
     const savedValue = window.localStorage.getItem(storageKey);
 
     if (!savedValue) {
@@ -98,6 +99,8 @@ export default function CameraTile({
     } catch {
       setFocusPoint(defaultFocus);
     }
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [defaultFocus, storageKey]);
 
   const saveFocusPoint = (point: FocusPoint) => {

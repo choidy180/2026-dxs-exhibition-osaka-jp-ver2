@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import InspectionDataState from '@/components/common/inspection-data-state/InspectionDataState';
 import { DashboardHeader } from '@/components/gasket-check/DashboardHeader';
 import { EmptyStateModal } from '@/components/gasket-check/EmptyStateModal';
 import { FullLogModal } from '@/components/gasket-check/FullLogModal';
 import { ImageModal } from '@/components/gasket-check/ImageModal';
 import { MainInspectionView } from '@/components/gasket-check/MainInspectionView';
 import { ProductionLogPanel } from '@/components/gasket-check/ProductionLogPanel';
-import { SoundPermissionModal } from '@/components/gasket-check/SoundPermissionModal';
 import { LAYOUT_CONFIGS } from '@/constants/gasketCheck';
 import { useDefectAlarm } from '@/hooks/gasket-check/useDefectAlarm';
 import { useInspectionPolling } from '@/hooks/gasket-check/useInspectionPolling';
@@ -22,7 +22,7 @@ export default function FilmAttachmentCheckClient() {
     const screenMode = useScreenMode();
     const layout = useMemo(() => LAYOUT_CONFIGS[screenMode], [screenMode]);
     const logs = useProductionLogs();
-    const { apiData, totalStats, isDefectMode } = useInspectionPolling();
+    const { apiData, totalStats, isDefectMode, isLoading, error, retry } = useInspectionPolling();
 
     const [imageModal, setImageModal] = useState<ImageModalState | null>(null);
     const [isFullLogOpen, setIsFullLogOpen] = useState(false);
@@ -41,6 +41,8 @@ export default function FilmAttachmentCheckClient() {
             imgUrl,
         });
     };
+
+    if (isLoading || error) return <PageFrame $padding={layout.padding} $gap={layout.gap}><InspectionDataState isLoading={isLoading} error={error} onRetry={retry} /></PageFrame>;
 
     return (
         <PageFrame $padding={layout.padding} $gap={layout.gap}>
@@ -82,13 +84,6 @@ export default function FilmAttachmentCheckClient() {
                 isOpen={isFullLogOpen}
                 logs={logs}
                 onClose={() => setIsFullLogOpen(false)}
-            />
-
-            <SoundPermissionModal
-                isOpen={isDefectMode && !audioAllowed}
-                onConfirm={() => {
-                    setAudioAllowed(true);
-                }}
             />
 
             <ImageModal

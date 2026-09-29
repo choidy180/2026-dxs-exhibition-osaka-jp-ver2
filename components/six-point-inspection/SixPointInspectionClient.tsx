@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import InspectionDataState from '@/components/common/inspection-data-state/InspectionDataState';
 
 import EmptyStateModal from '@/components/six-point-inspection/EmptyStateModal';
 import HistoryModal from '@/components/six-point-inspection/HistoryModal';
@@ -52,6 +53,13 @@ export default function SixPointInspectionClient() {
     a6: null,
   });
 
+  const registerHotspotRef = useCallback((key: CornerKey, node: HTMLButtonElement | null) => {
+    hotspotRefs.current[key] = node;
+  }, []);
+  const registerCameraRef = useCallback((key: CornerKey, node: HTMLButtonElement | null) => {
+    cameraTileRefs.current[key] = node;
+  }, []);
+
   const [activeCorner, setActiveCorner] = useState<CornerKey | null>(null);
   const [summaryFilter, setSummaryFilter] = useState<SummaryFilter>('all');
   const [viewType, setViewType] = useState<InspectionViewType>('split');
@@ -63,6 +71,7 @@ export default function SixPointInspectionClient() {
   const {
     apiData,
     hasFetched,
+    isLoading, error, retry,
     isDefectMode,
     totalStats,
   } = useInspectionPolling();
@@ -132,6 +141,8 @@ export default function SixPointInspectionClient() {
     setAnchor(key, anchor);
   };
 
+  if (isLoading || error) return <PageShell><InspectionDataState isLoading={isLoading} error={error} onRetry={retry} /></PageShell>;
+
   return (
     <PageShell>
       <SixPointGlobalStyles />
@@ -157,11 +168,11 @@ export default function SixPointInspectionClient() {
 
       <MainInspectionPanel
         activeCorner={activeCorner}
-        cameraTileRefs={cameraTileRefs}
+        registerCameraRef={registerCameraRef}
         connectorLines={connectorLines}
         cornerItems={cornerItems}
         guideImgUrl={GUIDE_IMAGE_PATH}
-        hotspotRefs={hotspotRefs}
+        registerHotspotRef={registerHotspotRef}
         isFail={resultState.isFail}
         onAnchorChange={handleAnchorChange}
         onImageClick={handleImageClick}

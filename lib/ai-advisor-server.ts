@@ -8,8 +8,7 @@ import {
 	parseAdvisorTable,
 } from '@/utils/ai-advisor-contract';
 
-const ADVISOR_TIMEOUT_MS = 120_000;
-const DEFAULT_ADVISOR_API_BASE_URL = 'http://192.168.0.157:8793';
+import { createDemoAdvisorReply, createDemoAdvisorMetadata } from '@/data/demo-advisor';
 const NO_STORE_HEADERS = { 'Cache-Control': 'no-store' };
 
 export class AdvisorRequestError extends Error {
@@ -40,80 +39,11 @@ export function advisorErrorResponse(error: unknown) {
 	return advisorJson(body, failure.status);
 }
 
-function advisorUrl(path: '/api/chat' | '/api/data-meta'): URL {
-	try {
-		const baseUrl = new URL(process.env.ADVISOR_API_BASE_URL?.trim() || DEFAULT_ADVISOR_API_BASE_URL);
-		if (!['http:', 'https:'].includes(baseUrl.protocol) || baseUrl.username || baseUrl.password) throw new Error();
-		return new URL(path, baseUrl);
-	} catch {
-		throw new AdvisorRequestError(503, 'INVALID_CONFIGURATION', 'AI Advisor 연결 설정을 확인해 주세요.');
-	}
-}
-
-/** Server-side, same-origin adapter: no credentials, raw errors, retries, or cached answers. */
-export async function fetchAdvisorJson(
-	request: Request,
-	path: '/api/chat' | '/api/data-meta',
-	body?: unknown,
-): Promise<unknown> {
-	const url = advisorUrl(path);
-	const controller = new AbortController();
-	let timedOut = false;
-	const abortOnDisconnect = () => controller.abort();
-	request.signal.addEventListener('abort', abortOnDisconnect, { once: true });
-	const timeout = setTimeout(() => {
-		timedOut = true;
-		controller.abort();
-	}, ADVISOR_TIMEOUT_MS);
-	if (request.signal.aborted) controller.abort();
-
-	try {
-		const response = await fetch(url, {
-			method: body === undefined ? 'GET' : 'POST',
-			headers: {
-				Accept: 'application/json',
-				...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-			},
-			...(body === undefined ? {} : { body: JSON.stringify(body) }),
-			cache: 'no-store',
-			credentials: 'omit',
-			redirect: 'error',
-			signal: controller.signal,
-		});
-		if (!response.ok) {
-			// Do not read or relay upstream detail arrays, SQL, or infrastructure error pages.
-			await response.body?.cancel();
-			if (response.status === 429) {
-				throw new AdvisorRequestError(429, 'UPSTREAM_BUSY', 'AI Advisor 요청이 많습니다. 잠시 후 다시 시도해 주세요.');
-			}
-			if (response.status === 400 || response.status === 422) {
-				throw new AdvisorRequestError(422, 'UPSTREAM_REJECTED', '질문을 처리하지 못했습니다. 날짜와 조회 조건을 구체적으로 입력해 주세요.');
-			}
-			throw new AdvisorRequestError(502, 'UPSTREAM_HTTP_ERROR', 'AI Advisor 서버에서 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
-		}
-		if (!/^application\/(?:[\w.+-]+\+)?json(?:\s*;|$)/i.test(response.headers.get('Content-Type') ?? '')) {
-			await response.body?.cancel();
-			throw new AdvisorRequestError(502, 'INVALID_RESPONSE', 'AI Advisor 응답 형식을 확인하지 못했습니다. 다시 시도해 주세요.');
-		}
-		try {
-			return await response.json();
-		} catch (error) {
-			if (controller.signal.aborted) throw error;
-			throw new AdvisorRequestError(502, 'INVALID_RESPONSE', 'AI Advisor 응답을 읽지 못했습니다. 다시 시도해 주세요.');
-		}
-	} catch (error) {
-		if (request.signal.aborted) {
-			throw new AdvisorRequestError(499, 'REQUEST_CANCELLED', '요청이 취소되었습니다.');
-		}
-		if (timedOut) {
-			throw new AdvisorRequestError(504, 'UPSTREAM_TIMEOUT', '답변 대기 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.');
-		}
-		if (error instanceof AdvisorRequestError) throw error;
-		throw new AdvisorRequestError(502, 'UPSTREAM_UNAVAILABLE', 'AI Advisor에 연결하지 못했습니다. 사내망 연결을 확인한 뒤 다시 시도해 주세요.');
-	} finally {
-		clearTimeout(timeout);
-		request.signal.removeEventListener('abort', abortOnDisconnect);
-	}
+/** Exhibition endpoints never contact an external service. */
+export async function fetchAdvisorJson(_request: Request, path: '/api/chat' | '/api/data-meta', body?: unknown): Promise<unknown> {
+  if (path === '/api/data-meta') return createDemoAdvisorMetadata();
+  const query = typeof body === 'object' && body !== null && 'query' in body ? String(body.query) : '';
+  return createDemoAdvisorReply(query);
 }
 
 function hasKnownBusinessFailure(answer: string): boolean {

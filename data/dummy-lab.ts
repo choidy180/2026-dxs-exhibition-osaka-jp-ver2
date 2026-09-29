@@ -41,8 +41,8 @@ const VENDORS = [
   '창원정공', '보성산업', '진영테크', '신흥화학', '동성정밀',
 ];
 
-const BUYERS = ['김민수', '박지훈', '이서연', '정우진', '최다은'];
-const MATERIAL_MANAGERS = ['강태호', '윤채원', '임현우', '한소희'];
+const BUYERS = ['담당자 A', '담당자 B', '담당자 C', '담당자 D', '담당자 E'];
+const MATERIAL_MANAGERS = ['자재담당 A', '자재담당 B', '자재담당 C', '자재담당 D'];
 const PROCESS_GBS = ['조립', '사출', '발포', '진공성형', '외주'];
 const ORDER_GBS = ['발주', '미발주'];
 

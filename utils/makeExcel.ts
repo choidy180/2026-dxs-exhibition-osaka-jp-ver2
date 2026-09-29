@@ -41,7 +41,7 @@ function buildRowFromCase(
   allHeaders: string[],
   perCaseDefaults: LabDefaults
 ) {
-  const row: Record<string, any> = {};
+  const row: Record<string, string | number> = {};
   for (const h of allHeaders) row[h] = "";
 
   // LAB_* 채우기
@@ -135,7 +135,7 @@ export function downloadCsvFromCases(
     )
   );
 
-  const esc = (v: any) => {
+  const esc = (v: unknown) => {
     const s = (v ?? "").toString();
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };

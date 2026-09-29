@@ -1,64 +1,31 @@
-// hooks/useMultiFetchGet.ts
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createExhibitionMaterials, createExhibitionVehicleEntries } from '@/data/exhibition-material';
+import { createMockApiData } from '@/data/smartFactoryViewer';
 
 interface UseMultiFetchGetResult<T = unknown> {
-  data: T[];
-  errors: (Error | null)[];
-  loading: boolean;
-  refetch: () => Promise<void>;
+  data: T[]; errors: (Error | null)[]; loading: boolean; refetch: () => Promise<void>;
 }
-
-export function useMultiFetchGet<T = unknown>(
-  urls: string[],
-  options?: RequestInit,
-  immediate = true
-): UseMultiFetchGetResult<T> {
+/** 기존 호출부 계약을 유지하면서 전시용 데이터만 반환한다. */
+export function useMultiFetchGet<T = unknown>(urls: string[], _options?: RequestInit, immediate = true): UseMultiFetchGetResult<T> {
+  void _options;
   const [data, setData] = useState<T[]>([]);
   const [errors, setErrors] = useState<(Error | null)[]>([]);
   const [loading, setLoading] = useState(false);
-
+  const key = JSON.stringify(urls);
+  const sources = useMemo(() => JSON.parse(key) as string[], [key]);
   const fetchAll = useCallback(async () => {
-    if (!urls || urls.length === 0) return;
     setLoading(true);
-
-    try {
-      const results = await Promise.all(
-        urls.map(async (url) => {
-          try {
-            const res = await fetch(url, { method: "GET", ...options });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const contentType = res.headers.get("content-type");
-            const parsed = contentType?.includes("application/json")
-              ? await res.json()
-              : await res.text();
-            return parsed as T;
-          } catch (err) {
-            console.error(`❌ ${url} 실패`, err);
-            throw err;
-          }
-        })
-      );
-      setData(results);
-      setErrors(Array(urls.length).fill(null));
-    } catch (err) {
-      // 개별 에러 캐치
-      setErrors(
-        urls.map((url, i) => {
-          try {
-            return (err as Error[])[i] ?? null;
-          } catch {
-            return err as Error;
-          }
-        })
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [urls, options]);
-
+    setData(sources.map(url => (
+      url.includes('000035') ? { success: true, data: createMockApiData() }
+        : url.includes('000052') ? createExhibitionVehicleEntries() : createExhibitionMaterials()
+    )) as T[]);
+    setErrors(sources.map(() => null));
+    setLoading(false);
+  }, [sources]);
   useEffect(() => {
-    if (immediate) fetchAll();
+    if (!immediate) return;
+    const timer = window.setTimeout(() => { void fetchAll(); }, 0);
+    return () => window.clearTimeout(timer);
   }, [fetchAll, immediate]);
-
   return { data, errors, loading, refetch: fetchAll };
 }

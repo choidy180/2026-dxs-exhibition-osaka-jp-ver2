@@ -1,6 +1,4 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import { isPushTestEnabled } from '@/lib/push-test/config';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
@@ -12,6 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function PushTestLayout({ children }: { children: React.ReactNode }) {
-  if (!isPushTestEnabled()) notFound();
   return children;
 }

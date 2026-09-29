@@ -1,8 +1,11 @@
 'use client';
 
 import styled from 'styled-components';
-import { MAX_CAMERA_COUNT, PORT } from '@/constants/material-monitoring';
+import { MAX_CAMERA_COUNT } from '@/constants/material-monitoring';
+import { color, font, fontSize, motion, radius, shadow, space, tone } from '@/styles/design-tokens';
 import type { CameraHost } from '@/hooks/use-camera-hosts';
+import type { MaterialCameraPlayback } from '@/types/material-camera-video';
+import { MATERIAL_CAMERA_RESET_MS } from '@/constants/material-camera-videos';
 
 type StatusColor = {
   text: string;
@@ -11,29 +14,30 @@ type StatusColor = {
 };
 
 const CONNECTED_COLOR: StatusColor = {
-  text: '#15803d',
-  bg: 'rgba(21, 128, 61, 0.08)',
-  border: 'rgba(21, 128, 61, 0.28)'
+  text: tone.success.fg,
+  bg: tone.success.bg,
+  border: tone.success.border
 };
 
 const CHECKING_COLOR: StatusColor = {
-  text: '#2563eb',
-  bg: 'rgba(37, 99, 235, 0.08)',
-  border: 'rgba(37, 99, 235, 0.25)'
+  text: tone.info.fg,
+  bg: tone.info.bg,
+  border: tone.info.border
 };
 
 const DISCONNECTED_COLOR: StatusColor = {
-  text: '#64748b',
-  bg: '#f1f5f9',
-  border: '#e2e8f0'
+  text: tone.neutral.fg,
+  bg: tone.neutral.bg,
+  border: tone.neutral.border
 };
 
 type Props = {
   hosts: CameraHost[];
+  cameras: MaterialCameraPlayback[];
   isScanning: boolean;
 };
 
-export default function CameraRpaStepList({ hosts, isScanning }: Props) {
+export default function CameraRpaStepList({ hosts, cameras, isScanning }: Props) {
   return (
     <RpaStepGrid>
       {Array.from({ length: MAX_CAMERA_COUNT }, (_, index) => {
@@ -41,18 +45,20 @@ export default function CameraRpaStepList({ hosts, isScanning }: Props) {
         const host = hosts[index];
         const isConnected = Boolean(host);
         const isChecking = !isConnected && isScanning;
-        const statusText = isConnected ? '연결됨' : isChecking ? '확인 중' : '연결 안 됨';
-        const detailText = host
-          ? `${host}:${PORT}`
+        const camera = cameras[index];
+        const isResetting = camera.resetUntil !== null;
+        const statusText = isResetting ? '초기화 중' : isConnected ? '연결됨' : isChecking ? '확인 중' : '연결 안 됨';
+        const detailText = isResetting ? '카메라 초기화 중' : host
+          ? '전시 영상 재생 중'
           : isChecking
             ? '카메라 신호 확인 중'
             : '카메라 신호 없음';
-        const statusColor = isConnected
+        const statusColor = isResetting ? CHECKING_COLOR : isConnected
           ? CONNECTED_COLOR
           : isChecking
             ? CHECKING_COLOR
             : DISCONNECTED_COLOR;
-        const progress = isConnected ? 100 : isChecking ? 45 : 0;
+        const progress = isResetting ? (1 - camera.remainingSeconds / (MATERIAL_CAMERA_RESET_MS / 1000)) * 100 : isConnected ? 100 : isChecking ? 45 : 0;
 
         return (
           <RpaStepCard
@@ -81,56 +87,60 @@ const RpaStepGrid = styled.div`
   flex: 0 0 auto;
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 8px;
-  font-family: 'Pretendard', system-ui, -apple-system, sans-serif;
+  gap: ${space.md}px;
+  margin-bottom: ${space.md}px;
+  font-family: ${font.family};
 
-  @media (max-width: 900px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  @media (max-width: 1500px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
+  @media (max-width: 760px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 `;
 
 const RpaStepCard = styled.article<{ $statusColor: StatusColor }>`
   min-height: 88px;
-  padding: 11px 12px;
-  background: #fff;
+  min-width: 0;
+  padding: ${space.lg}px ${space.md}px;
+  background: ${color.surface};
   border: 1px solid ${props => props.$statusColor.border};
-  border-radius: 12px;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+  border-radius: ${radius.card}px;
+  box-shadow: ${shadow.raised};
 
   .card-head {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
+    gap: ${space.xs}px;
+    margin-bottom: ${space.md}px;
   }
 
   .card-head strong {
-    color: #0f172a;
-    font-size: 0.86rem;
+    color: ${color.ink};
+    font-size: ${fontSize.bodySm};
     font-weight: 600;
+    white-space: nowrap;
   }
 
   .card-head span {
     color: ${props => props.$statusColor.text};
     background: ${props => props.$statusColor.bg};
     border: 1px solid ${props => props.$statusColor.border};
-    border-radius: 10px;
-    padding: 4px 8px;
-    font-size: 0.7rem;
+    border-radius: ${radius.control}px;
+    padding: ${space.xs}px ${space.sm}px;
+    font-size: ${fontSize.caption};
     font-weight: 600;
+    white-space: nowrap;
   }
 
   .step-title {
     overflow: hidden;
-    margin-bottom: 9px;
-    color: #334155;
-    font-size: 0.8rem;
+    margin-bottom: ${space.md}px;
+    color: ${color.ink2};
+    font-size: ${fontSize.meta};
     font-weight: 600;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -140,8 +150,8 @@ const RpaStepCard = styled.article<{ $statusColor: StatusColor }>`
   .progress {
     overflow: hidden;
     height: 5px;
-    background: #f1f5f9;
-    border-radius: 8px;
+    background: ${color.fill};
+    border-radius: ${radius.bar}px;
   }
 
   .progress b {
@@ -149,6 +159,6 @@ const RpaStepCard = styled.article<{ $statusColor: StatusColor }>`
     height: 100%;
     background: ${props => props.$statusColor.text};
     border-radius: inherit;
-    transition: width 0.35s ease;
+    transition: width ${motion.value};
   }
 `;

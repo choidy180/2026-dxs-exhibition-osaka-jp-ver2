@@ -105,7 +105,7 @@ export default function AiAdvisorClient({ launcherPlacement = 'rail' }: { launch
                 <S.Header>
                   <S.HeaderTitle>
                     <S.Avatar><Bot size={24} /></S.Avatar>
-                    <div><h2 id="ai-advisor-title">AI Advisor</h2><p>자재 소요량 · 계획 데이터 조회</p></div>
+                    <div><h2 id="ai-advisor-title">AI Advisor</h2><p>자재 · 품질 · 출하 현황 안내</p></div>
                   </S.HeaderTitle>
                   <S.Actions>
                     <S.Button type="button" onClick={reset}><Plus size={16} />새 대화</S.Button>
@@ -119,33 +119,33 @@ export default function AiAdvisorClient({ launcherPlacement = 'rail' }: { launch
                       <S.ExampleList>{ADVISOR_EXAMPLES.map(example => <S.Button type="button" key={example.label} disabled={chat.isLoading} onClick={() => void send(example.query)}><ChevronRight size={14} />{example.label}</S.Button>)}</S.ExampleList>
                     </section>
                     <section>
-                      <h3><MessageSquare size={17} />이번 대화 · {queries.length.toLocaleString('ko-KR')}건</h3>
+                      <h3><MessageSquare size={17} />이번 대화 · {`${queries.length.toLocaleString('ko-KR')}건`}</h3>
                       {queries.length ? queries.map(query => <S.HistoryButton key={query.id} type="button" title={query.text} onClick={() => document.getElementById(`advisor-${query.id}`)?.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'instant' : 'smooth' })}><span>{query.text}</span></S.HistoryButton>) : <p>질문을 보내면 이곳에서 다시 찾아볼 수 있습니다.</p>}
                     </section>
                     <section>
                       <h3><CalendarDays size={17} />질문 안내</h3>
-                      <p>날짜와 자재 조건을 함께 적어주세요. 기준일 이후의 질문에는 ‘계획 소요량’을 명시하면 더 정확하게 조회할 수 있습니다.</p>
+                      <p>자재 재고, 검사 품질, 출하 현황을 질문해 보세요. 전시용 샘플 데이터로 답변과 표를 제공합니다.</p>
                     </section>
                     <section><h3><Database size={17} />대화 보관</h3><p>이 화면을 사용하는 동안 대화가 유지됩니다. 새 대화를 시작하거나 페이지를 새로고침하면 초기화됩니다.</p></section>
                   </S.Sidebar>
                   <S.Chat>
                     <S.DataStatus $error={!!chat.metadataError} role="status">
                       <Database size={14} />
-                      {chat.metadataLoading ? '데이터 기준일 확인 중...' : chat.metadataError ? <><span>{chat.metadataError}</span><S.Button type="button" onClick={chat.retryMetadata}>기준일 재시도</S.Button></> : <><span>데이터 기준일 {chat.metadata?.as_of_date ?? '-'}</span><span>계획 조회 종료일 {chat.metadata?.forecast_end_date ?? '-'}</span>{!chat.metadata?.as_of_date && <S.Button type="button" onClick={chat.retryMetadata}>기준일 새로고침</S.Button>}</>}
+                      {chat.metadataLoading ? '데이터 기준일 확인 중...' : chat.metadataError ? <><span>{chat.metadataError}</span><S.Button type="button" onClick={chat.retryMetadata}>기준일 재시도</S.Button></> : <><span>데이터 기준일 {chat.metadata?.as_of_date ?? '-'}</span><span>전시 샘플 데이터</span>{!chat.metadata?.as_of_date && <S.Button type="button" onClick={chat.retryMetadata}>기준일 새로고침</S.Button>}</>}
                     </S.DataStatus>
                     <S.MessageList ref={listRef} role="log" aria-label="AI Advisor 대화" aria-live="polite" aria-relevant="additions" onScroll={() => { const el = listRef.current; if (el) setIsAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 100); }}>
-                      {chat.messages.length === 0 && <S.Welcome><Bot size={28} /><h3>어떤 자재가 얼마나 필요한가요?</h3><p>날짜별 계획 소요량을 질문해 보세요.<br />조회 결과는 답변과 표로 확인할 수 있습니다.</p><S.ExampleList>{ADVISOR_EXAMPLES.map(example => <S.Button type="button" key={example.label} disabled={chat.isLoading} onClick={() => void send(example.query)}>{example.label}<ChevronRight size={14} /></S.Button>)}</S.ExampleList></S.Welcome>}
+                      {chat.messages.length === 0 && <S.Welcome><Bot size={28} /><h3>공장 운영 현황을 확인해 보세요</h3><p>아래 예시를 선택하거나 궁금한 내용을 입력하세요.<br />조회 결과는 답변과 표로 확인할 수 있습니다.</p><S.ExampleList>{ADVISOR_EXAMPLES.map(example => <S.Button type="button" key={example.label} disabled={chat.isLoading} onClick={() => void send(example.query)}>{example.label}<ChevronRight size={14} /></S.Button>)}</S.ExampleList></S.Welcome>}
                       {chat.messages.map(message => <S.Message id={`advisor-${message.id}`} key={message.id} $user={message.role === 'user'} aria-label={message.role === 'user' ? '내 질문' : 'Advisor 답변'}><strong>{message.role === 'user' ? '나' : 'AI Advisor'}</strong><p>{message.text}</p>{message.status === 'empty' && <S.DataStatus><Search size={14} />조회 조건에 맞는 데이터가 없습니다. 날짜나 자재 조건을 바꿔보세요.</S.DataStatus>}{message.table && <AdvisorResultTable table={message.table} />}</S.Message>)}
                       {chat.isLoading && chat.requestStartedAt !== null && <AdvisorWaitingCard key={chat.requestStartedAt} startedAt={chat.requestStartedAt} durationSamplesMs={chat.responseDurationSamplesMs} onCancel={chat.cancel} />}
                       {chat.error && <S.StateCard $error role="alert"><CircleAlert size={20} /><div><p>{chat.error}</p><S.Button type="button" onClick={chat.retry} disabled={chat.isLoading}>다시 시도</S.Button></div></S.StateCard>}
                       <div ref={endRef} />
                     </S.MessageList>
                     <S.BottomBar>
-                      {hasAnswer && <S.Button type="button" disabled={chat.isLoading} onClick={() => void send(ADVISOR_FOLLOWUP)}>같은 날짜의 계획 소요량 1위</S.Button>}
+                      {hasAnswer && <S.Button type="button" disabled={chat.isLoading} onClick={() => void send(ADVISOR_FOLLOWUP)}>생산 목표와 달성률</S.Button>}
                       {!isAtBottom && <S.Button type="button" onClick={scrollToBottom}><ArrowDown size={14} />최신 답변</S.Button>}
                     </S.BottomBar>
                     <S.Composer onSubmit={event => { event.preventDefault(); if (canSend) void send(input); }}>
-                      <S.Input ref={inputRef} aria-label="AI Advisor 질문" placeholder="날짜와 자재 소요량을 질문해 주세요" value={input} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229) { event.preventDefault(); if (canSend) void send(input); } }} />
+                      <S.Input ref={inputRef} aria-label="AI Advisor 질문" placeholder="자재, 품질, 출하 현황을 질문해 주세요" value={input} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229) { event.preventDefault(); if (canSend) void send(input); } }} />
                       <S.SendButton type="submit" disabled={!canSend} aria-label="질문 보내기"><Send size={17} />전송</S.SendButton>
                     </S.Composer>
                     <S.Footnote><span>{inputLength > ADVISOR_QUERY_MAX_LENGTH ? `질문은 ${ADVISOR_QUERY_MAX_LENGTH.toLocaleString('ko-KR')}자 이내로 입력해 주세요.` : 'Enter 전송 · Shift+Enter 줄바꿈'}</span><span>{inputLength.toLocaleString('ko-KR')} / {ADVISOR_QUERY_MAX_LENGTH.toLocaleString('ko-KR')}</span></S.Footnote>

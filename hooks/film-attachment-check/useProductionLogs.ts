@@ -8,7 +8,8 @@ export function useProductionLogs() {
     const [logs, setLogs] = useState<SystemLog[]>([]);
 
     useEffect(() => {
-        setLogs(createDummyProductionLogs());
+        const timer = window.setTimeout(() => setLogs(createDummyProductionLogs()), 0);
+        return () => window.clearTimeout(timer);
     }, []);
 
     useEffect(() => {

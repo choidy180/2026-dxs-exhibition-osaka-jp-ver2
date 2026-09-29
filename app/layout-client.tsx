@@ -7,6 +7,8 @@ import { Monitor, MousePointer2 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 
 import TopNavigation from "@/components/navigation/top-navigation";
+import FullWidthLabSettings from '@/components/navigation/FullWidthLabSettings';
+import ExhibitionGuide from '@/components/exhibition-guide/ExhibitionGuide';
 import { useViewContext } from "./view-context";
 import StartAnime from "@/components/start/start-anime";
 
@@ -129,7 +131,6 @@ const NavContainer = styled.div<{ $hideOnMobile: boolean }>`
 
 const MainContent = styled.main<{ $isHidden: boolean; $isFullWidth: boolean; $mobileFullWidth: boolean }>`
   position: relative;
-  z-index: 1;
   min-height: 100vh;
   margin-left: ${(props) => (props.$isFullWidth ? "0" : "var(--app-sidebar-offset, 84px)")};
   width: ${(props) => (props.$isFullWidth ? "100%" : "calc(100% - var(--app-sidebar-offset, 84px))")};
@@ -150,6 +151,12 @@ const MainContent = styled.main<{ $isHidden: boolean; $isFullWidth: boolean; $mo
   }
 `;
 
+// Follow the existing navigation visibility breakpoint on the mobile-enabled warehouse page.
+const MobileLabSettings = styled.div`
+  display: none;
+  @media (max-width: 1024px) { display: block; }
+`;
+
 // --------------------------------------------------------------------------
 // 3. Main Component Logic
 // --------------------------------------------------------------------------
@@ -163,7 +170,8 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
   const isFirstAccess = useRef(true);
 
   // 로딩 애니메이션을 건너뛸 경로인지 확인
-  const isSkipLoading = pathname?.includes("master-dashboard") || isPushTestPage;
+  // Exhibition visitors can move between languages and screens without replaying the opening film.
+  const isSkipLoading = true;
   const isMasterDashboard = pathname?.includes("master-dashboard") ?? false;
   const isMaterialCheckPage = pathname?.startsWith("/material/inbound-inspection/material-check") ?? false;
   const isWarehouseManagementPage =
@@ -194,6 +202,8 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
 
   return (
     <>
+      {isFullWidthPage && <FullWidthLabSettings />}
+      {!isFullWidthPage && isWarehouseManagementPage && <MobileLabSettings><FullWidthLabSettings /></MobileLabSettings>}
       {/* 1. 모바일 접속 시 차단 화면 */}
       <MobileGuardContainer $isEnabled={!isMobileAllowedPage}>
         <IconCircle>
@@ -237,6 +247,8 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
         >
             {children}
         </MainContent>
+
+        <ExhibitionGuide fullWidth={isFullWidthPage} mobileAllowed={isMobileAllowedPage} mobileFullWidth={isWarehouseManagementPage} />
         
       </DesktopOnlyWrapper>
     </>

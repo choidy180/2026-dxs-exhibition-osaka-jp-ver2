@@ -1,10 +1,11 @@
 
 "use client";
 
+import { translateText } from '@/lib/i18n/translate';
 import React, { useCallback, useEffect, useRef } from "react";
 import Map from "ol/Map";
+import type MapBrowserEvent from "ol/MapBrowserEvent";
 import View from "ol/View";
-import VectorTileLayer from "ol/layer/VectorTile";
 import { TRANSPORT_VECTOR_BASEMAP } from "@/constants/transport-basemap";
 import { createTransportMapStyle } from "@/utils/transport-map-style";
 import { mapPalette } from "@/styles/design-tokens";
@@ -24,7 +25,7 @@ import { Coordinate } from "ol/coordinate";
 import { Geometry } from "ol/geom";
 
 export interface VWorldMarker {
-  id: string; 
+  id: string;
   lat: number;
   lng: number;
   title?: string;
@@ -40,7 +41,7 @@ export interface VWorldMarker {
   cargo?: string;
   eta?: string;
   vehicleNo?: string;
-  remainingTime?: string; 
+  remainingTime?: string;
   routeColor?: string;
   routeLineStyle?: string;
   flip?: boolean;
@@ -204,6 +205,7 @@ export default function VWorldMap({
     }, 520);
   };
 
+  useEffect(() => {
   activateMarkerByIdRef.current = (markerId: string, event?: Event, source: "dom" | "map" = "map") => {
     const marker = markerStoreRef.current.get(String(markerId));
     if (!marker) return false;
@@ -231,6 +233,8 @@ export default function VWorldMap({
   };
 
 
+  });
+
   useEffect(() => {
     if (!mapElement.current || mapRef.current) return;
 
@@ -241,7 +245,7 @@ export default function VWorldMap({
     remainingRouteSourceRef.current = remainingRouteSource;
     markerHitSourceRef.current = markerHitSource;
 
-    const baseLayer = new VectorTileLayer({
+    const baseLayer = new VectorLayer({
       source: basemap.source,
       background: mapPalette.land,
       declutter: true,
@@ -273,7 +277,7 @@ export default function VWorldMap({
       container.style.zIndex = '2147481000';
     });
 
-    const handleMapSingleClick = (event: any) => {
+    const handleMapSingleClick = (event: MapBrowserEvent<PointerEvent | KeyboardEvent | WheelEvent>) => {
       if (suppressNextClickRef.current) {
         suppressNextClickRef.current = false;
         event.originalEvent?.preventDefault?.();
@@ -303,7 +307,7 @@ export default function VWorldMap({
       onMapBlankClickRef.current?.();
     };
 
-    const handlePointerMove = (event: any) => {
+    const handlePointerMove = (event: MapBrowserEvent<PointerEvent | KeyboardEvent | WheelEvent>) => {
       if (event.dragging) return;
       const hit = map.hasFeatureAtPixel(event.pixel, { hitTolerance: 12, layerFilter: layer => layer === markerHitLayer });
       viewport.style.cursor = hit ? 'pointer' : '';
@@ -323,7 +327,7 @@ export default function VWorldMap({
       const isLG = fac.title.includes("LG");
       const borderColor = isLG ? '#ce0037' : '#2563eb';
 
-      el.innerHTML = `
+      el.innerHTML = translateText(`
         <div data-vworld-static-overlay="facility" style="display:flex; flex-direction:column; align-items:center;">
           <div style="width: 54px; height: 54px; background: #ffffff; border: 2px solid ${borderColor}; box-shadow: 0 8px 18px rgba(15,23,42,.16); border-radius: 16px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
             <img src="${fac.imageUrl}" style="width: 76%; height: auto; object-fit: contain;">
@@ -332,7 +336,7 @@ export default function VWorldMap({
             ${escapeHtml(fac.title)}
           </div>
         </div>
-      `;
+      `);
       map.addOverlay(new Overlay({ position: mPos, element: el, positioning: 'center-center' }));
     });
 
@@ -579,14 +583,14 @@ export default function VWorldMap({
         if (iconEl) {
           iconEl.style.zIndex = String(showPopup ? 1000004 : 1000002);
           iconEl.style.pointerEvents = 'auto';
-          iconEl.innerHTML = iconHtml;
+          iconEl.innerHTML = translateText(iconHtml);
           prepareMarkerElement(iconEl, carId);
         }
       } else {
         const iconEl = document.createElement('div');
         iconEl.style.zIndex = String(showPopup ? 1000004 : 1000002);
         iconEl.style.pointerEvents = 'auto';
-        iconEl.innerHTML = iconHtml;
+        iconEl.innerHTML = translateText(iconHtml);
         prepareMarkerElement(iconEl, carId);
         map.addOverlay(new Overlay({ id: iconOverlayId, element: iconEl, position: carPos, positioning: 'center-center', stopEvent: true }));
       }
@@ -638,13 +642,13 @@ export default function VWorldMap({
           if (popupEl) {
             popupEl.style.zIndex = String(1000008 - sIndex);
             popupEl.style.pointerEvents = 'none';
-            popupEl.innerHTML = popupContent;
+            popupEl.innerHTML = translateText(popupContent);
           }
         } else {
           const popupEl = document.createElement('div');
           popupEl.style.zIndex = String(1000008 - sIndex);
           popupEl.style.pointerEvents = 'none';
-          popupEl.innerHTML = popupContent;
+          popupEl.innerHTML = translateText(popupContent);
           map.addOverlay(new Overlay({ id: popupOverlayId, element: popupEl, position: carPos, positioning: 'bottom-center', offset: [0, yOffset], stopEvent: false }));
         }
       }
@@ -660,7 +664,7 @@ export default function VWorldMap({
 
   return (
     <>
-      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v9.0.0/ol.css" />
+
       <MapFrame>
         <MapSurface ref={mapElement} />
         <MapTileStatus status={basemap.status} onRetry={basemap.retry} />

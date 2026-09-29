@@ -34,11 +34,11 @@ import {
 
 interface MainInspectionPanelProps {
   activeCorner: CornerKey | null;
-  cameraTileRefs: MutableRefObject<Record<CornerKey, HTMLButtonElement | null>>;
+  registerCameraRef: (key: CornerKey, node: HTMLButtonElement | null) => void;
   connectorLines: Partial<Record<CornerKey, ConnectorLine>>;
   cornerItems: CornerItem[];
   guideImgUrl: string;
-  hotspotRefs: MutableRefObject<Record<CornerKey, HTMLButtonElement | null>>;
+  registerHotspotRef: (key: CornerKey, node: HTMLButtonElement | null) => void;
   isFail: boolean;
   onAnchorChange: (key: CornerKey, anchor: AnchorPoint) => void;
   onImageClick: (title: string, url: string) => void;
@@ -50,11 +50,11 @@ interface MainInspectionPanelProps {
 
 export default function MainInspectionPanel({
   activeCorner,
-  cameraTileRefs,
+  registerCameraRef,
   connectorLines,
   cornerItems,
   guideImgUrl,
-  hotspotRefs,
+  registerHotspotRef,
   isFail,
   onAnchorChange,
   onImageClick,
@@ -65,14 +65,6 @@ export default function MainInspectionPanel({
 }: MainInspectionPanelProps) {
   const topCameraItems = cornerItems.filter((item) => TOP_POINT_KEYS.includes(item.key));
   const bottomCameraItems = cornerItems.filter((item) => BOTTOM_POINT_KEYS.includes(item.key));
-
-  const registerHotspotRef = (key: CornerKey, node: HTMLButtonElement | null) => {
-    hotspotRefs.current[key] = node;
-  };
-
-  const registerCameraRef = (key: CornerKey, node: HTMLButtonElement | null) => {
-    cameraTileRefs.current[key] = node;
-  };
 
   const renderGuideViewport = (solo = false) => (
     <GuideViewport

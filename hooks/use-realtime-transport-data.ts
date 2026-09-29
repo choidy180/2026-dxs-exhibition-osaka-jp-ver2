@@ -2,14 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  REALTIME_TRANSPORT_API_PATH,
   TRANSPORT_POLL_INTERVAL_MS,
   TRANSPORT_REQUEST_TIMEOUT_MS,
 } from '@/constants/realtime-transport';
 import { createSampleTransportVehicles } from '@/data/dummy-realtime-transport';
 import type { TransportVehicleRecord } from '@/types/realtime-transport';
-import { getDxApiUrl } from '@/utils/dx-api';
-import { createTransportMarkers, getTransportVehicleRuntime, mapTransportApiResponse } from '@/utils/realtime-transport';
+import { createTransportMarkers, getTransportVehicleRuntime } from '@/utils/realtime-transport';
 
 type TransportResult = {
   sampleMode: boolean;
@@ -22,7 +20,7 @@ type TransportResult = {
 const EMPTY_RECORDS: TransportVehicleRecord[] = [];
 
 export function useRealtimeTransportData() {
-  const [isSampleMode, setIsSampleMode] = useState(false);
+  const [isSampleMode, setIsSampleMode] = useState(true);
   const [now, setNow] = useState(0);
   const [result, setResult] = useState<TransportResult>({
     sampleMode: false, records: EMPTY_RECORDS, isLoading: true, error: null, lastUpdated: null,
@@ -58,14 +56,7 @@ export function useRealtimeTransportData() {
     }, TRANSPORT_REQUEST_TIMEOUT_MS);
 
     try {
-      let records: TransportVehicleRecord[];
-      if (isSampleMode) {
-        records = createSampleTransportVehicles();
-      } else {
-        const response = await fetch(getDxApiUrl(REALTIME_TRANSPORT_API_PATH), { signal: controller.signal, cache: 'no-store' });
-        if (!response.ok) throw new Error(`Transport request failed: ${response.status}`);
-        records = mapTransportApiResponse(await response.json());
-      }
+      const records = createSampleTransportVehicles();
       if (controller.signal.aborted || requestRef.current !== controller) return;
       const receivedAt = new Date();
       setNow(receivedAt.getTime());

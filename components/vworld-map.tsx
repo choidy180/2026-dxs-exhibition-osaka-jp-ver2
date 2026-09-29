@@ -1,9 +1,9 @@
 "use client";
 
+import { translateText } from '@/lib/i18n/translate';
 import React, { useEffect, useRef } from "react";
 import Map from "ol/Map";
 import View from "ol/View";
-import VectorTileLayer from "ol/layer/VectorTile";
 import { TRANSPORT_VECTOR_BASEMAP } from "@/constants/transport-basemap";
 import { createTransportMapStyle } from "@/utils/transport-map-style";
 import { mapPalette } from "@/styles/design-tokens";
@@ -23,7 +23,7 @@ import { Coordinate } from "ol/coordinate";
 import { Geometry } from "ol/geom";
 
 export interface VWorldMarker {
-  id: string; 
+  id: string;
   lat: number;
   lng: number;
   title?: string;
@@ -36,7 +36,7 @@ export interface VWorldMarker {
   cargo?: string;
   eta?: string;
   vehicleNo?: string;
-  remainingTime?: string; 
+  remainingTime?: string;
   routeColor?: string;
   routeLineStyle?: string;
 }
@@ -111,7 +111,7 @@ export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: V
   const basemap = useTransportBasemap();
   const mapElement = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
-  
+
   const routeSourceRef = useRef<VectorSource<Feature<Geometry>> | null>(null);
   const remainingRouteSourceRef = useRef<VectorSource<Feature<Geometry>> | null>(null);
   const markerSourceRef = useRef<VectorSource<Feature<Geometry>> | null>(null);
@@ -124,12 +124,12 @@ export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: V
     const routeSource = new VectorSource<Feature<Geometry>>();
     const remainingRouteSource = new VectorSource<Feature<Geometry>>();
     const markerSource = new VectorSource<Feature<Geometry>>();
-    
+
     routeSourceRef.current = routeSource;
     remainingRouteSourceRef.current = remainingRouteSource;
     markerSourceRef.current = markerSource;
 
-    const baseLayer = new VectorTileLayer({
+    const baseLayer = new VectorLayer({
       source: basemap.source,
       background: mapPalette.land,
       declutter: true,
@@ -139,13 +139,13 @@ export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: V
     const map = new Map({
       target: mapElement.current,
       layers: [
-        baseLayer, 
-        new VectorLayer({ source: routeSource, zIndex: 10 }), 
-        new VectorLayer({ source: remainingRouteSource, zIndex: 15 }), 
+        baseLayer,
+        new VectorLayer({ source: routeSource, zIndex: 10 }),
+        new VectorLayer({ source: remainingRouteSource, zIndex: 15 }),
         new VectorLayer({ source: markerSource, zIndex: 20 })
       ],
       view: new View({ center: fromLonLat([128.76, 35.18]), zoom: 9, minZoom: 9, maxZoom: 16 }),
-      controls: [], 
+      controls: [],
     });
     mapRef.current = map;
 
@@ -160,7 +160,7 @@ export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: V
       const isLG = fac.title.includes("LG");
       const borderColor = isLG ? '#EF4444' : '#3B82F6';
 
-      el.innerHTML = `
+      el.innerHTML = translateText(`
         <div style="display:flex; flex-direction:column; align-items:center;">
           <div style="width: 52px; height: 52px; background: white; border: 3px solid ${borderColor}; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
             <img src="${fac.imageUrl}" style="width: 80%; height: auto; object-fit: contain;">
@@ -169,7 +169,7 @@ export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: V
             ${fac.title}
           </div>
         </div>
-      `;
+      `);
       map.addOverlay(new Overlay({ position: mPos, element: el, positioning: 'center-center' }));
     });
 
@@ -203,7 +203,7 @@ export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: V
     markerSource.clear();
     remainingRouteSource.clear();
 
-    const currentZoom = map.getView().getZoom() || 10; 
+    const currentZoom = map.getView().getZoom() || 10;
     const zoomFactor = Math.pow(1.2, currentZoom - 13);
     let dynamicDotRadius = 6 * zoomFactor;
     dynamicDotRadius = Math.max(2, dynamicDotRadius);
@@ -241,11 +241,11 @@ export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: V
 
     markers.filter(car => !car.isFacility).forEach((car, index) => {
       let carPos: Coordinate;
-      const isTarget = car.isFocused; 
+      const isTarget = car.isFocused;
       const isLgStart = (car.startLat || 0) > 35.18;
-      
+
       // [수정1] 방향에 따른 테마 컬러 지정 (LG 출발: 레드, GMT 출발: 다크/검정)
-      const themeColor = isLgStart ? '#ce0037' : '#1e293b'; 
+      const themeColor = isLgStart ? '#ce0037' : '#1e293b';
       const themeRgba = isLgStart ? '206, 0, 55' : '30, 41, 59';
 
       const progress = Math.max(0, Math.min(1, car.progress || 0));
@@ -253,11 +253,11 @@ export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: V
 
       if (typeof car.progress === 'number') {
         carPos = isLgStart ? routeGeom.getCoordinateAt(progress) : routeGeom.getCoordinateAt(1 - progress);
-        
+
         if (isTarget) {
           const flatCoords = routeGeom.getCoordinates();
           let remainingCoords: Coordinate[] = [];
-          
+
           // [수정2] 방향에 따라 남은 선의 좌표 배열 구성을 정교화함
           if (isLgStart) {
             // LG(index 0) -> GMT(index Last) 방향: 현재 위치부터 배열 끝(GMT)까지
@@ -272,24 +272,24 @@ export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: V
 
           if (remainingCoords.length > 1) {
             const remainingFeature = new Feature({ geometry: new LineString(remainingCoords) });
-            
+
             remainingFeature.setStyle([
-              new Style({ 
+              new Style({
                 stroke: new Stroke({ color: '#FFFFFF', width: 6, lineDash: [12, 12], lineCap: 'round' }),
-                zIndex: 3 
+                zIndex: 3
               }),
-              new Style({ 
+              new Style({
                 stroke: new Stroke({ color: themeColor, width: 3, lineDash: [12, 12], lineCap: 'round' }),
-                zIndex: 4 
+                zIndex: 4
               })
             ]);
             remainingRouteSource.addFeature(remainingFeature);
           }
 
-          const totalLengthMeters = routeGeom.getLength(); 
+          const totalLengthMeters = routeGeom.getLength();
           const remainingMeters = totalLengthMeters * (1 - progress);
           const remainingKm = remainingMeters / 1000;
-          const avgSpeedKmH = 60; 
+          const avgSpeedKmH = 60;
           const remainingMinutesTotal = Math.round((remainingKm / avgSpeedKmH) * 60);
 
           const hours = Math.floor(remainingMinutesTotal / 60);
@@ -298,12 +298,12 @@ export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: V
           if (remainingMinutesTotal <= 1) computedRemainingTimeStr = "도착 임박";
 
           const sIndex = stackIndexes[carId] || 0;
-          const POPUP_HEIGHT = 160; 
+          const POPUP_HEIGHT = 160;
           const yOffset = -60 - (sIndex * POPUP_HEIGHT);
 
           const iconOverlayId = `icon-${carId}`;
           const iconOverlay = map.getOverlayById(iconOverlayId);
-          
+
           // [수정3] 방향에 따라 트럭 SVG 좌우 반전 처리
           // LG(서쪽) -> GMT(동쪽): 기본 방향(오른쪽) / GMT(동쪽) -> LG(서쪽): 반전(왼쪽)
           const iconHtml = `
@@ -322,18 +322,18 @@ export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: V
 
           if (iconOverlay) {
             iconOverlay.setPosition(carPos);
-            if (iconOverlay.getElement()) iconOverlay.getElement()!.innerHTML = iconHtml;
+            if (iconOverlay.getElement()) iconOverlay.getElement()!.innerHTML = translateText(iconHtml);
           } else {
             const iconEl = document.createElement('div');
-            iconEl.innerHTML = iconHtml;
+            iconEl.innerHTML = translateText(iconHtml);
             map.addOverlay(new Overlay({ id: iconOverlayId, element: iconEl, position: carPos, positioning: 'center-center', stopEvent: false }));
           }
 
           const popupOverlayId = `popup-${carId}`;
           const popupOverlay = map.getOverlayById(popupOverlayId);
 
-          const tailHtml = sIndex > 0 
-              ? `<div style="position: absolute; bottom: -${(sIndex * POPUP_HEIGHT)-12}px; left: calc(50% - 1px); width: 0; height: ${(sIndex * POPUP_HEIGHT)-20}px; border-left: 2px dashed rgba(${themeRgba}, 0.4); z-index: -1;"></div>` 
+          const tailHtml = sIndex > 0
+              ? `<div style="position: absolute; bottom: -${(sIndex * POPUP_HEIGHT)-12}px; left: calc(50% - 1px); width: 0; height: ${(sIndex * POPUP_HEIGHT)-20}px; border-left: 2px dashed rgba(${themeRgba}, 0.4); z-index: -1;"></div>`
               : `<div style="position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 8px solid white;"></div>`;
 
           const popupContent = `
@@ -371,11 +371,11 @@ export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: V
 
           if (popupOverlay) {
             popupOverlay.setPosition(carPos);
-            popupOverlay.setOffset([0, yOffset]); 
-            if (popupOverlay.getElement()) popupOverlay.getElement()!.innerHTML = popupContent;
+            popupOverlay.setOffset([0, yOffset]);
+            if (popupOverlay.getElement()) popupOverlay.getElement()!.innerHTML = translateText(popupContent);
           } else {
             const popupEl = document.createElement('div');
-            popupEl.innerHTML = popupContent;
+            popupEl.innerHTML = translateText(popupContent);
             map.addOverlay(new Overlay({ id: popupOverlayId, element: popupEl, position: carPos, positioning: 'bottom-center', offset: [0, yOffset], stopEvent: false }));
           }
         }
@@ -397,7 +397,7 @@ export default function VWorldMap({ markers = [], focusedTitle, onEtaUpdate }: V
 
   return (
     <>
-      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v9.0.0/ol.css"  />
+
       <MapFrame>
         <MapSurface ref={mapElement} />
         <MapTileStatus status={basemap.status} onRetry={basemap.retry} />

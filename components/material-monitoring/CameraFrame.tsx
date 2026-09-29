@@ -1,27 +1,31 @@
 import React from 'react';
 import { Maximize2, Video } from 'lucide-react';
-import { PORT } from '@/constants/material-monitoring';
+import type { MaterialCameraPlayback } from '@/types/material-camera-video';
+import MaterialCameraVideo from './MaterialCameraVideo';
 import { CamBox } from './styles';
 
 type Props = {
   num: number;
   host?: string;
+  camera: MaterialCameraPlayback;
+  onVideoEnded: () => void;
+  onVideoRetry: () => void;
   isScanning: boolean;
   onExpand: () => void;
 };
 
-function CameraFrame({ num, host, isScanning, onExpand }: Props) {
+function CameraFrame({ num, host, camera, onVideoEnded, onVideoRetry, isScanning, onExpand }: Props) {
   const isLive = Boolean(host);
 
   return (
     <CamBox>
       <div className="cam-title">
-        <span className={isLive ? 'live-dot' : 'wait-dot'} />
+        <span className={isLive && camera.resetUntil === null ? 'live-dot' : 'wait-dot'} />
         자재검수 CAM {String(num).padStart(2, '0')}
       </div>
 
       {isLive ? (
-        <iframe src={`http://${host}:${PORT}/`} title={`Material inspection camera ${num}`} allow="fullscreen" />
+        <MaterialCameraVideo camera={camera} label={`자재검수 카메라 ${num}`} onEnded={onVideoEnded} onRetry={onVideoRetry} />
       ) : (
         <div className="empty-state">
           <Video size={42} opacity={0.18} />
@@ -29,7 +33,7 @@ function CameraFrame({ num, host, isScanning, onExpand }: Props) {
         </div>
       )}
 
-      <button className="fullscreen-btn" onClick={onExpand} title="전체화면 확대">
+      <button className="fullscreen-btn" onClick={onExpand} title="전체화면 확대" aria-label={`CAM ${num} 전체화면 확대`}>
         <Maximize2 size={17} />
       </button>
     </CamBox>

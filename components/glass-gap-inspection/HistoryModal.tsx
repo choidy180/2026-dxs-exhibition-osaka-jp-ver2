@@ -8,6 +8,7 @@ import { createPortal } from 'react-dom';
 
 import CustomDatePicker from '@/components/glass-gap-inspection/CustomDatePicker';
 import { GLASS_GAP_HISTORY_LOGS } from '@/data/glassGapInspectionHistory';
+import { createInspectionHistoryForDate } from '@/data/exhibition-inspection';
 import type { HistoryLog, InspectionTone } from '@/types/glassGapInspection';
 import {
   CornerImageGrid,
@@ -99,7 +100,7 @@ export default function HistoryModal({
       return [];
     }
 
-    return GLASS_GAP_HISTORY_LOGS;
+    return createInspectionHistoryForDate(selectedDate, GLASS_GAP_HISTORY_LOGS);
   }, [selectedDate]);
 
   const selectedLog = useMemo(() => {

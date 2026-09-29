@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AdvisorMetadata, AdvisorTable } from '@/types/ai-advisor';
 import {
-  parseAdvisorApiError,
   parseAdvisorChatResponse,
   parseAdvisorMetadata,
 } from '@/utils/ai-advisor-contract';
+
+import { createDemoAdvisorReply, createDemoAdvisorMetadata } from '@/data/demo-advisor';
 
 const CHAT_TIMEOUT_MS = 125_000;
 const METADATA_TIMEOUT_MS = 20_000;
@@ -87,25 +88,9 @@ export function useAiAdvisor(enabled: boolean) {
     }
 
     try {
-      const response = await fetch('/api/ai-advisor/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-        signal: controller.signal,
-        body: JSON.stringify({
-          query,
-          ...(sessionIdRef.current ? { session_id: sessionIdRef.current } : {}),
-        }),
-      });
-      const body: unknown = await response.json();
-
+      await new Promise<void>(resolve => setTimeout(resolve, 650));
+      const body = createDemoAdvisorReply(query);
       if (!mountedRef.current || chatRequestRef.current !== request) return;
-
-      if (!response.ok) {
-        const apiError = parseAdvisorApiError(body);
-        if (apiError?.session_id) sessionIdRef.current = apiError.session_id;
-        throw new Error(apiError?.error || '답변을 받지 못했습니다. 다시 시도해 주세요.');
-      }
 
       const result = parseAdvisorChatResponse(body);
       if (!result) throw new Error('답변 형식을 확인할 수 없습니다. 다시 시도해 주세요.');
@@ -210,17 +195,8 @@ export function useAiAdvisor(enabled: boolean) {
     setMetadataError(null);
 
     try {
-      const response = await fetch('/api/ai-advisor/meta', {
-        cache: 'no-store',
-        signal: controller.signal,
-      });
-      const body: unknown = await response.json();
+      const body = createDemoAdvisorMetadata();
       if (!mountedRef.current || metadataRequestRef.current !== request) return;
-
-      if (!response.ok) {
-        const apiError = parseAdvisorApiError(body);
-        throw new Error(apiError?.error || '데이터 기준일을 불러오지 못했습니다.');
-      }
 
       const result = parseAdvisorMetadata(body);
       if (!result) throw new Error('데이터 기준일 형식을 확인할 수 없습니다.');

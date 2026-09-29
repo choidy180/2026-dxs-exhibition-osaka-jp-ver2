@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { Loader2, Radio, RefreshCw, WifiOff } from 'lucide-react';
+import { Loader2, RefreshCw, WifiOff } from 'lucide-react';
+import { DEMO_FACTORY_IMAGE } from '@/data/exhibition-inspection';
 import { useCctvLiveStream } from '@/hooks/use-cctv-live-stream';
 import type { CctvCamera } from '@/types/cctv-monitoring';
 import type { ToneName } from '@/styles/design-tokens';
@@ -11,30 +11,9 @@ interface CctvLivePlayerProps {
   camera: CctvCamera;
 }
 
-/**
- * 실시간 CCTV 재생 화면 (WHEP/WebRTC).
- *
- * 훅이 만들어 준 MediaStream 을 `<video>` 에 연결한다.
- * 연결 중이거나 실패했을 때는 상태 안내를 화면 위에 겹쳐 보여준다.
- */
+/** 전시장에서는 로컬 동영상을 반복 재생한다. */
 export default function CctvLivePlayer({ camera }: CctvLivePlayerProps) {
-  const { stream, status, error, retry } = useCctvLiveStream(camera);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  // MediaStream 은 속성이 아니라 srcObject 로만 연결할 수 있다
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (video.srcObject !== stream) {
-      video.srcObject = stream;
-    }
-
-    if (stream) {
-      // 자동재생 정책 때문에 막히면 조용히 넘기고 사용자가 클릭할 수 있게 둔다
-      void video.play().catch(() => undefined);
-    }
-  }, [stream]);
+  const { src, key, status, error, retry, onPlaying, onError } = useCctvLiveStream(camera);
 
   const isPlaying = status === 'playing';
   const showOverlay = status !== 'playing';
@@ -44,15 +23,21 @@ export default function CctvLivePlayer({ camera }: CctvLivePlayerProps) {
     status === 'error' ? '실시간 영상을 재생할 수 없습니다' : '실시간 영상 연결 중...';
 
   const overlayDescription =
-    error ?? '사내망에서만 연결됩니다. 잠시만 기다려주세요.';
+    error ?? '영상을 준비하고 있습니다.';
 
   return (
     <LiveFrame>
       <LiveVideo
-        ref={videoRef}
+        key={key}
+        src={src}
+        poster={DEMO_FACTORY_IMAGE}
+        loop
+        controls
         autoPlay
         muted
         playsInline
+        onPlaying={onPlaying}
+        onError={onError}
         aria-label={`${camera.name} 실시간 화면`}
       />
 
@@ -76,11 +61,6 @@ export default function CctvLivePlayer({ camera }: CctvLivePlayerProps) {
             </button>
           )}
 
-          {status === 'connecting' && camera.stream.path && (
-            <span>
-              <Radio size={12} aria-hidden="true" /> {camera.stream.path}
-            </span>
-          )}
         </LiveOverlay>
       )}
     </LiveFrame>

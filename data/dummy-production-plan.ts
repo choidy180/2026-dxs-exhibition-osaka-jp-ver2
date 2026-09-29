@@ -7,6 +7,7 @@
  */
 
 import { buildWorkingDays, getRowCount } from '@/utils/production-plan';
+import { addDays, toDateKey } from '@/utils/date';
 import type { PlanDataset, PlanRevision, PlanRow } from '@/types/production-plan';
 
 /** 품목 마스터 — 실제 API 연결 시 이 목록은 사용하지 않는다 */
@@ -57,80 +58,22 @@ type RevisionSeed = {
  * 업로드 히스토리 시드.
  * 08-14 건은 6월~7월에 걸쳐 있어 월 그룹 헤더가 두 개로 나뉘는 경우를 확인할 수 있다.
  */
-const REVISION_SEEDS: RevisionSeed[] = [
-  {
-    id: 'rev-20260819-1',
-    uploadDate: '2026-08-19',
-    revision: 1,
-    uploadedAt: '2026-08-19 14:20',
-    status: 'draft',
-    fileName: '생산계획_2026년06월_수정.xlsx',
-    planFrom: '2026-06-01',
-    planTo: '2026-06-30',
-    itemCount: 15,
-    seed: 20_260_819,
-  },
-  {
-    id: 'rev-20260819-0',
-    uploadDate: '2026-08-19',
-    revision: 0,
-    uploadedAt: '2026-08-19 09:05',
-    status: 'confirmed',
-    fileName: '생산계획_2026년06월.xlsx',
-    planFrom: '2026-06-01',
-    planTo: '2026-06-30',
-    itemCount: 15,
-    seed: 7_010_411,
-  },
-  {
-    id: 'rev-20260814-0',
-    uploadDate: '2026-08-14',
-    revision: 0,
-    uploadedAt: '2026-08-14 15:30',
-    status: 'reconfirmed',
-    fileName: '생산계획_6월말_7월초.xlsx',
-    planFrom: '2026-06-22',
-    planTo: '2026-07-17',
-    itemCount: 13,
-    seed: 3_140_927,
-  },
-  {
-    id: 'rev-20260813-0',
-    uploadDate: '2026-08-13',
-    revision: 0,
-    uploadedAt: '2026-08-13 09:15',
-    status: 'confirmed',
-    fileName: '생산계획_2026년05월.xlsx',
-    planFrom: '2026-05-01',
-    planTo: '2026-05-29',
-    itemCount: 15,
-    seed: 1_618_033,
-  },
-  {
-    id: 'rev-20260812-1',
-    uploadDate: '2026-08-12',
-    revision: 1,
-    uploadedAt: '2026-08-12 16:40',
-    status: 'confirmed',
-    fileName: '생산계획_2026년05월_수정.xlsx',
-    planFrom: '2026-05-01',
-    planTo: '2026-05-29',
-    itemCount: 14,
-    seed: 2_718_281,
-  },
-  {
-    id: 'rev-20260812-0',
-    uploadDate: '2026-08-12',
-    revision: 0,
-    uploadedAt: '2026-08-12 10:05',
-    status: 'draft',
-    fileName: '생산계획_2026년05월_초안.xlsx',
-    planFrom: '2026-05-01',
-    planTo: '2026-05-29',
-    itemCount: 12,
-    seed: 1_414_213,
-  },
-];
+const today = new Date();
+const REVISION_SEEDS: RevisionSeed[] = [0, 0, 5, 6, 7, 7].map((daysAgo, index) => {
+  const uploadDate = toDateKey(addDays(today, -daysAgo));
+  const revision = index === 0 || index === 4 ? 1 : 0;
+  const monthOffset = index >= 3 ? -1 : 0;
+  const start = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+  const end = new Date(today.getFullYear(), today.getMonth() + monthOffset + 1, 0);
+  return {
+    id: `rev-${uploadDate.replaceAll('-', '')}-${revision}`,
+    uploadDate, revision, uploadedAt: `${uploadDate} ${index % 2 ? '09:05' : '14:20'}`,
+    status: index === 0 || index === 5 ? 'draft' : index === 2 ? 'reconfirmed' : 'confirmed',
+    fileName: `생산계획_${toDateKey(start).slice(0, 7)}_Rev${revision}.xlsx`,
+    planFrom: toDateKey(start), planTo: toDateKey(end), itemCount: index === 2 ? 13 : 15,
+    seed: 20260000 + index * 977,
+  };
+});
 
 /** 품목 × 근무일 계획수량 생성 — 약 60% 의 날에만 계획이 있는 현장 패턴을 모사한다 */
 const buildDataset = (seedInfo: RevisionSeed): PlanDataset => {

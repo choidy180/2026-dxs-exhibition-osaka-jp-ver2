@@ -1,5 +1,8 @@
-import { Loader2, Search } from 'lucide-react';
-import { CardTitle, InfoRow, MiniEmptyState, TopCard, VehicleImagePlaceholder } from '@/styles/styles';
+import { useState } from 'react';
+import { AlertCircle, Loader2, Search } from 'lucide-react';
+import { motion } from 'framer-motion';
+import styled from 'styled-components';
+import { color, controlHeight, focusRing, fontSize, motionDuration, radius, shadow, space, tone } from '@/styles/design-tokens';
 import type { VehicleSlotDetail } from '@/types/material-monitoring';
 import { useVehicleImageUrl } from '@/hooks/useVehicleImageUrl';
 
@@ -8,51 +11,75 @@ type Props = {
   isLoaded: boolean;
   isLoading: boolean;
   dwellString: string;
+  error: string | null;
+  onRetry: () => void;
 };
 
-export default function VehicleInfoCard({ vehicleInfo, isLoaded, isLoading, dwellString }: Props) {
+export default function VehicleInfoCard({ vehicleInfo, isLoaded, isLoading, dwellString, error, onRetry }: Props) {
+  const imageUrl = useVehicleImageUrl(vehicleInfo?.FILEPATH);
+  const [failedImage, setFailedImage] = useState<string | null>(null);
+  const retry = () => { setFailedImage(null); onRetry(); };
   return (
-    <TopCard style={{ minHeight: 'auto', padding: 14, marginBottom: 0, borderRadius: 12, boxShadow: '0 4px 6px -1px rgba(0,0,0,.05)' }}>
-      <CardTitle style={{ fontSize: '1.05rem', fontWeight: 600, marginBottom: 12 }}>입고 차량 정보</CardTitle>
-
-      {isLoaded && vehicleInfo ? (
-        <div>
-          <VehicleImagePlaceholder style={{ height: 148, marginBottom: 14, overflow: 'hidden', borderRadius: 12 }}>
-            <img
-              src={useVehicleImageUrl(vehicleInfo.FILEPATH)}
-              alt="Vehicle"
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              onError={event => { event.currentTarget.style.display = 'none'; }}
-              onClick={()=>console.log(vehicleInfo)}
-            />
-          </VehicleImagePlaceholder>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <InfoRow style={{ padding: 0, border: 0, marginBottom: 0 }}>
-              <span className="label" style={{ color: '#64748b', fontWeight: 500 }}>차량번호</span>
-              <span className="value" style={{ fontWeight: 600, fontSize: '1.05rem' }}>{vehicleInfo.PLATE || '번호미상'}</span>
-            </InfoRow>
-            <InfoRow style={{ padding: 0, border: 0, marginBottom: 0 }}>
-              <span className="label" style={{ color: '#64748b', fontWeight: 500 }}>도착시간</span>
-              <span className="value" style={{ fontWeight: 600 }}>{vehicleInfo.entry_time?.split(' ')[1] || '-'}</span>
-            </InfoRow>
-            <InfoRow style={{ padding: 0, border: 0, marginBottom: 0 }}>
-              <span className="label" style={{ color: '#64748b', fontWeight: 500 }}>체류시간</span>
-              <span className="value" style={{ fontWeight: 600 }}>{dwellString}</span>
-            </InfoRow>
-            <InfoRow style={{ padding: 0, border: 0, marginBottom: 0 }}>
-              <span className="label" style={{ color: '#64748b', fontWeight: 500 }}>상태</span>
-              <span className="value" style={{ padding: '4px 12px', borderRadius: 10, background: '#f1f5f9', color: '#475569', fontSize: '.85rem', fontWeight: 600 }}>입고대기</span>
-            </InfoRow>
-          </div>
-        </div>
-      ) : (
-        <MiniEmptyState style={{ minHeight: 160, borderRadius: 12 }}>
-          <div className="icon-circle">{isLoading ? <Loader2 className="spin" size={28} /> : <Search size={28} />}</div>
-          <h3 style={{ fontWeight: 600 }}>{isLoading ? '데이터 조회 중...' : '차량 데이터 대기'}</h3>
-          <p>{isLoading ? '잠시만 기다려주세요.' : '바코드를 스캔하면 차량정보가 표시됩니다.'}</p>
-        </MiniEmptyState>
-      )}
-    </TopCard>
+    <Card>
+      <Title>입고 차량 정보</Title>
+      {error ? (
+        <State role="alert"><AlertCircle size={28} /><strong>{error}</strong><Retry onClick={retry}>재시도</Retry></State>
+      ) : isLoading ? (
+        <State>
+          <motion.span animate={{ rotate: 360 }} transition={{ duration: motionDuration.spin, repeat: Infinity, ease: 'linear' }}>
+            <Loader2 size={28} />
+          </motion.span>
+          <strong>데이터 조회 중...</strong><span>잠시만 기다려주세요.</span>
+        </State>
+      ) : isLoaded && vehicleInfo ? (
+        <>
+          <ImageFrame>
+            {failedImage === imageUrl ? (
+              <State><AlertCircle size={24} /><span>이미지를 불러오지 못했습니다.</span><Retry onClick={retry}>재시도</Retry></State>
+            ) : <VehicleImage src={imageUrl} alt="입고 차량" onError={() => setFailedImage(imageUrl)} />}
+          </ImageFrame>
+          <Rows>
+            <Row><span>차량번호</span><strong>{vehicleInfo.PLATE || '-'}</strong></Row>
+            <Row><span>도착시간</span><strong>{vehicleInfo.entry_time
+              ? new Date(vehicleInfo.entry_time).toLocaleTimeString('ko-KR', { hour12: false }) : '-'}</strong></Row>
+            <Row><span>체류시간</span><strong>{dwellString}</strong></Row>
+            <Row><span>상태</span><Badge>입고대기</Badge></Row>
+          </Rows>
+        </>
+      ) : <State><Search size={28} /><strong>차량 데이터 대기</strong><span>차량정보가 없습니다.</span><Retry onClick={onRetry}>새로고침</Retry></State>}
+    </Card>
   );
 }
+
+const Card = styled.section`
+  padding: ${space.xxl}px; border: 1px solid ${color.borderSoft}; border-radius: ${radius.card}px;
+  background: ${color.surface}; box-shadow: ${shadow.card}; min-height: 0;
+`;
+const Title = styled.h2`
+  margin: 0 0 ${space.xl}px; font-size: ${fontSize.cardTitle}; font-weight: 600; color: ${color.ink};
+`;
+const ImageFrame = styled.div`
+  height: 148px; margin-bottom: ${space.xxl}px; overflow: hidden; border-radius: ${radius.card}px;
+  background: ${color.surfaceSubtle};
+`;
+const VehicleImage = styled.img`width: 100%; height: 100%; object-fit: cover;`;
+const Rows = styled.div`display: flex; flex-direction: column; gap: ${space.md}px;`;
+const Row = styled.div`
+  display: flex; justify-content: space-between; align-items: center; gap: ${space.md}px; font-size: ${fontSize.bodySm};
+  > span:first-child { color: ${color.ink3}; font-weight: 500; }
+  strong { color: ${color.ink}; font-weight: 600; }
+`;
+const Badge = styled.span`
+  padding: ${space.xs}px ${space.xl}px; border: 1px solid ${tone.warning.border};
+  border-radius: ${radius.control}px; background: ${tone.warning.bg}; color: ${tone.warning.fg}; font-weight: 600;
+`;
+const State = styled.div`
+  min-height: 148px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: ${space.md}px; color: ${color.ink3}; font-size: ${fontSize.bodySm}; text-align: center;
+  strong { font-weight: 600; }
+`;
+const Retry = styled.button`
+  min-height: ${controlHeight.sm}px; padding: 0 ${space.xl}px; border-radius: ${radius.control}px;
+  border: 1px solid ${color.border}; background: ${color.surface}; color: ${color.ink2}; cursor: pointer;
+  &:focus-visible { outline: ${focusRing}; outline-offset: 3px; }
+`;

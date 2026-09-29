@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import InspectionDataState from '@/components/common/inspection-data-state/InspectionDataState';
 import { DashboardHeader } from '@/components/film-attachment-check/DashboardHeader';
 import { EmptyStateModal } from '@/components/film-attachment-check/EmptyStateModal';
 import { FullLogModal } from '@/components/film-attachment-check/FullLogModal';
@@ -22,7 +23,7 @@ export default function FilmAttachmentCheckClient() {
     const screenMode = useScreenMode();
     const layout = useMemo(() => LAYOUT_CONFIGS[screenMode], [screenMode]);
     const logs = useProductionLogs();
-    const { apiData, totalStats, isDefectMode } = useInspectionPolling();
+    const { apiData, totalStats, isDefectMode, isLoading, error, retry } = useInspectionPolling();
 
     const [imageModal, setImageModal] = useState<ImageModalState | null>(null);
     const [isFullLogOpen, setIsFullLogOpen] = useState(false);
@@ -31,12 +32,6 @@ export default function FilmAttachmentCheckClient() {
     const [showPermissionModal, setShowPermissionModal] = useState(false);
 
     useDefectAlarm(isDefectMode, audioAllowed);
-
-    useEffect(() => {
-        if (isDefectMode && !audioAllowed) {
-            setShowPermissionModal(true);
-        }
-    }, [audioAllowed, isDefectMode]);
 
     const handleImageOpen = (title: string, imgUrl: string) => {
         if (!imgUrl) {
@@ -48,6 +43,8 @@ export default function FilmAttachmentCheckClient() {
             imgUrl,
         });
     };
+
+    if (isLoading || error) return <PageFrame $padding={layout.padding} $gap={layout.gap}><InspectionDataState isLoading={isLoading} error={error} onRetry={retry} /></PageFrame>;
 
     return (
         <PageFrame $padding={layout.padding} $gap={layout.gap}>

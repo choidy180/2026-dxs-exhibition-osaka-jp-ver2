@@ -1,8 +1,5 @@
 import type { ScreenMode } from '@/types/gasketCheck';
 
-import { getDxApiUrl } from '@/utils/dx-api';
-
-export const getFilmAttachmentApiUrl = () => getDxApiUrl('/api/DX_API000027');
 
 export const POLLING_INTERVAL_MS = 3000;
 

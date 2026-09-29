@@ -1,8 +1,5 @@
 import type { ScreenMode } from '@/types/gasketCheck';
 
-import { getDxApiUrl } from '@/utils/dx-api';
-
-export const getGasketCheckApiUrl = () => getDxApiUrl('/api/DX_API000026');
 
 export const POLLING_INTERVAL_MS = 3000;
 

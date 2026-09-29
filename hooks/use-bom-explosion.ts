@@ -1,10 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { USE_MOCK_BOM_DATA } from '@/constants/lab';
+import { toDateKey } from '@/utils/date';
 import type { BomDataset, BomFilter } from '@/types/lab';
 import {
-  EMPTY_BOM_FILTER, filterBomRows, getBomSummary, normalizeBomFilter, validateBomFilter,
+  EMPTY_BOM_FILTER, getBomSummary, normalizeBomFilter, validateBomFilter,
 } from '@/utils/lab';
 import { BomQueryError, fetchBomExplosion } from '@/utils/lab-api';
 
@@ -15,7 +15,7 @@ export function useBomExplosion() {
   const [validationError, setValidationError] = useState<string | null>(null);
 
   // 입력 중인 조건과 '조회' 로 적용된 조건을 분리한다
-  const [draftFilter, setDraftFilter] = useState<BomFilter>(EMPTY_BOM_FILTER);
+  const [draftFilter, setDraftFilter] = useState<BomFilter>({ ...EMPTY_BOM_FILTER, pjtCode: 'ET-09057' });
   const [appliedFilter, setAppliedFilter] = useState<BomFilter | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
   const lastRequestRef = useRef<BomFilter | null>(null);
@@ -50,12 +50,18 @@ export function useBomExplosion() {
     }
   }, []);
 
-  /** 실제 조회는 서버에서 조건을 적용하므로 응답 전체가 조회 결과다. */
+  useEffect(() => {
+    const initial = { ...EMPTY_BOM_FILTER, applyDate: toDateKey(new Date()), pjtCode: 'ET-09057' };
+    setDraftFilter(initial);
+    void load(initial);
+  }, [load]);
+
+  /** 로컬 저장소에서 조건을 적용하므로 응답 전체가 조회 결과다. */
   const summary = useMemo(() => getBomSummary(dataset?.rows ?? []), [dataset]);
 
   const filteredRows = useMemo(
     () => dataset && appliedFilter
-      ? USE_MOCK_BOM_DATA ? filterBomRows(dataset.rows, appliedFilter, dataset.baseDate) : dataset.rows
+      ? dataset.rows
       : [],
     [appliedFilter, dataset],
   );

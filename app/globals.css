@@ -1,7 +1,6 @@
 /* @import는 스타일시트 최상단에서만 유효하다. 이전에는 페이지별
    createGlobalStyle 안에 있어서 무시되고 Rajdhani가 로드되지 않았다.
    (수치 표기용 보조 폰트 — takttime-dashboard, realtime-status에서 사용) */
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700;800&display=swap');
 
 * {
   margin: 0;
@@ -12,7 +11,7 @@
 
 @font-face {
     font-family: 'A2z';
-    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/에이투지체-6SemiBold.woff2') format('woff2');
+    src: url('/fonts/Pretendard-SemiBold.woff2') format('woff2');
     font-weight: 600;
     font-display: swap;
 }

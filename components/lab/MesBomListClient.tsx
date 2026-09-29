@@ -15,7 +15,6 @@ import {
   Wrench,
 } from 'lucide-react';
 import {
-  BOM_BASE_DATE,
   BOM_COLUMNS,
   USE_MOCK_BOM_DATA,
 } from '@/constants/lab';
@@ -154,7 +153,7 @@ export default function MesBomListClient() {
             <div>
               <span className="eyebrow">Lab · MES BOM{USE_MOCK_BOM_DATA ? ' · MOCK DATA' : ''}</span>
               <h1>MES BOM 리스트</h1>
-              <p>MES 시스템 DB Link — BOM 정전개 전체 리스트</p>
+              <p>전시회 데모 · BOM 정전개 전체 리스트</p>
             </div>
           </TitleGroup>
 
@@ -168,7 +167,7 @@ export default function MesBomListClient() {
                 disabled={scope === 'current' ? currentDownloadDisabled : download.isDownloading}
                 aria-busy={download.isDownloading && download.scope === scope}
                 aria-describedby="bom-export-notice"
-                title={scope === 'current' ? currentDownloadHint : '조회 조건과 관계없이 MES 전체 원본 목록을 저장합니다.'}
+                title={scope === 'current' ? currentDownloadHint : '조회 조건과 관계없이 전시용 전체 목록을 저장합니다.'}
               >
                 {download.isDownloading && download.scope === scope ? (
                   <BomExportSpinner
@@ -193,8 +192,8 @@ export default function MesBomListClient() {
           {download.phase === 'error' ? <AlertCircle size={16} /> : download.phase === 'complete' ? <CheckCircle2 size={16} /> : <Info size={16} />}
           <p>
             {downloadNotice ?? <>
-              {USE_MOCK_BOM_DATA ? <>화면 목록은 <strong>{BOM_BASE_DATE}</strong> 기준 개발용 데이터입니다.</> : <>목록 적용일자: <strong>{dataset?.baseDate ?? '-'}</strong>.</>}{' '}
-              현재 조건은 화면 조회 결과를, 전체 리스트는 조건과 관계없이 MES 전체 원본을 저장하므로 열과 건수가 다를 수 있습니다.
+              전시용 BOM 데이터입니다. 목록 적용일자: <strong>{dataset?.baseDate ?? '-'}</strong>.{' '}
+              현재 조건은 화면 조회 결과를, 전체 리스트는 전시용 전체 데이터를 엑셀로 저장합니다.
             </>}
           </p>
           {download.isDownloading && (
@@ -294,7 +293,7 @@ export default function MesBomListClient() {
           <BomFilterHelp id="bom-filter-help" $error={!!validationError} role={validationError ? 'alert' : 'status'}>
             {validationError ?? <>
               적용일자와 PJT코드는 필수입니다. 발주구분 공백은 전체를 조회합니다.{' '}
-              {USE_MOCK_BOM_DATA ? `개발용 목록은 ${BOM_BASE_DATE} 기준입니다.` : '선택한 조건으로 MES BOM을 조회합니다.'}
+              선택한 조건으로 전시용 BOM을 조회합니다.
               {appliedFilter && isDraftDirty && ' 변경한 조건은 조회 버튼을 눌러 적용해 주세요.'}
             </>}
           </BomFilterHelp>

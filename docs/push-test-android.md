@@ -46,6 +46,8 @@ APK를 빌드할 PC에는 JDK 17, Android SDK platform 35, Build Tools 35.0.0을
 
 5. 빌드는 Firebase 앱용 공개 값과 공개 CA만 APK에 넣습니다. APK 빌드, Android 단위 검사, Android lint 성공 후 `.data/push-test-apk/dxs-cctv-test.apk`로 복사합니다. 서버 환경변수를 변경했다면 `push:phone`을 껐다가 다시 실행합니다.
 
+`push:apk`는 사설 IP `--host`와 `push:phone`이 만든 로컬 CA를 전제로 합니다. 사내 도메인 `https://gmt.dxsplatform.com` 접속 방식([PWA 안내](push-test.md))용 APK 빌드는 아직 지원하지 않으므로, 도메인 방식 테스트는 Chrome 웹앱(PWA)으로 진행합니다.
+
 `/lab/push/android.apk`는 테스트 활성 플래그가 모두 맞고 APK가 있을 때만 다운로드됩니다. 앱과 발송 API는 기존 테스트 인증·기기 식별을 사용합니다. 현재 사용자·현재 등록 기기만 반복 발송을 시작할 수 있으며, 반복 설정과 미발송 예약은 **CCTV Push OFF**로 취소합니다. FCM 설정 누락은 기존 웹 푸시 기능에 영향을 주지 않습니다.
 
 즉시 첫 발송과 10초 간격 반복 예약은 SQLite와 독립 서버 작업자가 처리합니다. 성공한 발송마다 10초 뒤의 다음 예약 한 건만 만들며, 실패하거나 발송 결과가 불명확하면 반복을 중지합니다. FCM에는 완결된 제목·본문과 내부 이동 경로를 보냅니다. 수신 시 CCTV 서버를 조회하지 않습니다. 서버의 FCM 수락 응답은 휴대폰 표시를 확인한 결과가 아닙니다.

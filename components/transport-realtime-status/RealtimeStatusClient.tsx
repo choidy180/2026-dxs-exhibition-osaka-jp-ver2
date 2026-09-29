@@ -2,9 +2,8 @@
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import styled from "styled-components";
-import axios from "axios";
 import {
-  Sun, Cloud, CloudRain, CloudSnow, CloudLightning, Truck,
+  Sun, Truck,
   RefreshCw, CheckCircle2, Navigation, Clock, AlertTriangle, PieChart,
   Eye, EyeOff, Layers3, X, Route, UserRound,
   PackageCheck, Gauge, TimerReset, Radio, MapPin, GripHorizontal,
@@ -13,7 +12,6 @@ import {
 import { format } from "date-fns";
 import dynamic from "next/dynamic";
 import type { VWorldMarker } from "@/components/vworld-map-dev";
-import { getDxApiUrl } from "@/utils/dx-api";
 import { zIndex } from "@/styles/design-tokens";
 
 const VWorldMap = dynamic(
@@ -50,20 +48,6 @@ const DEFAULT_INFO_PANELS: Record<InfoPanelKey, boolean> = {
   right: true,
   detail: true,
 };
-
-interface ApiVehicleData {
-  출도착처리ID: string;
-  출발시간: string;
-  출발위치: string;
-  도착시간: string | null;
-  도착위치: string | null;
-  상태: string;
-  차량번호: string;
-  출발지: string;
-  도착지: string;
-  소요시간: string | null;
-  운전자명: string | null;
-}
 
 interface SimulationVehicle {
   id: string;
@@ -102,21 +86,6 @@ const MAP_MODE_TOP = 18;
 const MAP_MODE_WIDTH = 390;
 const MAP_MODE_HEIGHT = 56;
 const MAP_MODE_SAFE_BOTTOM = MAP_MODE_TOP + MAP_MODE_HEIGHT + PANEL_GAP;
-
-const parseCoordinate = (coordStr: string | null, locName: string) => {
-  if (coordStr && coordStr !== "0.000000, 0.000000") {
-    const parts = coordStr.split(",");
-    if (parts.length === 2) {
-      const lat = parseFloat(parts[0]);
-      const lng = parseFloat(parts[1]);
-      if (lat !== 0 && lng !== 0) return { lat, lng, title: locName };
-    }
-  }
-  for (const key in LOCATION_MAP) {
-    if (locName.includes(key) || key.includes(locName)) return { ...LOCATION_MAP[key], title: locName };
-  }
-  return { ...DEFAULT_POS, title: locName };
-};
 
 const getShortLocName = (title: string) => {
   if (title.includes("LG")) return "LG";
@@ -330,7 +299,8 @@ const useDraggableDock = (viewport: Size2D) => {
 
   useEffect(() => {
     if (!viewport.width || !viewport.height) return;
-    setDockPosition(prev => prev ? clampDockPosition(prev) : getDefaultPosition());
+    const frame = window.requestAnimationFrame(() => setDockPosition(prev => prev ? clampDockPosition(prev) : getDefaultPosition()));
+    return () => window.cancelAnimationFrame(frame);
   }, [clampDockPosition, getDefaultPosition, viewport.height, viewport.width]);
 
   const position = dockPosition ?? getDefaultPosition();
@@ -379,61 +349,14 @@ const useVehicleSimulation = () => {
   const [vehicles, setVehicles] = useState<SimulationVehicle[]>([]);
   const [markers, setMarkers] = useState<VWorldMarker[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSampleMode, setIsSampleMode] = useState(false);
+  const [isSampleMode, setIsSampleMode] = useState(true);
   const [targetIds, setTargetIds] = useState<{ lgId: string | null; gmtId: string | null }>({ lgId: null, gmtId: null });
   const vehiclesRef = useRef<SimulationVehicle[]>([]);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      let mappedVehicles: SimulationVehicle[] = [];
-      if (isSampleMode) {
-        mappedVehicles = generateSampleData();
-        await new Promise(r => setTimeout(r, 300));
-      } else {
-        try {
-          const res = await axios.get(getDxApiUrl('/api/DX_API000002'));
-          const data: ApiVehicleData[] = res.data;
-          const now = Date.now();
-          const tripCounts: Record<string, number> = {};
-          data.forEach(item => {
-            tripCounts[item.차량번호] = (tripCounts[item.차량번호] || 0) + 1;
-          });
-
-          mappedVehicles = data.map((item) => {
-            const startPos = parseCoordinate(item.출발위치, item.출발지);
-            const destPos = parseCoordinate(item.도착위치, item.도착지);
-            const startTime = new Date(item.출발시간).getTime();
-            let durationSec = 1800;
-            if (item.소요시간) {
-              const [h, m, s] = item.소요시간.split(":").map(Number);
-              durationSec = h * 3600 + m * 60 + s;
-            }
-            const elapsedSec = (now - startTime) / 1000;
-            const isTimeOver = elapsedSec >= durationSec;
-            const isArrived = item.상태 === "도착" || isTimeOver;
-
-            return {
-              id: item.출도착처리ID,
-              vehicleNo: item.차량번호,
-              driver: item.운전자명 || "미지정",
-              startPos,
-              destPos,
-              totalDistanceKm: 45,
-              baseDurationSec: durationSec,
-              startTime,
-              status: isArrived ? "Arrived" : "Moving",
-              cargo: "전자부품",
-              temp: "상온",
-              dailyTripCount: tripCounts[item.차량번호] || 1
-            };
-          });
-        } catch (apiError) {
-          console.error("API Call Failed", apiError);
-          mappedVehicles = [];
-        }
-      }
-
+      const mappedVehicles = generateSampleData();
       mappedVehicles.sort((a, b) => b.startTime - a.startTime);
       setVehicles(mappedVehicles);
       vehiclesRef.current = mappedVehicles;
@@ -452,11 +375,11 @@ const useVehicleSimulation = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [isSampleMode]);
+  }, []);
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30000);
+    const interval = setInterval(fetchData, 180000);
     return () => clearInterval(interval);
   }, [fetchData]);
 
@@ -635,13 +558,13 @@ export default function RealtimeStatusClient() {
       destPos: getNearestLocation(selectedMarker.destLat, selectedMarker.destLng, "도착지 확인 중"),
       totalDistanceKm: 45,
       baseDurationSec,
-      startTime: Date.now() - Math.round(progress * baseDurationSec * 1000),
+      startTime: (currentTime?.getTime() ?? 0) - Math.round(progress * baseDurationSec * 1000),
       status: "Moving" as VehicleStatus,
       cargo: selectedMarker.cargo || "운행 화물",
       temp: "상온",
       dailyTripCount: 1,
     };
-  }, [vehicles, selectedVehicleId, selectedMarker]);
+  }, [vehicles, selectedVehicleId, selectedMarker, currentTime]);
   const selectedRuntime = selectedVehicle ? getRuntime(selectedVehicle) : null;
 
   const panelRects = useMemo(() => {
@@ -788,48 +711,16 @@ export default function RealtimeStatusClient() {
     }
   }, [clearVehicleSelection, selectedVehicleId]);
 
-  const fetchWeather = async () => {
-    try {
-      const res = await axios.get("https://api.open-meteo.com/v1/forecast?latitude=35.15&longitude=128.86&current_weather=true&timezone=auto");
-      const { temperature, weathercode } = res.data.current_weather;
-      let desc = "맑음";
-      let icon = <Sun size={18} color="#64748b" />;
-
-      if (weathercode >= 0 && weathercode <= 3) {
-        desc = weathercode === 0 ? "맑음" : "구름조금";
-        icon = weathercode === 0 ? <Sun size={18} color="#f59e0b" /> : <Cloud size={18} color="#64748b" />;
-      } else if (weathercode >= 45 && weathercode <= 48) {
-        desc = "안개";
-        icon = <Cloud size={18} color="#94a3b8" />;
-      } else if (weathercode >= 51 && weathercode <= 67) {
-        desc = "비";
-        icon = <CloudRain size={18} color="#2563eb" />;
-      } else if (weathercode >= 71 && weathercode <= 77) {
-        desc = "눈";
-        icon = <CloudSnow size={18} color="#60a5fa" />;
-      } else if (weathercode >= 80 && weathercode <= 82) {
-        desc = "소나기";
-        icon = <CloudRain size={18} color="#2563eb" />;
-      } else if (weathercode >= 95) {
-        desc = "뇌우";
-        icon = <CloudLightning size={18} color="#7c3aed" />;
-      }
-
-      setWeather({ temp: temperature, desc, icon });
-    } catch (e) {
-      console.error("Weather fetch failed", e);
-    }
-  };
+  const fetchWeather = () => setWeather({ temp: 24, desc: '맑음', icon: <Sun size={18} /> });
 
   useEffect(() => {
-    setIsMounted(true);
-    setCurrentTime(new Date());
-    fetchWeather();
+    const initialTimer = window.setTimeout(() => { setIsMounted(true); setCurrentTime(new Date()); fetchWeather(); }, 0);
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     const weatherTimer = setInterval(fetchWeather, 600000);
     return () => {
       clearInterval(timer);
       clearInterval(weatherTimer);
+      window.clearTimeout(initialTimer);
     };
   }, []);
 
@@ -851,7 +742,8 @@ export default function RealtimeStatusClient() {
     const hasVehicle = vehicles.some(v => v.id === selectedVehicleId);
     const hasMarker = markerMap.has(selectedVehicleId) || markers.some(marker => String(marker.id) === selectedVehicleId);
     if (!hasVehicle && !hasMarker) {
-      setSelectedVehicleId(null);
+      const timer = window.setTimeout(() => setSelectedVehicleId(null), 0);
+      return () => window.clearTimeout(timer);
     }
   }, [markerMap, markers, selectedVehicleId, vehicles]);
 
@@ -901,9 +793,9 @@ export default function RealtimeStatusClient() {
           <div className="divider" />
           <div className="weather">{weather.icon}<span className="temp">{weather.temp}°C</span><span className="desc">{weather.desc}</span></div>
           <div className="divider" />
-          <button className="api-status" type="button" onClick={() => isSampleMode && setIsSampleMode(false)}>
+          <button className="api-status" type="button" onClick={() => { void fetchData(); }}>
             <span className={`dot ${isLoading ? "loading" : (isSampleMode ? "sample" : "normal")}`} />
-            {isSampleMode ? "실시간 연동으로 전환" : "API 연동 정상"}
+            전시회 데모 · 새로고침
           </button>
           <div className="divider" />
           <button className="updated" type="button" onClick={fetchData}>
@@ -1022,7 +914,7 @@ export default function RealtimeStatusClient() {
             </StatsGrid>
 
             <RouteSummary>
-              <div className="summary-head"><span>노선별 누적</span><strong>{totalCount}건</strong></div>
+              <div className="summary-head"><span>노선별 누적</span><strong>{`${totalCount}건`}</strong></div>
               <div className="route-row"><span>GMT → LG</span><div><i style={{ width: `${totalCount ? (gmtToLgTotal / totalCount) * 100 : 0}%` }} /></div><strong>{gmtToLgTotal}</strong></div>
               <div className="route-row"><span>LG → GMT</span><div><i style={{ width: `${totalCount ? (lgToGmtTotal / totalCount) * 100 : 0}%` }} /></div><strong>{lgToGmtTotal}</strong></div>
               <div className="route-row muted"><span>기타</span><div><i style={{ width: `${totalCount ? (otherRoutesTotal / totalCount) * 100 : 0}%` }} /></div><strong>{otherRoutesTotal}</strong></div>
@@ -1032,7 +924,7 @@ export default function RealtimeStatusClient() {
           <MovingListPanel>
             <MovingListHeader>
               <span><Navigation size={14} /> 실시간 운행 현황 리스트</span>
-              <small>{movingVehicles.length}대 운행중</small>
+              <small>{`${movingVehicles.length}대 운행중`}</small>
             </MovingListHeader>
             <MiniMovingList>
               {movingVehicles.length > 0 ? movingVehicles.map(v => {
@@ -1050,7 +942,7 @@ export default function RealtimeStatusClient() {
                   >
                     <div className="v-info">
                       <div className="v-no">{v.vehicleNo}{isWarning && <AlertTriangle size={12} color="#b45309" />}</div>
-                      <div className="v-trip">{v.dailyTripCount}회차 · {runtime.progressPct}%</div>
+                      <div className="v-trip">{`${v.dailyTripCount}회차 · ${runtime.progressPct}%`}</div>
                     </div>
                     <div className="route-info">{getShortLocName(v.startPos.title)} <span>→</span> {getShortLocName(v.destPos.title)}</div>
                     <div className="time-info">{runtime.etaLabel}</div>
@@ -1082,7 +974,7 @@ export default function RealtimeStatusClient() {
           </SidebarHeaderSection>
 
           <HistorySectionWrapper>
-            <HistoryHeader>전체 배차 내역<span className="count-badge">{totalCount}건</span></HistoryHeader>
+            <HistoryHeader>전체 배차 내역<span className="count-badge">{`${totalCount}건`}</span></HistoryHeader>
             <ScrollableHistoryList>
               {vehicles.map((v) => {
                 const isArrived = v.status === "Arrived";
@@ -1100,7 +992,7 @@ export default function RealtimeStatusClient() {
                     <div className="info-row">
                       <div className="title">
                         <span className="v-no">{v.vehicleNo}</span>
-                        {isWarning ? <span className="trip-count warning"><AlertTriangle size={12} /> {v.dailyTripCount}회차 완료</span> : <span className="trip-count">누적 {v.dailyTripCount}회차</span>}
+                        {isWarning ? <span className="trip-count warning"><AlertTriangle size={12} /> {`${v.dailyTripCount}회차 완료`}</span> : <span className="trip-count">{`누적 ${v.dailyTripCount}회차`}</span>}
                       </div>
                       <div className={`status ${isArrived ? "arrived" : "moving"}`} style={{ color: isArrived ? "#64748b" : themeColor }}>{isArrived ? "도착완료" : "배송중"}</div>
                     </div>
@@ -1166,7 +1058,7 @@ export default function RealtimeStatusClient() {
             <div><Gauge size={16} /><span>상태</span><strong>{selectedVehicle.status === "Arrived" ? "도착완료" : "이동중"}</strong></div>
             <div><TimerReset size={16} /><span>남은 시간</span><strong>{selectedRuntime.etaLabel}</strong></div>
             <div><Route size={16} /><span>총 거리</span><strong>{selectedVehicle.totalDistanceKm}km</strong></div>
-            <div><AlertTriangle size={16} /><span>당일 회차</span><strong>{selectedVehicle.dailyTripCount}회</strong></div>
+            <div><AlertTriangle size={16} /><span>당일 회차</span><strong>{`${selectedVehicle.dailyTripCount}회`}</strong></div>
           </DetailMetricGrid>
 
           <DetailTimeline>

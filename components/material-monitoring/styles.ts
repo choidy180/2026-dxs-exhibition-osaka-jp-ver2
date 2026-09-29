@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
+import { color, focusRing, font, fontSize, radius, space } from '@/styles/design-tokens';
 
-const FONT = `'Pretendard', system-ui, -apple-system, sans-serif`;
+const FONT = font.family;
 
 export const VideoHeader = styled.div`
   display: flex;
@@ -57,6 +58,15 @@ export const VideoHeader = styled.div`
     gap: 6px;
     cursor: pointer;
   }
+
+  @media (max-width: 1500px) {
+    flex-wrap: wrap;
+    gap: ${space.md}px;
+    padding: ${space.xl}px;
+    .title-area { flex-basis: 100%; }
+    h3 { font-size: ${fontSize.cardTitle}; line-height: 1.3; }
+    .header-actions { margin-left: auto; flex-wrap: wrap; }
+  }
 `;
 
 export const MonitorShell = styled.div`
@@ -72,7 +82,8 @@ export const MonitorShell = styled.div`
   font-family: ${FONT};
 
   @media (max-width: 1500px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    padding: ${space.md}px;
   }
 `;
 
@@ -129,7 +140,7 @@ export const CamBox = styled.div`
   box-shadow: 0 6px 18px rgba(15, 23, 42, .05);
   contain: layout paint style;
 
-  iframe {
+  video {
     width: 100%;
     height: 100%;
     border: 0;
@@ -225,7 +236,7 @@ export const CameraFullscreenOverlay = styled(motion.div)`
     background: #05070b;
   }
 
-  iframe {
+  video {
     width: 100%;
     height: 100%;
     border: 0;
@@ -708,10 +719,15 @@ export const CloseButton = styled.button`
 `;
 
 export const ViewAllButton = styled.button`
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: ${space.xs}px 0;
   border: 0;
   background: transparent;
-  color: #64748b;
-  font-size: .84rem;
+  color: ${color.ink3};
+  font-size: ${fontSize.bodySm};
   font-weight: 600;
   cursor: pointer;
+  border-radius: ${radius.row}px;
+  &:focus-visible { outline: ${focusRing}; outline-offset: 3px; }
 `;

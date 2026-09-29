@@ -19,7 +19,7 @@ export type CctvCameraStatus = 'online' | 'offline' | 'maintenance';
  * WHEP(WebRTC) 방식이라 신호 교환 경로만 있으면 되고, 영상은 WebRTC 로 직접 흐른다.
  */
 export interface CctvStreamConfig {
-  transport: 'whep';
+  transport: 'local';
   /** '/camera-204/whep' — 동일 출처 프록시에 넘길 경로 */
   path: string | null;
 }

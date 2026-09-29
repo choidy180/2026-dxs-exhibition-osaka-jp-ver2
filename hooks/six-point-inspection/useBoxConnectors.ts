@@ -76,10 +76,7 @@ export const useBoxConnectors = ({
   useEffect(() => {
     const shouldShowConnectors = viewType === 'split' || viewType === 'rightStack';
 
-    if (!shouldShowConnectors) {
-      setLines({});
-      return;
-    }
+    if (!shouldShowConnectors) return;
 
     const update = () => {
       window.requestAnimationFrame(recalculate);
@@ -118,7 +115,7 @@ export const useBoxConnectors = ({
   }, [cornerItems, hotspotRefs, cameraTileRefs, recalculate, stageRef, viewType]);
 
   return {
-    lines,
+    lines: viewType === 'guide' ? {} : lines,
     recalculate,
   };
 };

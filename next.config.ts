@@ -1,30 +1,26 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // 👇 개발 인디케이터 숨김 설정 (강제 적용)
-  devIndicators: {
-    buildActivity: false,
-    appIsrStatus: false,
-  } as any, // 타입 오류 방지용
+  distDir: process.env.EXHIBITION_DIST_DIR || '.next',
+  devIndicators: false,
 
   compiler: {
     styledComponents: true,
   },
   
-  images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "gapi.dxsplatform.com",
-        pathname: "/images/**",
-      },
-      {
-        protocol: "http",
-        hostname: "192.168.2.147",
-        port: "24828",
-        pathname: "/images/**",
-      },
-    ],
+  turbopack: {
+    rules: {
+      '*.tsx': { loaders: ['./scripts/exhibition-i18n-loader.cjs'] },
+    },
+  },
+  webpack(config) {
+    config.module.rules.push({
+      test: /\.(tsx|jsx)$/,
+      exclude: /node_modules/,
+      enforce: 'pre',
+      use: ['./scripts/exhibition-i18n-loader.cjs'],
+    });
+    return config;
   },
 };
 

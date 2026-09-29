@@ -110,6 +110,10 @@ export const fontSize = {
   caption: '0.72rem',
   /** 지표 카드 대표 수치 */
   metric: '3rem',
+  /** 전시 캐릭터 안내 — 멀리서 읽을 수 있는 확대 문안 */
+  guideTitle: '1.75rem',
+  guideSpeech: '1.5rem',
+  guideControl: '1.05rem',
 } as const;
 
 /** 폰트 웨이트 — 400/500/600만 사용. 700+ 는 신규 화면에서 쓰지 않는다. */
@@ -187,13 +191,39 @@ export const motionDuration = {
   spin: 0.9,
 } as const;
 
+/** 사용자 요청에 따른 전시 안내 캐릭터의 크기와 잔잔한 반복 동작. */
+export const exhibitionGuide = {
+  mascotWidth: { desktop: 336, medium: 285.6, compact: 252, mobile: 184.8 },
+  focusBackdrop: {
+    blur: 3,
+    centerOffset: space.huge,
+    fadeHeight: space.huge * 3,
+    surfaceOpacity: 12,
+  },
+  motion: {
+    breathe: [1, 1.018, 1],
+    sway: [0, -0.9, 0, 0.9, 0],
+    float: [0, -7, 0, -4, 0],
+    breatheDuration: 3.8,
+    swayDuration: 7.2,
+    floatDuration: 5.8,
+  },
+} as const;
+
 /** z-index — 새 레이어는 반드시 여기에 등록하고 숫자를 직접 쓰지 않는다 */
 export const zIndex = {
   stickyHead: 1,
   popover: 100,
+  /** Page guide stays behind dialogs and navigation. */
+  exhibitionGuide: 900,
   modalBackdrop: 2000,
   modal: 2001,
   fullscreen: 5000,
+  navScrim: 10000,
+  navPanel: 10010,
+  navRail: 10020,
+  navPopover: 10040,
+  navHover: 10050,
   /** 기존 내비게이션(10020~10050)과 함께 사용하는 전역 Advisor */
   advisorLauncher: 10030,
   advisorBackdrop: 10100,
@@ -236,6 +266,7 @@ export const tokens = {
   controlHeight,
   motion,
   motionDuration,
+  exhibitionGuide,
   zIndex,
   gridLayer,
   focusRing,

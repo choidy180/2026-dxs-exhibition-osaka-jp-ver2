@@ -45,7 +45,7 @@ export const DUMMY_CCTV_CAMERAS: readonly CctvCamera[] = CAMERA_SEEDS.map((seed,
   lastSeenAt: null,
   apiCameraId: null,
   stream: {
-    transport: 'whep',
-    path: `/${seed.code.toLowerCase()}/whep`,
+    transport: 'local',
+    path: '/videos/dashboard-short.mp4',
   },
 }));

@@ -14,7 +14,8 @@ export const useHotspotAnchors = () => {
 
   useEffect(() => {
     const storedValue = window.localStorage.getItem(HOTSPOT_STORAGE_KEY);
-    setAnchors(getAnchorMapFromStorageValue(storedValue));
+    const timer = window.setTimeout(() => setAnchors(getAnchorMapFromStorageValue(storedValue)), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {

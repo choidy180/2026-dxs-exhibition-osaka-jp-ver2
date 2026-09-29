@@ -2,9 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
-import { limitToLast, onValue, query, ref } from 'firebase/database';
 import styled from 'styled-components';
-import { db } from '@/lib/firebase';
 import {
   OverlayContainer,
   MainGridInternal,
@@ -137,7 +135,6 @@ export default function AIDashboardModal({ onClose, externalData }: AIDashboardM
 
   const isProcessingRef = useRef(false);
   const lastStepTimeRef = useRef(0);
-  const initialMount = useRef(true);
 
   const activeItem = useMemo(
     () => items.find(item => item.id === selectedId) || (items.length ? items[0] : null),
@@ -162,6 +159,7 @@ export default function AIDashboardModal({ onClose, externalData }: AIDashboardM
   }, []);
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
     if (externalData?.length) {
       const mappedItems: WearableItemData[] = externalData.map((item, index) => ({
         id: index,
@@ -234,34 +232,19 @@ export default function AIDashboardModal({ onClose, externalData }: AIDashboardM
 
     setItems(mockItems);
     setSelectedId(mockItems[0].id);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [externalData]);
 
   useEffect(() => {
-    if (!db) return;
-
-    const logRef = ref(db, 'logs');
-    const q = query(logRef, limitToLast(1));
-
-    const unsubscribe = onValue(q, snapshot => {
-      const dataWrapper = snapshot.val();
-
-      if (initialMount.current) {
-        initialMount.current = false;
-        return;
-      }
-
-      if (!dataWrapper) return;
-
-      const key = Object.keys(dataWrapper)[0];
-      const status = Number(dataWrapper[key]?.Status);
-
-      if (!Number.isNaN(status)) {
-        setViewMode('rpa');
-        setStepQueue(prev => (prev.at(-1) === status ? prev : [...prev, status]));
-      }
-    });
-
-    return () => unsubscribe();
+    let step = 0;
+    const timer = window.setInterval(() => {
+      step += 1;
+      setViewMode('rpa');
+      setStepQueue(previous => [...previous, step]);
+      if (step === 5) window.clearInterval(timer);
+    }, 2200);
+    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {

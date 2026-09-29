@@ -23,12 +23,6 @@ export const useDefectAlarm = (isDefectMode: boolean) => {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (isDefectMode && !audioAllowed && !audioContextRef.current) {
-      setShowPermissionModal(true);
-    }
-  }, [audioAllowed, isDefectMode]);
-
-  useEffect(() => {
     const stopAlarm = () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);

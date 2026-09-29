@@ -1,14 +1,9 @@
 import assert from 'node:assert/strict';
-import { verify } from 'node:crypto';
-import test from 'node:test';
+import test, { mock } from 'node:test';
 import { getFcmConfig, isFcmReady } from '../../lib/push-test/config';
-import { buildAndroidFcmMessage, createFcmSender, type FcmHttpRequest } from '../../lib/push-test/fcm';
-import { PushDeliveryError } from '../../lib/push-test/send';
+import { buildAndroidFcmMessage, createFcmSender, sendAndroidPushNotification, type FcmHttpRequest } from '../../lib/push-test/fcm';
 import { PushTestError, validatePushEndpoint, validatePushTarget, validatePushTargetEndpoint } from '../../lib/push-test/validation';
 import { androidPayload, androidSubscription, androidToken, fcmFixture } from './fcm-fixtures';
-
-const oauthResponse = { status: 200, body: { access_token: 'fixture-access-token', token_type: 'Bearer', expires_in: 3600 } };
-const successResponse = { status: 200, body: { name: 'projects/push-test-project/messages/fixture' } };
 
 test('Android 구독은 네이티브 토큰으로 검증하며 URL을 전송 대상으로 받아들이지 않는다', () => {
   assert.deepEqual(validatePushTarget({ platform: 'android', token: androidToken }), androidSubscription);
@@ -51,7 +46,7 @@ test('FCM 설정은 프로젝트와 서버키를 검증하고 잘못된 값에 �
   }
 });
 
-test('FCM payload에는 앱 종료 중 표시할 notification과 고정 앱 경로가 함께 들어간다', () => {
+test('기존 FCM 메시지 형식은 로컬 미리보기 호환을 위해 유지한다', () => {
   const { message } = buildAndroidFcmMessage(androidToken, androidPayload);
   assert.equal(message.token, androidToken);
   assert.deepEqual(message.notification, { title: androidPayload.title, body: androidPayload.body });
@@ -64,114 +59,71 @@ test('FCM payload에는 앱 종료 중 표시할 notification과 고정 앱 경�
   assert.equal(JSON.stringify(message).includes('image'), false);
 });
 
-test('RS256 JWT를 검증하고 Google 고정 URL과 캐시된 OAuth 토큰으로만 발송한다', async () => {
+test('전시용 발송기는 기존 설정과 주입 전송기를 받아도 네트워크를 호출하지 않는다', async () => {
   const fixture = fcmFixture();
-  const calls: string[] = [];
-  const now = 1_700_000_000_000;
-  const httpRequest: FcmHttpRequest = async (url, options) => {
-    calls.push(url);
-    if (url === 'https://oauth2.googleapis.com/token') {
-      const form = new URLSearchParams(options.body);
-      assert.equal(form.get('grant_type'), 'urn:ietf:params:oauth:grant-type:jwt-bearer');
-      const [headerText, claimsText, signature] = (form.get('assertion') ?? '').split('.');
-      const header = JSON.parse(Buffer.from(headerText, 'base64url').toString());
-      const claims = JSON.parse(Buffer.from(claimsText, 'base64url').toString());
-      assert.equal(header.alg, 'RS256');
-      assert.equal(header.kid, fixture.account.private_key_id);
-      assert.equal(claims.iss, fixture.account.client_email);
-      assert.equal(claims.aud, url);
-      assert.equal(claims.scope, 'https://www.googleapis.com/auth/firebase.messaging');
-      assert.equal(claims.iat, now / 1000);
-      assert.equal(claims.exp - claims.iat, 3600);
-      assert.equal(verify('RSA-SHA256', Buffer.from(`${headerText}.${claimsText}`), fixture.publicKey, Buffer.from(signature, 'base64url')), true);
-      return oauthResponse;
-    }
-    assert.equal(url, 'https://fcm.googleapis.com/v1/projects/push-test-project/messages:send');
-    assert.equal(options.headers.Authorization, 'Bearer fixture-access-token');
-    assert.deepEqual(JSON.parse(options.body), buildAndroidFcmMessage(androidToken, androidPayload));
-    return successResponse;
+  let requestCalls = 0;
+  let clockCalls = 0;
+  const httpRequest: FcmHttpRequest = async () => {
+    requestCalls += 1;
+    throw new Error('External transport must not be called');
   };
-  const send = createFcmSender({ httpRequest, now: () => now });
+  const send = createFcmSender({
+    httpRequest,
+    now: () => { clockCalls += 1; return 1_700_000_000_000; },
+    timeoutMs: 1,
+  });
   await send(androidSubscription, androidPayload, fixture.config);
   await send(androidSubscription, androidPayload, fixture.config);
-  assert.deepEqual(calls, [
-    'https://oauth2.googleapis.com/token',
-    'https://fcm.googleapis.com/v1/projects/push-test-project/messages:send',
-    'https://fcm.googleapis.com/v1/projects/push-test-project/messages:send',
-  ]);
+  assert.equal(requestCalls, 0);
+  assert.equal(clockCalls, 0);
 });
 
-test('만료 직전 토큰과 다른 서비스 계정의 토큰은 다시 발급한다', async () => {
-  const first = fcmFixture();
-  const second = fcmFixture('another-test-project');
-  let now = 1_700_000_000_000;
-  let oauthCalls = 0;
-  const send = createFcmSender({ now: () => now, httpRequest: async url => {
-    if (url === 'https://oauth2.googleapis.com/token') { oauthCalls += 1; return oauthResponse; }
-    return successResponse;
-  } });
-  await send(androidSubscription, androidPayload, first.config);
-  now += 3541_000;
-  await send(androidSubscription, androidPayload, first.config);
-  await send(androidSubscription, androidPayload, second.config);
-  assert.equal(oauthCalls, 3);
-});
-
-test('OAuth 오류나 리다이렉트 뒤에는 FCM 요청을 보내지 않는다', async () => {
-  const fixture = fcmFixture();
-  for (const response of [
-    { status: 302, body: { location: 'https://attacker.example/token' } },
-    { status: 400, body: { error: 'invalid_grant', error_description: 'private details' } },
-    { status: 200, body: { access_token: 'invalid\ntoken', token_type: 'Bearer', expires_in: 3600 } },
-  ]) {
-    let calls = 0;
-    const send = createFcmSender({ httpRequest: async url => {
-      calls += 1;
-      assert.equal(url, 'https://oauth2.googleapis.com/token');
-      return response;
-    } });
-    await assert.rejects(send(androidSubscription, androidPayload, fixture.config),
-      (error: unknown) => error instanceof PushDeliveryError && !error.uncertain && !error.removeSubscription
-        && !error.message.includes('private details'));
-    assert.equal(calls, 1);
+test('전시용 기본 발송기는 서비스 계정 설정 없이도 로컬에서 완료된다', async () => {
+  const previous = process.env.PUSH_TEST_FCM_SERVICE_ACCOUNT_JSON;
+  const fetchMock = mock.method(globalThis, 'fetch', async () => {
+    throw new Error('Exhibition sender must not use fetch');
+  });
+  try {
+    for (const value of [undefined, 'invalid-service-account-config']) {
+      if (value === undefined) delete process.env.PUSH_TEST_FCM_SERVICE_ACCOUNT_JSON;
+      else process.env.PUSH_TEST_FCM_SERVICE_ACCOUNT_JSON = value;
+      await createFcmSender()(androidSubscription, androidPayload);
+      await sendAndroidPushNotification(androidSubscription, androidPayload);
+    }
+    assert.equal(fetchMock.mock.callCount(), 0);
+  } finally {
+    fetchMock.mock.restore();
+    if (previous === undefined) delete process.env.PUSH_TEST_FCM_SERVICE_ACCOUNT_JSON;
+    else process.env.PUSH_TEST_FCM_SERVICE_ACCOUNT_JSON = previous;
   }
 });
 
-test('네트워크 발송 결과가 불명확해도 요청을 재시도하거나 기기 구독을 삭제하지 않는다', async () => {
-  const fixture = fcmFixture();
-  let sends = 0;
-  const send = createFcmSender({ httpRequest: async url => {
-    if (url === 'https://oauth2.googleapis.com/token') return oauthResponse;
-    sends += 1;
-    throw new Error('raw response may contain a device token');
-  } });
-  await assert.rejects(send(androidSubscription, androidPayload, fixture.config), (error: unknown) =>
-    error instanceof PushDeliveryError && error.uncertain && error.code === 'FCM_TRANSPORT_UNKNOWN' && !error.removeSubscription);
-  assert.equal(sends, 1);
-});
-
-test('네이티브 UNREGISTERED만 구독 삭제 대상으로 표시하고 일반 HTTP 404는 보존한다', async () => {
-  const fixture = fcmFixture();
-  for (const code of [null, 'UNREGISTERED', 'SENDER_ID_MISMATCH']) {
-    const send = createFcmSender({ httpRequest: async url => url === 'https://oauth2.googleapis.com/token' ? oauthResponse : {
-      status: 404, body: { error: { details: code ? [{ '@type': 'type.googleapis.com/google.firebase.fcm.v1.FcmError', errorCode: code }] : [] } },
-    } });
-    await assert.rejects(send(androidSubscription, androidPayload, fixture.config), (error: unknown) =>
-      error instanceof PushDeliveryError && error.removeSubscription === (code === 'UNREGISTERED') && !error.uncertain);
-  }
-});
-
-test('OAuth와 FCM 전송은 하나의 전체 제한시간을 공유한다', async () => {
-  const fixture = fcmFixture();
+test('동시 전시 알림은 입력을 변경하거나 주입 전송기를 실행하지 않는다', async () => {
   let requests = 0;
-  const send = createFcmSender({ timeoutMs: 25, httpRequest: async (url, options) => {
+  const send = createFcmSender({ httpRequest: async () => {
     requests += 1;
-    if (url === 'https://oauth2.googleapis.com/token') return oauthResponse;
-    return new Promise((_resolve, reject) => {
-      options.signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
-    });
+    return { status: 500, body: { error: 'Must not be requested' } };
   } });
-  await assert.rejects(send(androidSubscription, androidPayload, fixture.config), (error: unknown) =>
-    error instanceof PushDeliveryError && error.code === 'FCM_TRANSPORT_UNKNOWN');
-  assert.equal(requests, 2);
+  const subscription = Object.freeze({ ...androidSubscription });
+  const payload = Object.freeze({ ...androidPayload });
+  const results = await Promise.all(Array.from({ length: 10 }, () => send(subscription, payload)));
+  assert.ok(results.every(result => result === undefined));
+  assert.equal(requests, 0);
+  assert.deepEqual(subscription, androidSubscription);
+  assert.deepEqual(payload, androidPayload);
+});
+
+test('전시용 발송기도 잘못된 기기 토큰을 검증하며 외부 요청을 보내지 않는다', async () => {
+  let requests = 0;
+  const send = createFcmSender({ httpRequest: async () => {
+    requests += 1;
+    throw new Error('External transport must not be called');
+  } });
+  for (const token of ['', 'short-token', 'https://example.invalid/device', 'invalid token with spaces']) {
+    await assert.rejects(
+      send({ ...androidSubscription, token }, androidPayload),
+      (error: unknown) => error instanceof PushTestError && error.code === 'INVALID_FCM_TOKEN',
+    );
+  }
+  assert.equal(requests, 0);
 });

@@ -310,10 +310,10 @@ export default function OrderPlanClient() {
               $compact
               onClick={sendToMes}
               disabled={!hasRows || isTransferring}
-              title={ENABLE_MES_TRANSFER ? undefined : 'MES 발주 전송은 API 연결 후 사용할 수 있습니다.'}
+              title={ENABLE_MES_TRANSFER ? '발주 전송을 로컬에서 시뮬레이션합니다.' : undefined}
             >
               {isTransferring ? <Loader2 size={15} className="spin" /> : <Send size={15} />}
-              MES 발주 전송
+              발주 전송 체험
             </ActionButton>
           </CardHead>
 

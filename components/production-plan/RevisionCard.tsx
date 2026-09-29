@@ -59,7 +59,7 @@ export default function RevisionCard({
           <History size={20} />
           <h2>리비전 관리</h2>
         </div>
-        {revisions.length > 0 && <CountPill>총 {formatNumber(revisions.length)}건</CountPill>}
+        {revisions.length > 0 && <CountPill>{`총 ${formatNumber(revisions.length)}건`}</CountPill>}
       </CardHead>
 
       <DatePickerField label="업로드 일자" value={uploadDate} onChange={onChangeUploadDate} />
@@ -129,7 +129,7 @@ export default function RevisionCard({
                 </StatusBadge>
               </div>
               <div className="row-bottom">
-                <span>{formatNumber(revision.rowCount)}건</span>
+                <span>{`${formatNumber(revision.rowCount)}건`}</span>
                 <time>{revision.uploadedAt}</time>
               </div>
             </HistoryItem>

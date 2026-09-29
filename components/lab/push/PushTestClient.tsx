@@ -89,7 +89,7 @@ export default function PushTestClient({ certificateSetup, apkDownloadPath = nul
           </PushSwitch>
         </CardHead>
         <PushDetails><span><Timer size={15} aria-hidden="true" />ON 즉시 · 이후 10초 간격</span><TestChip>알림 테스트</TestChip></PushDetails>
-        <Hint id="push-test-description">1~200번 중 무작위 카메라의 오류 알림을 보냅니다.<br />실제 CCTV 상태와 별개이며, OFF를 누르면 멈춥니다.</Hint>
+        <Hint id="push-test-description">전시회 데모 알림을 이 화면에 표시합니다.<br />OFF를 누르면 알림 시뮬레이션이 멈춥니다.</Hint>
         {!push.error && push.status && !push.status.workerReady && <Feedback $error role="status"><Info size={18} aria-hidden="true" /><span>알림 발송 서버에 연결되지 않았습니다. PC의 테스트 서버가 켜져 있는지 확인해주세요.</span>
           <SoftButton type="button" onClick={() => { void push.refresh(); }} disabled={busy}>다시 확인</SoftButton>
         </Feedback>}

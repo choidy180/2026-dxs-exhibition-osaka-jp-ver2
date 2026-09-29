@@ -11,6 +11,7 @@ import {
 } from '@react-three/drei';
 import { AlertOctagon, Wrench } from 'lucide-react';
 import * as THREE from 'three';
+import LocalEnvironment from '@/components/common/local-environment/LocalEnvironment';
 import { FLOOR_MODEL_PATH, JIG_MODEL_PATH, PROCESS_CONFIG } from '@/constants/smartFactoryViewer';
 import type {
   ApiDataItem,
@@ -340,7 +341,7 @@ class ModelErrorBoundary extends React.Component<
 }
 
 function FloorModel({ highContrast }: { highContrast: boolean }) {
-  const { scene } = useGLTF(FLOOR_MODEL_PATH);
+  const { scene } = useGLTF(FLOOR_MODEL_PATH, '/draco/');
   const clonedScene = useMemo(() => {
     const cloned = scene.clone(true);
     const contrastTarget = new THREE.Color('#34433f');
@@ -516,7 +517,7 @@ function InteractiveJigModel({
   onHoverChange,
   onInjectUnitChange,
 }: JigModelProps) {
-  const { scene } = useGLTF(url);
+  const { scene } = useGLTF(url, '/draco/');
   const modelScene = useMemo(() => scene.clone(true), [scene]);
   const activeIdRef = useRef<string | null>(null);
   const lastInjectKeyRef = useRef<string | null>(null);
@@ -998,6 +999,7 @@ export function FactoryScene({
         powerPreference: 'high-performance',
       }}
     >
+      <LocalEnvironment />
       <ambientLight intensity={0.5} />
       <directionalLight
         position={[-20, 30, -20]}
@@ -1011,7 +1013,7 @@ export function FactoryScene({
       </directionalLight>
 
       <Suspense fallback={null}>
-        <Stage environment="city" intensity={2} adjustCamera={false} shadows={false}>
+        <Stage environment={null} intensity={2} adjustCamera={false} shadows={false}>
           <FactoryModelLayer
             config={sceneConfig}
             apiData={apiData}
@@ -1027,5 +1029,5 @@ export function FactoryScene({
   );
 }
 
-useGLTF.preload(JIG_MODEL_PATH);
-useGLTF.preload(FLOOR_MODEL_PATH);
+useGLTF.preload(JIG_MODEL_PATH, '/draco/');
+useGLTF.preload(FLOOR_MODEL_PATH, '/draco/');

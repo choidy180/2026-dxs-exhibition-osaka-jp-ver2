@@ -44,11 +44,11 @@ export const createMockApiData = (): ApiDataItem[] => {
       '취출경화시간(초)': '120',
       '취출무게(g)': '1250',
       '취출주변온도(℃)': '26.0',
-      FILENAME1: '',
-      AI_TIME_STR: '',
+      FILENAME1: 'inspection-door.png',
+      AI_TIME_STR: new Date().toLocaleTimeString('ko-KR', { hour12: false }),
       AI_LABEL: isDemoError ? '온도 상한 초과' : '정상',
       RESULT002: isDemoError ? '불량' : '정상',
-      FILEPATH1: '',
+      FILEPATH1: '/demo/inspection-door.png',
     };
   });
 };

@@ -28,7 +28,7 @@ const spin = keyframes`
   to { transform: rotate(360deg); }
 `;
 
-const vehicleTableColumns = '38% 27% 35%';
+const vehicleTableColumns = 'minmax(0, 1.1fr) minmax(0, 0.95fr) minmax(0, 1fr)';
 
 const Card = styled(FullHeightCard)`
   height: 100%;
@@ -57,11 +57,15 @@ const Header = styled.div`
 `;
 
 const Title = styled(CardTitle)`
+  min-width: 0;
+  flex-shrink: 1;
   margin: 0;
   padding: 0;
   color: ${color.ink};
   font-size: ${fontSize.cardTitle};
   font-weight: ${fontWeight.semibold};
+  overflow-wrap: anywhere;
+  line-height: 1.3;
 `;
 
 const AverageStayMetric = styled.div`
@@ -73,6 +77,7 @@ const AverageStayMetric = styled.div`
   align-items: center;
   justify-content: space-between;
   gap: ${space.lg}px;
+  flex-wrap: wrap;
   border: 1px solid ${color.brandBorder};
   border-radius: ${radius.control}px;
   background: ${color.brandSoft};
@@ -158,7 +163,8 @@ const VehicleTable = styled.div`
 `;
 
 const TableHeader = styled.div`
-  flex: 0 0 40px;
+  flex: 0 0 auto;
+  min-height: 48px;
   box-sizing: border-box;
   padding-right: ${space.sm}px;
   display: grid;
@@ -169,14 +175,16 @@ const TableHeader = styled.div`
 
   > div {
     min-width: 0;
-    padding: 0 ${space.lg}px;
+    padding: ${space.sm}px ${space.md}px;
     color: ${color.ink3};
     font-size: ${fontSize.micro};
     font-weight: ${fontWeight.semibold};
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.3;
   }
 
-  > div:first-child { padding-left: ${space.huge}px; }
+  > div:first-child { padding-left: ${space.md}px; }
 
   > div:last-child {
     padding-right: ${space.xs}px;
@@ -222,12 +230,12 @@ const VehicleRow = styled.div<{ $missingCustomer: boolean }>`
     overflow: hidden;
     display: flex;
     align-items: center;
-    padding: ${space.sm}px ${space.lg}px;
+    padding: ${space.sm}px ${space.sm}px;
     color: ${color.ink2};
     font-size: ${fontSize.bodySm};
   }
 
-  .cell:first-child { padding-left: ${space.huge}px; }
+  .cell:first-child { padding-left: ${space.md}px; }
 
   .cell:last-child {
     justify-content: center;
@@ -299,7 +307,7 @@ const VehicleRow = styled.div<{ $missingCustomer: boolean }>`
     max-width: 100%;
     box-sizing: border-box;
     overflow: hidden;
-    padding: ${space.xs}px ${space.md}px;
+    padding: ${space.xs}px ${space.xs}px;
     color: ${color.brand};
     background: ${color.brandSoft};
     border: 1px solid ${color.brandBorder};
@@ -307,7 +315,10 @@ const VehicleRow = styled.div<{ $missingCustomer: boolean }>`
     font-size: ${fontSize.caption};
     font-weight: ${fontWeight.semibold};
     text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
+    line-height: 1.3;
   }
 
 `;

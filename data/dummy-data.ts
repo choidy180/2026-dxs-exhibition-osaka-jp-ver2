@@ -1,4 +1,4 @@
-// dummyData.ts
+import { addDays, toDateKey } from '@/utils/date';
 
 // 50개 컬럼의 헤더 정의
 export const COLUMN_HEADERS = [
@@ -18,13 +18,11 @@ const createDummyData = () => {
   const totalRows = 94; // 요청된 세로 최대 94개
 
   for (let i = 0; i < totalRows; i++) {
-    const row: { [key: string]: any } = {};
-    // 날짜 조회를 위해 2025년 8월 데이터를 포함하도록 날짜를 설정
-    const baseDate = `2025-08-${String(i % 30 + 1).padStart(2, '0')}`;
-    const workName = `040212 작업제(${i + 1})`;
+    const row: Record<string, string | number> = {};
+    const baseDate = toDateKey(addDays(new Date(), -(i % 30)));
 
     row['날짜'] = baseDate;
-    row['시험명'] = `2004.12.11`;
+    row['시험명'] = `DEMO-${String(i + 1).padStart(3, '0')}`;
     row['시험작업자'] = `D(글로즈아황산염) ${i % 3 + 1}`;
     row['비고'] = `비고${i % 5 + 1}`;
     row['No'] = i + 1;

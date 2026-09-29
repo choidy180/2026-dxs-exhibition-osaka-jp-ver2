@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_ORDER_PLAN_DATE } from '@/constants/lab';
+import { toDateKey } from '@/utils/date';
 import type { OrderPlanDataset, OrderPlanFilter, PlanRevisionOption } from '@/types/lab';
 import { EMPTY_ORDER_FILTER, filterOrderRows, getOrderPlanSummary } from '@/utils/lab';
 import {
@@ -41,6 +42,7 @@ export function useOrderPlan() {
 
   useEffect(() => {
     isMountedRef.current = true;
+    setPlanDate(toDateKey(new Date()));
     return () => {
       isMountedRef.current = false;
     };
@@ -152,6 +154,7 @@ export function useOrderPlan() {
       const result = await transferToMes(dataset.revisionId, targets.map(row => row.itemNo));
       if (!isMountedRef.current) return;
       setNotice({ tone: result.ok ? 'success' : 'warning', message: result.message });
+      if (result.ok) await loadDataset(dataset.revisionId, dataset.planDate);
     } catch (caught) {
       if (!isMountedRef.current) return;
       console.error('[lab/order] MES 발주 전송 실패', caught);
@@ -159,7 +162,7 @@ export function useOrderPlan() {
     } finally {
       if (isMountedRef.current) setIsTransferring(false);
     }
-  }, [dataset, filteredRows]);
+  }, [dataset, filteredRows, loadDataset]);
 
   const clearNotice = useCallback(() => setNotice(null), []);
   const showNotice = useCallback((next: OrderNotice) => setNotice(next), []);

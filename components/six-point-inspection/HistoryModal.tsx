@@ -8,6 +8,7 @@ import { createPortal } from 'react-dom';
 
 import CustomDatePicker from '@/components/six-point-inspection/CustomDatePicker';
 import { SIX_POINT_HISTORY_LOGS } from '@/data/sixPointInspectionHistory';
+import { createInspectionHistoryForDate } from '@/data/exhibition-inspection';
 import type { HistoryLog, InspectionTone } from '@/types/sixPointInspection';
 import {
   CornerImageGrid,
@@ -99,7 +100,7 @@ export default function HistoryModal({
       return [];
     }
 
-    return SIX_POINT_HISTORY_LOGS;
+    return createInspectionHistoryForDate(selectedDate, SIX_POINT_HISTORY_LOGS);
   }, [selectedDate]);
 
   const selectedLog = useMemo(() => {

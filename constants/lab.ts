@@ -1,9 +1,4 @@
-/**
- * 실험실 화면 설정
- *
- * BOM은 실제 API가 기본이며, 발주대상 화면은 기존 목업 기본값을 유지한다.
- * `NEXT_PUBLIC_LAB_USE_MOCK=true` 를 명시하면 두 화면 모두 목업으로 동작한다.
- */
+/** 로컬 전시회용 BOM·발주 설정. 모든 동작은 시뮬레이션이다. */
 
 import { getDxApiUrl } from '@/utils/dx-api';
 
@@ -22,15 +17,15 @@ export const API_ENDPOINTS = {
   MES_TRANSFER: '/DX_API000204',
 } as const;
 
-export const USE_MOCK_DATA = (process.env.NEXT_PUBLIC_LAB_USE_MOCK ?? 'true').toLowerCase() !== 'false';
+export const USE_MOCK_DATA = true;
 
-/** 실제 MES 목록을 기본으로 조회한다. 목업은 명시적으로 설정한 경우에만 사용한다. */
-export const USE_MOCK_BOM_DATA = (process.env.NEXT_PUBLIC_LAB_USE_MOCK ?? 'false').toLowerCase() === 'true';
+/** 전시회에서는 항상 번들에 포함된 BOM 목록을 사용한다. */
+export const USE_MOCK_BOM_DATA = true;
 
 export const MOCK_LATENCY_MS = 460;
 
-/** MES 발주 전송 — API 연결 전까지 비활성 */
-export const ENABLE_MES_TRANSFER = false;
+/** 로컬 발주 전송 시뮬레이션 사용 여부 */
+export const ENABLE_MES_TRANSFER = true;
 
 /** SSR/CSR 렌더 결과를 맞추기 위한 고정 기준일 */
 export const BOM_BASE_DATE = '2026-07-27';

@@ -1,13 +1,19 @@
 import { RefreshCw } from 'lucide-react';
+import styled from 'styled-components';
 import { PinkButton } from '@/styles/styles';
 import { CameraStage, MonitorShell, VideoHeader } from './styles';
 import CameraGrid from './CameraGrid';
 import type { CameraHost } from '@/hooks/use-camera-hosts';
 import { MaterialListItem } from '@/types/material-monitoring';
 import CameraRpaStepList from './CameraRpaStepList';
+import type { MaterialCameraPlayback } from '@/types/material-camera-video';
+import { color, radius, space } from '@/styles/design-tokens';
 
 type Props = {
   hosts: CameraHost[];
+  cameras: MaterialCameraPlayback[];
+  onVideoEnded: (index: number, revision: number) => void;
+  onVideoRetry: (index: number) => void;
   isScanning: boolean;
   scanMessage: string;
   logs: MaterialListItem[];
@@ -19,6 +25,9 @@ type Props = {
 
 export default function MonitoringSection({
   hosts,
+  cameras,
+  onVideoEnded,
+  onVideoRetry,
   isScanning,
   onRetryScan,
   onOpenMap,
@@ -36,17 +45,24 @@ export default function MonitoringSection({
           <button className="soft-btn" onClick={onRetryScan} disabled={isScanning}>
             <RefreshCw size={15} /> 재연결
           </button>
-          <PinkButton onClick={onOpenMap} style={{ background: '#0f172a', borderRadius: 10, padding: '8px 16px', fontWeight: 600 }}>
+          <WarehouseButton onClick={onOpenMap}>
             D동 현황 &gt;
-          </PinkButton>
+          </WarehouseButton>
         </div>
       </VideoHeader>
       <MonitorShell>
         <CameraStage>
-          <CameraRpaStepList hosts={hosts} isScanning={isScanning} />
-          <CameraGrid hosts={hosts} isScanning={isScanning} onExpand={onExpandCamera} />
+          <CameraRpaStepList hosts={hosts} cameras={cameras} isScanning={isScanning} />
+          <CameraGrid hosts={hosts} cameras={cameras} onVideoEnded={onVideoEnded} onVideoRetry={onVideoRetry} isScanning={isScanning} onExpand={onExpandCamera} />
         </CameraStage>
       </MonitorShell>
     </>
   );
 }
+
+const WarehouseButton = styled(PinkButton)`
+  background: ${color.ink};
+  border-radius: ${radius.control}px;
+  padding: ${space.md}px ${space.xxxl}px;
+  font-weight: 600;
+`;

@@ -167,10 +167,10 @@ export default function ProductionPlanClient({ labMode = false }: ProductionPlan
               $variant="dark"
               onClick={saveToDatabase}
               disabled={!activeRevision || isSaving}
-              title={ENABLE_DB_SAVE ? undefined : 'DB 저장은 API 연결 후 사용할 수 있습니다.'}
+              title={ENABLE_DB_SAVE ? '현재 브라우저에 생산계획을 저장합니다.' : undefined}
             >
               {isSaving ? <Loader2 size={16} className="spin" /> : <Database size={16} />}
-              DB 저장
+              로컬 저장
             </ActionButton>
           </HeaderActions>
         </Header>
@@ -178,7 +178,7 @@ export default function ProductionPlanClient({ labMode = false }: ProductionPlan
         {labMode && (
           <LabInfoBar role="status">
             <Info size={17} aria-hidden="true" />
-            <p>개발 진행 중인 실험실 화면으로 실제 생산계획 데이터는 아직 연결되지 않았습니다.</p>
+            <p>전시회 데모입니다. 엑셀 업로드, 확정, 저장을 이 브라우저에서 체험할 수 있습니다.</p>
           </LabInfoBar>
         )}
 

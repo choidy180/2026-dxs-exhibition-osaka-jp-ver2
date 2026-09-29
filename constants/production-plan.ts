@@ -1,9 +1,4 @@
-/**
- * 생산계획 업로드 설정
- *
- * API 가 준비되면 `NEXT_PUBLIC_PRODUCTION_PLAN_USE_MOCK=false` 만 설정하면
- * 목업 대신 실제 엔드포인트로 전환된다. 엔드포인트 경로는 아래 상수만 교체한다.
- */
+/** 로컬 전시회용 생산계획 설정. 환경변수로 외부 API를 활성화하지 않는다. */
 
 import { getDxApiUrl } from '@/utils/dx-api';
 
@@ -24,16 +19,15 @@ export const API_ENDPOINTS = {
 
 /**
  * 목업 모드 스위치.
- * 기본값은 목업(true). 환경변수에 'false' 를 넣으면 실제 API 를 호출한다.
+ * 전시회 버전에서는 항상 로컬 데모를 사용한다.
  */
-export const USE_MOCK_DATA =
-  (process.env.NEXT_PUBLIC_PRODUCTION_PLAN_USE_MOCK ?? 'true').toLowerCase() !== 'false';
+export const USE_MOCK_DATA = true;
 
 /** 목업 응답 지연 (실제 API 체감과 로딩 상태 확인용) */
 export const MOCK_LATENCY_MS = 420;
 
-/** DB 저장 기능 사용 여부 — API 연결 전까지 비활성 */
-export const ENABLE_DB_SAVE = false;
+/** 로컬 저장 체험 기능 사용 여부 */
+export const ENABLE_DB_SAVE = true;
 
 /** 업로드 허용 확장자 */
 export const ACCEPTED_FILE_EXTENSIONS = ['.xlsx', '.xls'] as const;

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getVehicleApiUrl } from '@/constants/material-monitoring';
-import type { VehicleApiResponse, VehicleSlotDetail } from '@/types/material-monitoring';
+import { createExhibitionVehicle } from '@/data/exhibition-material';
+import type { VehicleSlotDetail } from '@/types/material-monitoring';
 
 export function useVehicleData() {
   const [now, setNow] = useState<Date | null>(null);
   const [vehicleInfo, setVehicleInfo] = useState<VehicleSlotDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [vehicleError, setVehicleError] = useState<string | null>(null);
 
   // 현재 시간 갱신
   useEffect(() => {
@@ -18,21 +19,14 @@ export function useVehicleData() {
   // 차량 API 조회
   const fetchVehicleData = useCallback(async () => {
     setIsLoading(true);
+    setVehicleError(null);
 
     try {
-      const res = await fetch(getVehicleApiUrl());
-      if (!res.ok) throw new Error('Vehicle API Error');
-
-      const data: VehicleApiResponse = await res.json();
-      const slots = Object.values(data).flatMap(area => area.slots_detail);
-      const validSlots = slots
-        .filter(slot => slot.FILEPATH && slot.FILENAME && /\.(jpg|png)$/i.test(slot.FILENAME))
-        .sort((a, b) => new Date(b.entry_time || 0).getTime() - new Date(a.entry_time || 0).getTime());
-
-      setVehicleInfo(validSlots[0] || null);
+      setVehicleInfo(createExhibitionVehicle());
       setIsLoaded(true);
     } catch (error) {
       console.error(error);
+      setVehicleError('차량 정보를 불러오지 못했습니다.');
       setIsLoaded(true);
     } finally {
       setIsLoading(false);
@@ -52,6 +46,7 @@ export function useVehicleData() {
 
   return {
     vehicleInfo,
+    vehicleError,
     isVehicleLoading: isLoading,
     isVehicleDataLoaded: isLoaded,
     dwellString,

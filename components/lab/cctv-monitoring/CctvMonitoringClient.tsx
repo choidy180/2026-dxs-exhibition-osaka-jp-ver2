@@ -418,7 +418,7 @@ function CameraModal({ camera, closeButtonRef, onClose }: CameraModalProps) {
           >
             <ModalHeader>
               <ModalTitle>
-                <span className="eyebrow">CCTV LIVE · WHEP</span>
+                <span className="eyebrow">CCTV MONITORING</span>
                 <h2 id="cctv-modal-title">{camera.code} · {camera.ipAddress || '-'}</h2>
               </ModalTitle>
               <ViewerActions>
@@ -433,7 +433,7 @@ function CameraModal({ camera, closeButtonRef, onClose }: CameraModalProps) {
               <StageLabel><Camera size={13} aria-hidden="true" />{camera.code}</StageLabel>
               <StageHint>
                 <Wifi size={13} aria-hidden="true" />
-                실시간 영상 · WebSocket JPEG 수신
+                전시 영상 재생 중
               </StageHint>
             </ModalStage>
             <ModalFooter>
@@ -602,7 +602,7 @@ export default function CctvMonitoringClient({ testPanel }: { testPanel?: ReactN
           <Info size={17} aria-hidden="true" />
           <p>
             {USE_MOCK_DATA
-              ? '개발 확인용 목업 데이터입니다. 실제 카메라 API는 연결되지 않습니다.'
+              ? '전시용 영상과 예시 데이터로 공장 모니터링을 체험할 수 있습니다.'
               : `사내 카메라 목록 API를 연결했습니다. 썸네일은 ${formatRefreshInterval(THUMBNAIL_REFRESH_MS)}마다 갱신하며, 응답하지 않는 카메라는 연결 안 됨으로 표시합니다.`}
           </p>
         </NoticeBar>

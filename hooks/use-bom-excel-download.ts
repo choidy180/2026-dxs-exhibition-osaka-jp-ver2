@@ -1,8 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { API_ENDPOINTS } from '@/constants/lab';
-import { getDxApiUrl } from '@/utils/dx-api';
 import type { BomExportWorkerMessage } from '@/types/bom-export';
 import type { BomRow } from '@/types/lab';
 
@@ -120,7 +118,7 @@ export function useBomExcelDownload() {
       };
       worker.postMessage(request.scope === 'current'
         ? { type: 'start', scope: 'current', rows: request.rows }
-        : { type: 'start', scope: 'all', url: getDxApiUrl(`/api${API_ENDPOINTS.BOM_EXPORT}`) });
+        : { type: 'start', scope: 'all' });
     } catch {
       fail('엑셀 다운로드를 시작하지 못했습니다. 브라우저를 새로고침한 뒤 다시 시도해주세요.');
     }

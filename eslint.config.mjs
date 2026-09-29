@@ -9,9 +9,13 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    ".next-exhibition/**",
+    ".next-exhibition-build/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Bundled upstream decoder required for offline GLB rendering.
+    "public/draco/**",
   ]),
 ]);
 

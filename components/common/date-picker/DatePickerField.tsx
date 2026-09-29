@@ -112,7 +112,7 @@ export default function DatePickerField({
                 <ChevronLeft size={16} />
               </button>
               <strong>
-                {view.getFullYear()}년 {String(view.getMonth() + 1).padStart(2, '0')}월
+                {`${view.getFullYear()}년 ${String(view.getMonth() + 1).padStart(2, '0')}월`}
               </strong>
               <button type="button" onClick={() => shiftMonth(1)} aria-label="다음 달">
                 <ChevronRight size={16} />

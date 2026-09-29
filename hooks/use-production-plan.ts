@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_UPLOAD_DATE } from '@/constants/production-plan';
+import { toDateKey } from '@/utils/date';
 import type { PlanDataset, PlanRevision, PlanSummary, RevisionStatus } from '@/types/production-plan';
 import {
   getConfirmedStatus,
@@ -59,6 +60,7 @@ export function useProductionPlan() {
 
   useEffect(() => {
     isMountedRef.current = true;
+    setUploadDate(toDateKey(new Date()));
     return () => {
       isMountedRef.current = false;
     };
@@ -251,7 +253,7 @@ export function useProductionPlan() {
     await loadRevisions(demoRevisionId);
   }, [loadRevisions]);
 
-  /** DB 저장 — API 미연결 상태에서는 안내만 노출한다 */
+  /** 현재 브라우저의 전시 저장소에 저장한다. */
   const saveToDatabase = useCallback(async () => {
     if (!activeRevision) return;
 

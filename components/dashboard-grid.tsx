@@ -18,7 +18,7 @@ type CardData = {
   id: string;
   title: string;
   desc: string;
-  icon: any;
+  icon: React.ComponentType<{ size?: number | string; color?: string }>;
   color: string;
   href: string;
 };

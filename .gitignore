@@ -53,3 +53,10 @@ next-env.d.ts
 /android/**/src/debug/res/raw/push_test_ca.crt
 *.keystore
 *.jks
+
+# Isolated exhibition checks
+/.next-exhibition/
+/.next-exhibition-build/
+/.lint-exhibition*
+/.tsc-exhibition*
+/.i18n-missing.json

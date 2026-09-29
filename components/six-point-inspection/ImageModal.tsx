@@ -30,12 +30,10 @@ export default function ImageModal({
   onClose,
   title,
 }: ImageModalProps) {
-  const [loadError, setLoadError] = useState(false);
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
-
-    setLoadError(false);
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -54,7 +52,7 @@ export default function ImageModal({
     return null;
   }
 
-  const hasImage = Boolean(imgUrl) && !loadError;
+  const hasImage = Boolean(imgUrl) && failedUrl !== imgUrl;
 
   return createPortal(
     <ModalBackdrop onClick={onClose}>
@@ -75,7 +73,7 @@ export default function ImageModal({
             <ImageModalImage
               src={resolveDxResourceUrl(imgUrl)}
               alt={title}
-              onError={() => setLoadError(true)}
+              onError={() => setFailedUrl(imgUrl)}
             />
           ) : (
             <ImageModalEmptyText>

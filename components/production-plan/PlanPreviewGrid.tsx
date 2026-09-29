@@ -75,7 +75,7 @@ export default function PlanPreviewGrid({ dataset, isLoading, error, onRetry, no
         </div>
         {dataset && (
           <CountPill>
-            품목 {formatNumber(dataset.rows.length)}개 · 계획일 {formatNumber(dayCount)}일
+            {`품목 ${formatNumber(dataset.rows.length)}개 · 계획일 ${formatNumber(dayCount)}일`}
           </CountPill>
         )}
       </CardHead>

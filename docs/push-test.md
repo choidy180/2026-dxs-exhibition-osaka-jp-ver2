@@ -4,12 +4,35 @@
 
 별도 APK로 설치하는 갤럭시 앱은 [갤럭시 CCTV 테스트 앱](push-test-android.md)을 참고한다. 기존 PWA와 계정·예약 저장소를 공유하며, APK 알림은 네이티브 FCM으로 수신한다.
 
-회사 현장에서 전달할 안내서는 다음 두 파일이다. **Windows PC 서버 실행 + 갤럭시 Chrome 웹앱(PWA) 설치**를 기준으로 하며, CA 인증서 설치 오류와 해결 절차를 포함한다. 별도 APK 설치 안내서가 아니다.
+회사 현장에서 전달할 안내서는 다음 두 파일이다. **사내 도메인 `https://gmt.dxsplatform.com` 접속 + 갤럭시 Chrome 웹앱(PWA) 설치**를 기준으로 하며, 휴대폰 CA 인증서 설치 단계가 없다. 별도 APK 설치 안내서가 아니다.
 
-PDF v2.1은 **2026-09-17에 확인한 현재 PC 환경**에 맞춘 안내서다. 프로젝트 폴더는 `C:\dev\2026-mode-dxs`, Wi-Fi 주소는 `192.168.22.211`이며, 실행 명령은 `npm.cmd run push:phone -- --host=192.168.22.211`이다. 이미 설정·실행을 마친 PC에서는 서버를 중복 실행하지 않는다. `push:phone`은 개발용 HTTPS 서버와 워커를 함께 실행하며, 별도 운영 빌드·공인 도메인 배포로 전환한 안내서는 아니다. 네트워크 변경 후에는 현재 PC 주소를 다시 확인한다.
+PDF v3.0(도메인 접속판)은 **2026-09-21에 확인한 도메인 응답**을 기준으로 작성했다. 앱 주소는 `https://gmt.dxsplatform.com/lab/push`이며, 도메인은 Let's Encrypt 공인 인증서(`*.dxsplatform.com`, 만료 2026-12-02)를 사용하므로 갤럭시에 CA 파일을 설치하지 않는다. 확인일 기준 이 도메인은 `/lab/push` 404, 푸시 API 500 상태로 **아직 푸시 테스트가 활성화되지 않았다.** 서버 담당자 안내서 2~4쪽(패키지 설치 → 설정 파일 → 서버 실행)을 먼저 진행해야 한다. 사설 IP 인증서 방식(v2.1, `push:phone`)은 아래 "(대안) 핫스팟·사설 IP 인증서로 테스트하기"에 남겨 두었다.
 
-- [PC 서버 운영자 안내서 (PDF)](../output/pdf/dxs-cctv-pc-operator-guide.pdf)
+- [서버 담당자 안내서 (PDF)](../output/pdf/dxs-cctv-pc-operator-guide.pdf)
 - [갤럭시 사용자 안내서 (PDF)](../output/pdf/dxs-cctv-galaxy-user-guide.pdf)
+
+## 사내 도메인(gmt.dxsplatform.com)으로 테스트하기
+
+2026-09-21 확인 결과 `https://gmt.dxsplatform.com/`은 Cloudflare 경유로 원본 프로젝트 `2026-mode-dxs`의 **Next 개발 서버(`next dev`, localhost:3000)** 를 내보내는 Windows PC다. 루트와 `/lab/cctv-monitoring`은 200이지만 `/lab/push`·manifest·sw.js는 404(`APP_ENV`/`PUSH_TEST_ENABLED` 미설정)이고, `/api/push-test/*`는 `Module not found: Can't resolve 'better-sqlite3'`로 500을 반환했다. 즉 푸시 코드는 이미 배포되어 있고 서버 PC의 패키지 설치와 테스트 설정만 빠져 있다.
+
+도메인이 연결된 서버 PC에서 다음 순서로 진행한다.
+
+1. 프로젝트 폴더에서 `npm.cmd install`을 실행한다. `better-sqlite3 12.11.1` 사전 빌드 파일이 설치되면 500 오류가 해소된다.
+2. 같은 폴더에서 실행 중인 `npm run dev` 창을 `Ctrl+C`로 종료한다. 푸시 실행 명령이 같은 개발 서버 잠금을 사용하므로 두 개를 함께 켤 수 없다. 도메인 연결(터널·프록시) 프로그램은 그대로 둔다.
+3. `.env.push-test.local`이 없으면 `npm.cmd run push:setup`(**`--phone` 없이**)을 실행하고 "내부 HTTPS 주소" 질문에 `https://gmt.dxsplatform.com`을 입력한다. 이미 있으면 `PUSH_TEST_ORIGIN=https://gmt.dxsplatform.com`으로 한 줄만 수정한다. 경로·포트 번호·끝의 `/`를 붙이지 않는다.
+4. `npm.cmd run push:dev`(개발 모드 + 워커) 또는 `npm.cmd run build` 후 `npm.cmd run push:start`(운영 빌드 + 워커)를 실행한다. 두 명령 모두 웹 서버를 `127.0.0.1:3000`에 바인딩하므로 기존 도메인 연결이 이 포트로 향해야 한다. 다른 포트를 쓰고 있었다면 `PORT`를 같은 값으로 맞춘다.
+5. PC Chrome에서 `https://gmt.dxsplatform.com/lab/push`가 로그인 화면으로 열리고 `https://gmt.dxsplatform.com/lab/push/manifest.webmanifest`가 JSON으로 열리면 활성화된 것이다. 로그인까지 되면 갤럭시 사용자에게 앱 주소와 계정을 전달한다.
+
+갤럭시는 Chrome에서 앱 주소를 열어 **앱 설치 → 로그인 → CCTV Push ON**만 진행한다. 인증서 다운로드·설정 앱에서의 CA 설치·핫스팟 연결 단계가 없다. 로그인·알림은 LTE나 외부 Wi-Fi에서도 동작하지만 CCTV 목록·영상은 여전히 사내망에서만 연결된다.
+
+주의 사항:
+
+- 서버는 브라우저의 `Origin` 헤더와 `PUSH_TEST_ORIGIN`이 정확히 같을 때만 API 요청을 받는다. 값이 다르면 로그인에서 "같은 테스트 앱에서 다시 시도해주세요"(403)가 난다. Cloudflare는 `Origin` 헤더를 그대로 전달하므로 추가 설정은 없다.
+- 서비스 워커·manifest·API 응답은 `Cache-Control: no-store`이므로 Cloudflare 캐시에 남지 않는다. 세션 쿠키는 `Secure`, `SameSite=Strict`, 경로 `/api/push-test`로 발급된다.
+- 테스트 페이지가 인터넷에서 열린다. 계정으로만 보호되므로 ID·비밀번호를 공용 문서에 적지 않는다. 개발 모드 서버는 오류 상세(서버 파일 경로 등)를 응답에 포함하므로 테스트 후에는 운영 빌드(`push:start`)로 전환하는 것을 권장한다.
+- 예전 IP 주소(`https://192.168.x.x:3000`)로 설치한 웹앱은 그 앱에서 **CCTV Push OFF** 후 삭제한다. 도메인 주소에서 ON하는 것만으로 예전 등록이 정리되지는 않는다. 갤럭시에 설치한 `push-test-ca.crt`는 삭제해도 된다.
+- `push:apk`는 사설 IP `--host`와 로컬 CA를 전제로 하므로 도메인 origin용 APK 빌드는 아직 지원하지 않는다. 도메인 방식은 Chrome 웹앱(PWA) 기준이다.
+- 이 저장소(전시용 사본)의 작업 트리는 `lib/push-test/send.ts` 등에서 실제 발송을 제거한 로컬 시뮬레이션 상태다. 도메인 테스트 서버는 실제 발송 코드가 있는 원본 프로젝트(`2026-mode-dxs`, 현재 배포본)로 실행해야 한다.
 
 ## PC 패키지 설치
 
@@ -22,7 +45,9 @@ npm.cmd install
 
 `better-sqlite3 13.0.3`은 Windows에서 포함된 실행 파일이 있어도 `node-gyp rebuild`를 호출하여 Python을 찾다가 실패하는 [설치 문제](https://github.com/WiseLibs/better-sqlite3/issues/1516)가 보고되어 있다. 이 프로젝트는 해당 문제를 피하도록 `12.11.1`에 고정했다. 같은 오류가 나면 갱신된 `package.json`과 `package-lock.json`을 함께 받은 뒤 위 명령을 다시 실행한다. 이 버전은 지원 환경에서 미리 빌드된 파일을 내려받으므로 GitHub 다운로드 연결이 필요하다. 다른 환경이나 다운로드 실패로 소스 빌드가 필요한 경우에는 별도 빌드 도구가 필요할 수 있다.
 
-## Windows 컴퓨터 + 갤럭시에서 처음 테스트하기
+## (대안) 핫스팟·사설 IP 인증서로 테스트하기
+
+도메인을 사용할 수 없는 현장에서만 쓰는 예전 방식(v2.1)이다. 서버 PC의 사설 IP로 접속하므로 휴대폰에 테스트용 CA 인증서를 설치해야 한다. 도메인 방식이 가능하면 위 절차를 사용한다.
 
 처음 한 번은 휴대폰에 테스트용 인증서를 설치한다. 이후에는 컴퓨터에서 실행 명령을 켜고, 갤럭시 Chrome에서 출력된 주소로 들어가면 된다. 회사에서 이미 사용하는 HTTPS 테스트 서버가 있다면 아래의 서버 설정 절차를 사용한다.
 
@@ -90,7 +115,7 @@ SQLite 파일과 `-wal`/`-shm` 파일은 웹 공개 디렉터리에 두지 않�
 
 ### 여러 사람이 간단하게 테스트하려면
 
-서버에 휴대폰이 기본 신뢰하는 HTTPS 인증서를 적용하면 테스트 참여자는 별도 CA 인증서를 설치할 필요 없이 내부 주소 접속 → 앱 설치 → 로그인 → **CCTV Push ON** 순서로 진행할 수 있다. 실제 보유 도메인과 해당 도메인의 DNS 설정 권한이 필요하다. 공개 인증기관의 DNS-01 검증과 내부 DNS를 사용하면 CCTV 서버를 인터넷에 공개하지 않고 인증서를 발급받을 수 있다. 회사에서 이미 신뢰되는 내부 HTTPS 주소를 제공한다면 이를 우선 사용한다. 현재 개발용 사설 IP 주소에 인증서 다운로드 버튼을 추가하는 것만으로 이 신뢰 설정이 대체되지는 않는다. [Let's Encrypt DNS-01 안내](https://letsencrypt.org/docs/challenge-types/#dns-01-challenge)
+서버에 휴대폰이 기본 신뢰하는 HTTPS 인증서를 적용하면 테스트 참여자는 별도 CA 인증서를 설치할 필요 없이 내부 주소 접속 → 앱 설치 → 로그인 → **CCTV Push ON** 순서로 진행할 수 있다. 실제 보유 도메인과 해당 도메인의 DNS 설정 권한이 필요하다. 공개 인증기관의 DNS-01 검증과 내부 DNS를 사용하면 CCTV 서버를 인터넷에 공개하지 않고 인증서를 발급받을 수 있다. 회사에서 이미 신뢰되는 내부 HTTPS 주소를 제공한다면 이를 우선 사용한다. 현재는 `https://gmt.dxsplatform.com`이 이 역할을 하며, 절차는 위 "사내 도메인(gmt.dxsplatform.com)으로 테스트하기"에 있다. 현재 개발용 사설 IP 주소에 인증서 다운로드 버튼을 추가하는 것만으로 이 신뢰 설정이 대체되지는 않는다. [Let's Encrypt DNS-01 안내](https://letsencrypt.org/docs/challenge-types/#dns-01-challenge)
 
 현재 `push:phone`의 USB 없는 파일 전달은 개발용 편의 기능이다. 웹 포트의 다음 포트(기본 3001)에 사설 IP로만 연결하는 HTTP 서버를 열고 `/lab/push/test-ca.crt`에서 공개 CA 인증서 하나만 제공한다. 다른 경로와 앱·API·CCTV 영상은 제공하지 않는다. HTTPS의 같은 경로도 인증서 다운로드를 제공한다. `/lab/push`의 **앱 설치** 안내에 **휴대폰 인증서 받기** 링크가 표시된다. 인증서 설치 전에는 PC 실행 창의 HTTP 다운로드 주소를 휴대폰 Chrome 주소창에 직접 입력한다. 서버가 내부적으로 지정하는 `PUSH_TEST_LOCAL_CERTIFICATE` 및 `PUSH_TEST_CERTIFICATE_DOWNLOAD_URL` 값은 사용자가 따로 만들 필요가 없다. 일반 `push:dev/start`에서는 이 편의 기능이 켜지지 않는다.
 
