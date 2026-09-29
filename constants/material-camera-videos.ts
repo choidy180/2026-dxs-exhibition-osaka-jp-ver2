@@ -12,4 +12,4 @@ export const MATERIAL_CAMERA_VIDEOS = [
   '09_JP-FR-9042_60_JP.mp4',
   '10_JP-FR-1057_44_JP.mp4',
   '11_JP-FR-2069_56_JP.mp4',
-].map(filename => `/videos/material-inbound/${filename}`);
+].map(filename => `/videos/material-inbound/web-v1/${filename}`);

@@ -64,7 +64,13 @@ AI 답변은 정해진 시연 시나리오입니다. 실제 ERP 전송, AI 추�
 
 ## 로컬 시각 자료
 
-입고 검수 영상 원본은 `video/`에 있으며, 브라우저용 파일은 `public/videos/material-inbound/`에 복사되어 있습니다. 재생 목록은 `constants/material-camera-videos.ts`에서 관리합니다. 해당 영상 파일을 교체할 때는 브라우저용 복사본도 함께 갱신합니다.
+입고 검수 영상 원본은 `video/`와 `public/videos/material-inbound/`에 보관합니다. 실제 CAM01~06은 `public/videos/material-inbound/web-v1/`의 웹용 영상을 재생합니다. 재생 목록은 `constants/material-camera-videos.ts`에서 관리합니다.
+
+원본은 각각 1080p·약 7~9.5Mbps여서 여섯 카메라의 동시 재생에 약 45~55Mbps가 필요합니다. 웹용은 H.264 Main / 720p / 24fps / 최대 비트레이트 목표 1.2Mbps / 무음 / fast-start로 변환해 다운로드와 디코딩 부담을 낮췄습니다. 실제 네트워크 속도가 여섯 영상의 합산 전송량보다 낮으면 버퍼링은 여전히 발생할 수 있습니다.
+
+버퍼링 중에는 마지막 프레임을 유지하고 작은 안내를 표시합니다. 브라우저가 재생을 차단하거나 일시 정지하면 재생 버튼을 제공하고, 탭으로 돌아왔을 때 재생을 다시 시도합니다. 영상 종료 후에는 기존처럼 3초 초기화 후 다른 영상을 선택합니다.
+
+FFmpeg가 설치된 환경에서 `node scripts/optimize-material-camera-videos.mjs`로 웹용 파일을 재생성할 수 있습니다. 별도 실행 파일은 `FFMPEG_PATH`로 지정합니다. Vercel 빌드에서는 변환하지 않으므로 생성된 MP4 11개를 Git에 함께 커밋해야 합니다. `web-v1`은 1년 immutable 캐시를 사용하므로 원본을 교체할 때는 폴더 버전을 올리고 변환 스크립트·재생 목록·`next.config.ts` 헤더 경로를 함께 갱신합니다.
 
 - `public/demo/factory-floor.png`: 제조 현장 카메라 대체 이미지.
 - `public/demo/inspection-door.png`: 도어·가스켓 검사 이미지.

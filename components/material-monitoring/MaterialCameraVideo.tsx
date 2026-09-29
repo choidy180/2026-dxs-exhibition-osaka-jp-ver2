@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { AlertCircle, Loader2, RotateCw, Video } from 'lucide-react';
+import { AlertCircle, Loader2, Play, RotateCw, Video } from 'lucide-react';
 import type { MaterialCameraPlayback } from '@/types/material-camera-video';
 import { MATERIAL_CAMERA_RESET_MS } from '@/constants/material-camera-videos';
+import { useMaterialVideoPlayback } from '@/hooks/use-material-video-playback';
 import styled, { css } from 'styled-components';
 import { color, controlHeight, focusRing, fontSize, fontWeight, motionDuration, radius, space, tone } from '@/styles/design-tokens';
 
@@ -22,7 +23,9 @@ export default function MaterialCameraVideo(props: Props) {
 }
 
 function CameraVideo({ camera, label, mirror = false, onEnded, onRetry }: Props) {
-  const [status, setStatus] = useState<'loading' | 'playing' | 'error'>('loading');
+  const mirrorRef = useRef<HTMLVideoElement>(null);
+  const videoRef = mirror ? mirrorRef : camera.videoRef;
+  const { status, resume, onPlaying, onWaiting, onStalled, onPause, onError } = useMaterialVideoPlayback(videoRef);
   const reducedMotion = useReducedMotion();
   const resetting = camera.resetUntil !== null;
   const empty = !camera.src && camera.revision > 0;
@@ -37,14 +40,17 @@ function CameraVideo({ camera, label, mirror = false, onEnded, onRetry }: Props)
     <CameraPlaybackFrame data-camera-playback={phase}>
       {camera.src && !resetting && (
         <video
-          ref={mirror ? undefined : camera.videoRef}
+          ref={videoRef}
           src={camera.src}
           autoPlay muted playsInline preload="auto"
           aria-label={label}
           onLoadedMetadata={event => syncMirror(event.currentTarget)}
-          onPlaying={() => setStatus('playing')}
-          onWaiting={() => setStatus('loading')}
-          onError={() => setStatus('error')}
+          onCanPlay={event => resume(event.currentTarget)}
+          onPlaying={onPlaying}
+          onWaiting={onWaiting}
+          onStalled={onStalled}
+          onPause={onPause}
+          onError={onError}
           onEnded={mirror ? undefined : onEnded}
         />
       )}
@@ -59,14 +65,14 @@ function CameraVideo({ camera, label, mirror = false, onEnded, onRetry }: Props)
             transition={{ duration: reducedMotion ? 0 : motionDuration.fast }}
           >
             <div className="state-content">
-              {phase === 'error' ? <AlertCircle size={24} /> : phase === 'empty' ? <Video size={28} /> : (
+              {phase === 'error' ? <AlertCircle size={24} /> : phase === 'empty' ? <Video size={28} /> : phase === 'paused' ? <Play size={24} /> : (
                 <motion.span className="state-icon" aria-hidden="true"
                   animate={{ rotate: reducedMotion ? 0 : 360 }}
                   transition={{ duration: motionDuration.spin, ease: 'linear', repeat: reducedMotion ? 0 : Infinity }}>
                   {resetting ? <RotateCw size={24} /> : <Loader2 size={24} />}
                 </motion.span>
               )}
-              <strong>{resetting ? '카메라 초기화 중' : empty ? '등록된 영상이 없습니다.' : status === 'error' ? '영상을 불러오지 못했습니다.' : '영상 준비 중...'}</strong>
+              <strong>{resetting ? '카메라 초기화 중' : empty ? '등록된 영상이 없습니다.' : status === 'error' ? '영상을 불러오지 못했습니다.' : status === 'paused' ? '재생 버튼을 눌러 주세요.' : status === 'buffering' ? '영상 버퍼링 중...' : '영상 준비 중...'}</strong>
               {resetting && <>
                 <span className="countdown">{`${camera.remainingSeconds.toLocaleString('ko-KR')}초`}</span>
                 <span className="state-description">잠시 후 다음 영상을 재생합니다.</span>
@@ -79,6 +85,7 @@ function CameraVideo({ camera, label, mirror = false, onEnded, onRetry }: Props)
               </>}
               {empty && <span className="state-description">카메라에 재생할 영상을 추가해 주세요.</span>}
               {phase === 'error' && <button type="button" onClick={onRetry}><RotateCw size={14} />재시도</button>}
+              {phase === 'paused' && <button type="button" onClick={() => resume()}><Play size={14} />재생</button>}
             </div>
           </CameraPlaybackState>
         )}
@@ -148,6 +155,24 @@ const CameraPlaybackState = styled(motion.div)<{ $phase: string; $mirror: boolea
       strong { font-size: ${fontSize.caption}; }
       .countdown { font-size: ${fontSize.body}; }
     }
+  `}
+
+  ${({ $phase }) => $phase === 'buffering' && css`
+    inset: auto ${space.md}px ${space.md}px;
+    padding: 0;
+    background: transparent;
+    pointer-events: none;
+
+    .state-content {
+      width: auto;
+      max-width: 100%;
+      flex-direction: row;
+      padding: ${space.sm}px ${space.md}px;
+      border-color: ${tone.info.border};
+      background: ${tone.info.bg};
+    }
+    strong { font-size: ${fontSize.caption}; }
+    .state-icon svg { width: ${space.xxxl}px; height: ${space.xxxl}px; }
   `}
 `;
 

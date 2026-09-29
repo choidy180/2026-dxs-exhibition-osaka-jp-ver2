@@ -1,5 +1,8 @@
 /** Additional exhibition UI messages translated for English and Japanese. */
 export const extraCatalog: Record<string, { en: string; ja: string }> = {
+  "영상 버퍼링 중...": { en: "Buffering video...", ja: "映像を読み込み中..." },
+  "재생 버튼을 눌러 주세요.": { en: "Press play to continue.", ja: "再生ボタンを押してください。" },
+  "재생": { en: "Play", ja: "再生" },
   "GR5 가조립 자재 #1": { en: "GR5 Pre-assembly Materials #1", ja: "GR5 仮組立資材 #1" },
   "GR5 가조립 자재 #2": { en: "GR5 Pre-assembly Materials #2", ja: "GR5 仮組立資材 #2" },
   "실시간 적재 현황": { en: "Real-time loading status", ja: "リアルタイム積載状況" },
