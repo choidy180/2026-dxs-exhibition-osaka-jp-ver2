@@ -6,9 +6,13 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { NextRequest } from 'next/server';
 import webPush from 'web-push';
-import { handlePushTest } from '../../lib/push-test/api';
+import { POST } from '../../app/api/push-test/[action]/route';
 import { openPushTestStore } from '../../lib/push-test/store';
 import { requireTestOwner } from '../../lib/push-test/auth';
+
+const handlePushTest = (action: string, request: NextRequest) => POST(request, {
+  params: Promise.resolve({ action }),
+});
 
 test('API 인증·기기 격리·CSRF·중복 예약·취소·환경 차단', async () => {
   const keys = webPush.generateVAPIDKeys();
@@ -25,6 +29,11 @@ test('API 인증·기기 격리·CSRF·중복 예약·취소·환경 차단', as
   const request = (body: unknown, cookie = '', origin = 'https://push.example.test') => new NextRequest('https://push.example.test/api/push-test/status', {
     method: 'POST', headers: { 'Content-Type': 'application/json', origin, cookie }, body: JSON.stringify(body),
   });
+  for (const action of ['unknown', 'constructor', '__proto__']) {
+    const response = await handlePushTest(action, request({}));
+    assert.equal(response.status, 404);
+    assert.equal((await response.json()).code, 'NOT_FOUND');
+  }
   const login = async () => {
     const response = await handlePushTest('login', request({ userId: 'tester', password }));
     assert.equal(response.status, 200);

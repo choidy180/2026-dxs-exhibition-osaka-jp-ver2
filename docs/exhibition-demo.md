@@ -81,6 +81,15 @@ AI 답변은 정해진 시연 시나리오입니다. 실제 ERP 전송, AI 추�
 
 > Use case: background-extraction. Asset type: transparent PNG upper-body mascot for a local exhibition website guide. Input image 1 is the EDIT TARGET: the supplied acrylic keychain photograph. Extract and faithfully clean up ONLY the illustrated lucky cat character inside the acrylic. Remove all metal keyring, clasp, chains, acrylic outline, reflections, texture, shadows, black background, legs and floor. Preserve this same cute white cat identity: orange forehead patches and short orange stripes, pink inner ears, friendly closed smiling eyes behind dark gray rectangular smart glasses with side modules, pink nose and smiling mouth, short whiskers, red collar with yellow bell, the raised paw on the viewer's left and orange forearm marking, and the white DX SOLUTIONS shirt with its small blue/gray circuit-tree mark. Retain the tiny shirt branding as closely as possible without adding text. Composition: single front-facing head-and-torso upper-body portrait cropped neatly just below the chest, both ears fully visible, friendly raised paw fully visible. Omit the lower gold coin and legs because this is a bust. Reconstruct a clean crisp flat 2D illustration from the printed artwork, dark soft outlines, original colors and proportions, no redesign, no 3D rendering. Character should fill 90% of the canvas with only a small transparent margin. True transparent background with alpha, not a checkerboard painted into the image, not a white or black backdrop. No speech bubble, no UI, no caption, no watermark. Output one isolated upper-body cat character.
 
+## Vercel Git 배포
+
+- 저장소의 애플리케이션 코드와 `public`을 함께 커밋하고 GitHub에 푸시한 뒤, Vercel에서 저장소를 Import합니다. Framework는 Next.js, Build Command는 `npm run build`, Output Directory는 기본값을 사용합니다. `EXHIBITION_DIST_DIR`은 설정하지 않습니다.
+- 영상은 `public/videos/`와 `public/sample.mp4`, 스마트 팩토리 이미지는 `public/images/smart-factory/`에서 제공합니다. 원본 `video/`와 `.cursor.zip`은 배포에 필요하지 않습니다.
+- Hobby 배포에서 서버 함수 12개 제한 오류가 발생하지 않도록 푸시 테스트 API 5개를 `app/api/push-test/[action]/route.ts`로 통합했습니다. `/api/push-test/` 아래 `login`, `status`, `subscribe`, `schedule`, `unsubscribe`의 기존 URL과 POST 동작은 유지됩니다. 빌드의 동적 서버 경로는 14개에서 10개로 줄어듭니다. 실제 Vercel 함수 수는 플랫폼의 번들링 결과에 따라 달라질 수 있습니다.
+- 기존 5개 `route.ts`의 삭제와 새 `[action]/route.ts` 추가를 함께 커밋해야 합니다. 새 파일만 추가하면 기존 경로가 남아 함수 수가 줄어들지 않습니다.
+- 전시 데모는 별도 외부 API 키가 필요하지 않습니다. 실제 푸시 테스트의 SQLite 저장소와 상시 워커는 Vercel용으로 전환한 것이 아니므로 `PUSH_TEST_ENABLED`를 켜지 않습니다.
+- 공식 참고: [Vercel 함수 수와 번들링](https://vercel.com/docs/functions/runtimes#functions-created-per-deployment), [Next.js 동적 경로](https://nextjs.org/docs/app/api-reference/file-conventions/dynamic-routes).
+
 ## 검증 명령
 
 ```powershell
