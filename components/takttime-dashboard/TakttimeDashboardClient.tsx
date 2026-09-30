@@ -3,8 +3,10 @@
 
 import ConveyorVisionVideo from './ConveyorVisionVideo';
 import { TAKTTIME_PART_NAMES, TAKTTIME_PLAYBACK_RATE } from '@/constants/takttime-camera-videos';
+import { TAKTTIME_CHART_MAX_SECONDS, TAKTTIME_TARGET_SECONDS as TARGET_TAKT } from '@/constants/takttime-cycle';
 import { TAKTTIME_TRACKING } from '@/data/takttime-tracking';
 import type { TakttimeLine, VisionRecognition } from '@/types/takttime-vision';
+import { getDemoCycleTime } from '@/utils/takttime-cycle';
 import React, { useState, useEffect, useMemo, memo, useCallback, useId } from "react";
 import styled, { createGlobalStyle } from "styled-components";
 import { motion, AnimatePresence, Variants } from "framer-motion";
@@ -41,8 +43,6 @@ import {
 } from "lucide-react";
 
 // --- [1. 설정 및 데이터 상수] ---
-
-const TARGET_TAKT = 60.0;
 
 const KPI_DATA = {
   1: { target: 36, rate: "98.7%", production: 19 },   // 꼬모냉장고
@@ -719,10 +719,7 @@ const MonitorChart = memo(({ data }: { data: CycleData[] }) => {
         />
         <YAxis
           hide
-          domain={[
-            0,
-            (dataMax: number) => Math.ceil((Math.max(dataMax || 0, TARGET_TAKT) * 1.22) / 10) * 10
-          ]}
+          domain={[0, TAKTTIME_CHART_MAX_SECONDS]}
         />
         <Bar dataKey="cycleTime" maxBarSize={48} radius={[10, 10, 0, 0]} isAnimationActive={false}>
           {data.map((entry, index) => (
@@ -776,28 +773,10 @@ const PredictionTime = ({ value }: { value: string }) => (
 );
 
 // --- [더미 데이터 생성 함수] ---
-const DUMMY_CYCLE_PATTERNS: Record<string, number[]> = {
-  A: [42.3, 176.0, 125.0, 125.0, 180.0, 98.0, 101.0, 101.0, 37.7, 77.7],
-  B: [42.3, 150.0, 161.0, 60.0, 151.0, 40.2, 178.0, 48.0, 215.0, 70.0],
-  C: [48.3, 41.3, 42.7, 149.4, 145.6, 40.3, 41.0, 44.7, 43.8, 147.7],
-};
-
-const createMockCycleTime = (line: string, index?: number) => {
-  const pattern = DUMMY_CYCLE_PATTERNS[line] ?? DUMMY_CYCLE_PATTERNS.A;
-  if (typeof index === 'number') return pattern[index % pattern.length];
-
-  const shouldBeNormal = Math.random() < 0.3;
-  const value = shouldBeNormal
-    ? 37 + Math.random() * 22
-    : 70 + Math.random() * 150;
-
-  return parseFloat(value.toFixed(1));
-};
-
 const generateInitialDummyData = (line: TakttimeLine): CycleData[] => {
   const baseTime = new Date();
   return Array.from({ length: 10 }).map((_, i) => {
-      const ct = createMockCycleTime(line, i);
+      const ct = getDemoCycleTime(line, 50 + i);
       const timeObj = new Date(baseTime.getTime() - (9 - i) * TAKTTIME_TRACKING[line].partIntervalSeconds / TAKTTIME_PLAYBACK_RATE * 1000);
       const timeLabel = timeObj.toTimeString().split(' ')[0]; 
       return {
@@ -821,11 +800,11 @@ export default function ProcessDashboard() {
   const [loadingMsg, setLoadingMsg] = useState("Initializing System...");
 
   // [수정] 통신 실패 시에도 자연스럽게 차트가 렌더링되도록 초기값을 더미 데이터로 세팅
-  const [data, setData] = useState<{A: CycleData[], B: CycleData[], C: CycleData[]}>({ 
+  const [data, setData] = useState<{A: CycleData[], B: CycleData[], C: CycleData[]}>(() => ({
     A: generateInitialDummyData('A'), 
     B: generateInitialDummyData('B'), 
     C: generateInitialDummyData('C') 
-  });
+  }));
   const [alertLogs, setAlertLogs] = useState<LogData[]>([]);
   const [showLogModal, setShowLogModal] = useState(false);
   const [showBottleneckAlert, setShowBottleneckAlert] = useState(false);
@@ -876,10 +855,11 @@ export default function ProcessDashboard() {
 
   const handleRecognition = useCallback((line: TakttimeLine, event: VisionRecognition) => {
     const timestamp = new Date();
-    const cycleTime = createMockCycleTime(line);
-    // 시연 CT 값은 유지하고, 해당 영상의 부품 통과 프레임에만 그래프를 추가한다.
+    // 영상 통과 시점에만 이어지는 생산 순번으로 값을 만들어 반복 재생 때도 추세가 끊기지 않게 한다.
     setData(previous => {
       const history = previous[line];
+      const production = (history.at(-1)?.production ?? 49) + 1;
+      const cycleTime = getDemoCycleTime(line, production);
       const next: CycleData = {
         id: `${line}-${timestamp.getTime()}-${event.sequence}`,
         name: TAKTTIME_PART_NAMES[line][event.kind],
@@ -888,7 +868,7 @@ export default function ProcessDashboard() {
         visualCycleTime: cycleTime,
         target: TARGET_TAKT,
         isOver: cycleTime > TARGET_TAKT,
-        production: (history.at(-1)?.production ?? 0) + 1,
+        production,
       };
       return { ...previous, [line]: [...history.slice(-9), next] };
     });
