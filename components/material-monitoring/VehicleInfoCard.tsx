@@ -62,7 +62,7 @@ const ImageFrame = styled.div`
   height: 148px; margin-bottom: ${space.xxl}px; overflow: hidden; border-radius: ${radius.card}px;
   background: ${color.surfaceSubtle};
 `;
-const VehicleImage = styled.img`width: 100%; height: 100%; object-fit: cover;`;
+const VehicleImage = styled.img`width: 100%; height: 100%; object-fit: cover; object-position: center bottom;`;
 const Rows = styled.div`display: flex; flex-direction: column; gap: ${space.md}px;`;
 const Row = styled.div`
   display: flex; justify-content: space-between; align-items: center; gap: ${space.md}px; font-size: ${fontSize.bodySm};

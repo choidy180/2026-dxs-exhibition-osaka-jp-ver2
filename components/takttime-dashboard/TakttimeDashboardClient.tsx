@@ -1,7 +1,10 @@
 "use client";
 
 
-import DemoVideo from '@/components/common/demo-video/DemoVideo';
+import ConveyorVisionVideo from './ConveyorVisionVideo';
+import { TAKTTIME_PART_NAMES, TAKTTIME_PLAYBACK_RATE } from '@/constants/takttime-camera-videos';
+import { TAKTTIME_TRACKING } from '@/data/takttime-tracking';
+import type { TakttimeLine, VisionRecognition } from '@/types/takttime-vision';
 import React, { useState, useEffect, useMemo, memo, useCallback, useId } from "react";
 import styled, { createGlobalStyle } from "styled-components";
 import { motion, AnimatePresence, Variants } from "framer-motion";
@@ -40,13 +43,6 @@ import {
 // --- [1. 설정 및 데이터 상수] ---
 
 const TARGET_TAKT = 60.0;
-const REFRESH_RATE = 5000;
-
-const WS_PATHS = {
-  A: "/videos/dashboard-short.mp4", // 발포라인
-  B: "/videos/dashboard-short.mp4", // 총조립1라인
-  C: "/videos/dashboard-short.mp4", // 총조립2라인
-};
 
 const KPI_DATA = {
   1: { target: 36, rate: "98.7%", production: 19 },   // 꼬모냉장고
@@ -694,9 +690,6 @@ const CustomCycleLabel = memo((props: { x?: number; y?: number; value?: string |
 });
 CustomCycleLabel.displayName = "CustomCycleLabel";
 
-const WsVideoStream = memo(({ wsUrl }: { wsUrl: string }) => <DemoVideo src={wsUrl} />);
-WsVideoStream.displayName = 'WsVideoStream';
-
 const MonitorChart = memo(({ data }: { data: CycleData[] }) => {
   const chartId = useId().replace(/:/g, "");
   const normalGradientId = `${chartId}-normal-gradient`;
@@ -722,7 +715,7 @@ const MonitorChart = memo(({ data }: { data: CycleData[] }) => {
           tickLine={false}
           tick={{ fill: "#9CA3AF", fontSize: 11, fontWeight: 600 }}
           dy={10}
-          interval={0}
+          interval="preserveStartEnd"
         />
         <YAxis
           hide
@@ -756,9 +749,9 @@ const MonitorChart = memo(({ data }: { data: CycleData[] }) => {
 });
 MonitorChart.displayName = "MonitorChart";
 
-const ProcessChart = memo(({ data }: { data: CycleData[] }) => {
+const ProcessChart = memo(({ data, line }: { data: CycleData[]; line: TakttimeLine }) => {
   return (
-    <ChartWrapper>
+    <ChartWrapper data-chart-line={line} data-production={data.at(-1)?.production ?? 0}>
       <ChartCanvas>
         <MonitorChart data={data} />
       </ChartCanvas>
@@ -801,11 +794,11 @@ const createMockCycleTime = (line: string, index?: number) => {
   return parseFloat(value.toFixed(1));
 };
 
-const generateInitialDummyData = (line: string): CycleData[] => {
+const generateInitialDummyData = (line: TakttimeLine): CycleData[] => {
   const baseTime = new Date();
   return Array.from({ length: 10 }).map((_, i) => {
       const ct = createMockCycleTime(line, i);
-      const timeObj = new Date(baseTime.getTime() - (9 - i) * 5 * 60 * 1000); 
+      const timeObj = new Date(baseTime.getTime() - (9 - i) * TAKTTIME_TRACKING[line].partIntervalSeconds / TAKTTIME_PLAYBACK_RATE * 1000);
       const timeLabel = timeObj.toTimeString().split(' ')[0]; 
       return {
           id: `${line}-${i}`,
@@ -852,7 +845,7 @@ export default function ProcessDashboard() {
         return;
       }
 
-      if (event.key !== 'Enter' || isTyping) return;
+      if (event.key !== 'Enter' || isTyping || target?.closest('button, a, [role="button"]')) return;
       event.preventDefault();
       setShowBottleneckAlert(true);
     };
@@ -881,43 +874,34 @@ export default function ProcessDashboard() {
       });
   }, [alertLogs, searchText, filterType]);
 
+  const handleRecognition = useCallback((line: TakttimeLine, event: VisionRecognition) => {
+    const timestamp = new Date();
+    const cycleTime = createMockCycleTime(line);
+    // 시연 CT 값은 유지하고, 해당 영상의 부품 통과 프레임에만 그래프를 추가한다.
+    setData(previous => {
+      const history = previous[line];
+      const next: CycleData = {
+        id: `${line}-${timestamp.getTime()}-${event.sequence}`,
+        name: TAKTTIME_PART_NAMES[line][event.kind],
+        timeLabel: timestamp.toTimeString().split(' ')[0],
+        cycleTime,
+        visualCycleTime: cycleTime,
+        target: TARGET_TAKT,
+        isOver: cycleTime > TARGET_TAKT,
+        production: (history.at(-1)?.production ?? 0) + 1,
+      };
+      return { ...previous, [line]: [...history.slice(-9), next] };
+    });
+  }, []);
+
   useEffect(() => {
-    const fetchData = async () => {
-        setData(prev => {
-          const createNext = (prevLine: CycleData[], lineStr: string) => {
-              if (prevLine.length === 0) return generateInitialDummyData(lineStr);
-              const newCt = createMockCycleTime(lineStr);
-              const newTime = new Date();
-              const newItem = {
-                  id: `${lineStr}-${newTime.getTime()}`,
-                  name: `Dummy`,
-                  timeLabel: newTime.toTimeString().split(' ')[0],
-                  cycleTime: newCt,
-                  visualCycleTime: newCt,
-                  target: TARGET_TAKT,
-                  isOver: newCt > TARGET_TAKT,
-                  production: prevLine[prevLine.length - 1].production + 1
-              };
-              return [...prevLine.slice(1), newItem];
-          };
-          return {
-              A: createNext(prev.A, 'A'),
-              B: createNext(prev.B, 'B'),
-              C: createNext(prev.C, 'C'),
-          };
-        });
-    };
-    
-    fetchData(); // 컴포넌트 마운트 시 최초 실행
-    const interval = setInterval(fetchData, REFRESH_RATE);
-    
     // 로그 데이터는 목업 유지
     const logs = MOCK_CSV_DATA.trim().split('\n').slice(1).map(line => {
       const [time, msg, type] = line.split(','); return { time, msg, type: type.trim() as LogData['type'] };
     });
     const logsTimer = window.setTimeout(() => setAlertLogs(logs), 0);
     
-    return () => { clearInterval(interval); window.clearTimeout(logsTimer); };
+    return () => { window.clearTimeout(logsTimer); };
   }, []); // 의존성 배열 비움
 
   const getSlicedData = (lineData: CycleData[]) => {
@@ -989,17 +973,17 @@ export default function ProcessDashboard() {
                   <ViewContainer key="view-1">
                       <MultiChartCard>
                         <VideoBox $isLarge={true}>
-                          <WsVideoStream wsUrl={WS_PATHS.A} />
+                          <ConveyorVisionVideo line="A" onRecognition={handleRecognition} />
                           <div className="label">발포라인</div>
                         </VideoBox>
-                        <ProcessChart data={displayData.A} />
+                        <ProcessChart line="A" data={displayData.A} />
                       </MultiChartCard>
                       <MultiChartCard>
                         <VideoBox $isLarge={true}>
-                          <WsVideoStream wsUrl={WS_PATHS.C} />
+                          <ConveyorVisionVideo line="C" onRecognition={handleRecognition} />
                           <div className="label">총조립2라인</div>
                         </VideoBox>
-                        <ProcessChart data={displayData.C} />
+                        <ProcessChart line="C" data={displayData.C} />
                       </MultiChartCard>
                   </ViewContainer>
                 )}
@@ -1009,17 +993,17 @@ export default function ProcessDashboard() {
                   <ViewContainer key="view-2">
                       <MultiChartCard>
                         <VideoBox $isLarge={true}>
-                          <WsVideoStream wsUrl={WS_PATHS.A} />
+                          <ConveyorVisionVideo line="A" onRecognition={handleRecognition} />
                           <div className="label">발포라인2</div>
                         </VideoBox>
-                        <ProcessChart data={displayData.A} />
+                        <ProcessChart line="A" data={displayData.A} />
                       </MultiChartCard>
                       <MultiChartCard>
                         <VideoBox $isLarge={true}>
-                          <WsVideoStream wsUrl={WS_PATHS.C} />
+                          <ConveyorVisionVideo line="C" onRecognition={handleRecognition} />
                           <div className="label">총조립2라인</div>
                         </VideoBox>
-                        <ProcessChart data={displayData.C} />
+                        <ProcessChart line="C" data={displayData.C} />
                       </MultiChartCard>
                   </ViewContainer>
                 )}
@@ -1029,24 +1013,24 @@ export default function ProcessDashboard() {
                   <ViewContainer key="view-3">
                       <MultiChartCard>
                         <VideoBox $isLarge={false}>
-                          <WsVideoStream wsUrl={WS_PATHS.A} />
+                          <ConveyorVisionVideo line="A" onRecognition={handleRecognition} />
                           <div className="label">발포라인</div>
                         </VideoBox>
-                        <ProcessChart data={displayData.A} />
+                        <ProcessChart line="A" data={displayData.A} />
                       </MultiChartCard>
                       <MultiChartCard>
                         <VideoBox $isLarge={false}>
-                          <WsVideoStream wsUrl={WS_PATHS.B} />
+                          <ConveyorVisionVideo line="B" onRecognition={handleRecognition} />
                           <div className="label">총조립1라인</div>
                         </VideoBox>
-                        <ProcessChart data={displayData.B} />
+                        <ProcessChart line="B" data={displayData.B} />
                       </MultiChartCard>
                       <MultiChartCard>
                         <VideoBox $isLarge={false}>
-                          <WsVideoStream wsUrl={WS_PATHS.C} />
+                          <ConveyorVisionVideo line="C" onRecognition={handleRecognition} />
                           <div className="label">총조립2라인</div>
                         </VideoBox>
-                        <ProcessChart data={displayData.C} />
+                        <ProcessChart line="C" data={displayData.C} />
                       </MultiChartCard>
                   </ViewContainer>
                 )}

@@ -60,3 +60,10 @@ next-env.d.ts
 /.lint-exhibition*
 /.tsc-exhibition*
 /.i18n-missing.json
+
+# Conveyor rendering intermediates; only the packaged MP4/JPG assets are published.
+/tmp/takttime-conveyors/
+/tmp/takttime-*-render.log
+
+# Local editor/build backup archives
+/.cursor.zip

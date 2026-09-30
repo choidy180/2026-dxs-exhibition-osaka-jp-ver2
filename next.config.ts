@@ -5,10 +5,13 @@ const nextConfig: NextConfig = {
   devIndicators: false,
 
   async headers() {
-    return [{
-      source: '/videos/material-inbound/web-v1/:path*',
+    return [
+      '/videos/material-inbound/web-v1/:path*',
+      '/videos/takttime/web-v1/:path*',
+    ].map(source => ({
+      source,
       headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
-    }];
+    }));
   },
 
   compiler: {

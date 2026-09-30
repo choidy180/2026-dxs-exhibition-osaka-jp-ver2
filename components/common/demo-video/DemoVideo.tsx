@@ -5,12 +5,12 @@ import { AlertCircle, Film, Loader2, RefreshCw } from 'lucide-react';
 import styled from 'styled-components';
 import { color, font, fontSize, radius, space, focusRing } from '@/styles/design-tokens';
 
-export default function DemoVideo({ src = '/videos/dashboard-short.mp4' }: { src?: string }) {
+export default function DemoVideo({ src = '/videos/dashboard-short.mp4', poster = '/demo/factory-floor.png' }: { src?: string; poster?: string }) {
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [attempt, setAttempt] = useState(0);
   return <Frame>
-    {src && <video key={attempt} src={src} poster="/demo/factory-floor.png" autoPlay loop muted playsInline controls
-      aria-label="전시회 공정 영상" onPlaying={() => setState('ready')} onError={() => setState('error')} />}
+    {src && <video key={`${src}-${attempt}`} src={src} poster={poster} autoPlay loop muted playsInline controls
+      aria-label="전시회 공정 영상" onLoadStart={() => setState('loading')} onPlaying={() => setState('ready')} onError={() => setState('error')} />}
     {(!src || state !== 'ready') && <State role="status">
       {!src ? <><Film size={20} />영상이 없습니다.</> : state === 'error' ? <>
         <AlertCircle size={20} />영상을 재생할 수 없습니다.
