@@ -605,11 +605,12 @@ const DashboardButton = styled.button`
 `;
 
 const DashboardLogoIcon = styled.span`
-  width: 64px;
-  height: 40px;
+  width: ${controlHeight.lg}px;
+  height: ${controlHeight.lg + space.sm}px;
   flex: 0 0 auto;
   display: block;
-  background: url("/icons/GMT.png") no-repeat center / contain;
+  /* 기존 브랜드 이미지의 왼쪽 나무 심볼만 원래 비율로 표시한다. */
+  background: url("/logo/dxsolutions.png") no-repeat left center / auto 100%;
 `;
 
 const RailMenu = styled.div`
