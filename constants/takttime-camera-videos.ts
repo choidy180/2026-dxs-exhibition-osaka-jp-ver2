@@ -1,8 +1,8 @@
-/** 720p·60초·무음 영상. 각 파일의 마지막 프레임 다음에 첫 프레임이 자연스럽게 이어진다. */
+/** 2026-10-02 촬영한 라인별 30초 영상. 화면의 라인 이름에 맞춰 연결한다. */
 export const TAKTTIME_CAMERA_VIDEOS = {
-  A: '/videos/takttime/web-v1/foaming.mp4',
-  B: '/videos/takttime/web-v1/assembly-1.mp4',
-  C: '/videos/takttime/web-v1/assembly-2.mp4',
+  A: '/videos/takttime/20261002/foaming.mp4',
+  B: '/videos/takttime/20261002/assembly-1.mp4',
+  C: '/videos/takttime/20261002/assembly-2.mp4',
 } as const;
 
 export const TAKTTIME_PLAYBACK_RATE = 0.5;
