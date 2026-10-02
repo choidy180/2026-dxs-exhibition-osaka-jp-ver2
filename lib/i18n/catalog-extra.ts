@@ -185,7 +185,7 @@ export const extraCatalog: Record<string, { en: string; ja: string }> = {
   },
   "우측 하단(A4) 틈새 불량. 오차 범위 초과.": {
     "en": "Gap defect at lower right (A4). Tolerance exceeded.",
-    "ja": "右下（A4）に隙間不良。許容範囲を超えています。"
+    "ja": "右下（A4）隙間不良。許容範囲を超えています。"
   },
   "운송비 정산": {
     "en": "Transport cost settlement",
@@ -473,7 +473,7 @@ export const extraCatalog: Record<string, { en: string; ja: string }> = {
   },
   "자연형 3D": {
     "en": "Natural 3D",
-    "ja": "自然表示3D"
+    "ja": "3Dビュー"
   },
   "자재 낙하 감지": {
     "en": "Material drop detected",
@@ -641,7 +641,7 @@ export const extraCatalog: Record<string, { en: string; ja: string }> = {
   },
   "전시회 데모입니다. 엑셀 업로드, 확정, 저장을 이 브라우저에서 체험할 수 있습니다.": {
     "en": "Exhibition demo. Try Excel uploads, confirmation and saving in this browser.",
-    "ja": "展示会デモです。このブラウザでExcelアップロード、確定、保存を体験できます。"
+    "ja": "展示会デモです。このブラウザ上で、Excelのアップロード・確定・保存をお試しいただけます。"
   },
   "전체 공간": {
     "en": "All space",
@@ -661,7 +661,7 @@ export const extraCatalog: Record<string, { en: string; ja: string }> = {
   },
   "전체 알림 및 로그 내역": {
     "en": "All alerts and logs",
-    "ja": "全通知・ログ履歴"
+    "ja": "すべての通知・ログ履歴"
   },
   "전체 지도를 보거나 필요한 구역만 확대해서 확인하세요.": {
     "en": "View the full map or zoom in on a specific area.",
@@ -1493,7 +1493,7 @@ export const extraCatalog: Record<string, { en: string; ja: string }> = {
   },
   "현재 화면은 GR2 기준으로 구성되어 있습니다. 다른 공정은 추후 같은 구조로 확장하면 됩니다.": {
     "en": "This screen is configured for GR2. Other processes can use the same structure.",
-    "ja": "この画面はGR2向けです。他の工程にも同じ構成で拡張できます。"
+    "ja": "現在の画面はGR2を基準に構成されています。他の工程については、今後同じ構成で拡張する予定です。"
   },
   "현재 활성 유닛": {
     "en": "Currently active unit",

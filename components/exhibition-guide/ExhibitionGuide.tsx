@@ -14,7 +14,7 @@ import * as S from './styles';
 const copy = {
   ko: { name: 'DX 길잡이', open: '이 페이지 안내 다시 보기', close: '말풍선 닫기', next: '다음 안내', done: '알겠어요', hint: '눌러서 안내 보기', mascot: '웃으며 손을 든 DX 고양이 길잡이', loading: '길잡이 준비 중', retry: '캐릭터 다시 불러오기' },
   en: { name: 'DX Guide', open: 'Replay this page guide', close: 'Close speech bubble', next: 'Next tip', done: 'Got it!', hint: 'Tap for a tour', mascot: 'Smiling DX cat guide with a raised paw', loading: 'Getting ready', retry: 'Reload character' },
-  ja: { name: 'DXガイド', open: 'このページの案内をもう一度見る', close: '吹き出しを閉じる', next: '次のヒント', done: 'わかった！', hint: 'タップして案内を見る', mascot: '手を上げて笑うDX猫ガイド', loading: 'ガイドを準備中', retry: 'キャラクターを再読み込み' },
+  ja: { name: 'DXガイド', open: 'このページの案内をもう一度見る', close: '吹き出しを閉じる', next: '次のヒント', done: 'わかりました', hint: 'タップして案内を見る', mascot: '手を上げて笑うDX猫ガイド', loading: 'ガイドを準備中', retry: 'キャラクターを再読み込み' },
 } as const;
 
 type GuideCopy = (typeof copy)[keyof typeof copy];

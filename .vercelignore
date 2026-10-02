@@ -1,0 +1,31 @@
+# Keep local secrets, state, and isolated build artifacts out of CLI uploads too.
+.env*
+.data/
+certificates/
+*.pem
+*.keystore
+*.jks
+.cursor.zip
+.next-exhibition*/
+.lint-exhibition*
+.tsc-exhibition*
+.i18n-missing.json
+android/**/.gradle/
+android/**/build/
+android/**/local.properties
+android/**/google-services.json
+android/**/src/main/res/values/firebase-config.xml
+android/**/src/debug/res/raw/push_test_ca.crt
+
+# Local authoring artifacts and original source material are not required by the app.
+output/
+outputs/
+tmp/
+video/
+assets/
+
+# CAM playback uses the optimized web-v1 files, not these original MP4s.
+public/videos/material-inbound/*.mp4
+
+# Takttime playback uses the current 20261002 assets.
+public/videos/takttime/web-v1/

@@ -14,6 +14,7 @@ Rev {0} 확정을 취소했습니다.|Rev {0} の確定を取り消しました�
 파일 용량이 너무 큽니다. {0}MB 이하 파일을 사용해주세요.|ファイルが大きすぎます。{0}MB以下のファイルを使用してください。|The file is too large. Use a file no larger than {0} MB.
 전시용 발주 {0}건의 전송 시뮬레이션을 완료했습니다.|展示用発注{0}件の送信シミュレーションが完了しました。|Completed the local transmission simulation for {0} orders.
 질문은 {0}자 이내로 입력해 주세요.|質問は{0}文字以内で入力してください。|Enter a question of no more than {0} characters.
+{0} 공정 준비 중|{0}工程 準備中|{0} process in preparation
 `;
 
 export const templateCatalog = source.trim().split('\n').map(line => {

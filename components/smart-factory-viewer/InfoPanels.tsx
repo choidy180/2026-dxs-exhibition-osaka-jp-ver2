@@ -255,7 +255,7 @@ function ActiveUnitPanel({
       <InfoRow $mode={mode} $uiMode={mode}>
         <InfoLabel $mode={mode}>
           <Droplets size={15} />
-          R액 압력
+          R액 유량
         </InfoLabel>
         <InfoValue $mode={mode}>
           {matchedData?.['R액 압력(kg/㎥)'] ?? '-'}
@@ -265,7 +265,7 @@ function ActiveUnitPanel({
       <InfoRow $mode={mode} $uiMode={mode}>
         <InfoLabel $mode={mode}>
           <Gauge size={15} />
-          P액 압력
+          P액 유량
         </InfoLabel>
         <InfoValue $mode={mode}>
           {matchedData?.['P액 압력(kg/㎥)'] ?? '-'}

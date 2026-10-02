@@ -111,7 +111,7 @@ export function PreparingModal({ target, onClose }: PreparingModalProps) {
     <ModalBackdrop>
       <ModalBox>
         <XCircle size={44} color="#be123c" />
-        <ModalTitle>{target} 공정 준비 중</ModalTitle>
+        <ModalTitle>{`${target} 공정 준비 중`}</ModalTitle>
         <ModalText>현재 화면은 GR2 기준으로 구성되어 있습니다. 다른 공정은 추후 같은 구조로 확장하면 됩니다.</ModalText>
         <ModalButton type="button" onClick={onClose}>
           닫기

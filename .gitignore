@@ -67,3 +67,8 @@ next-env.d.ts
 
 # Local editor/build backup archives
 /.cursor.zip
+
+# Local document/image deliverables and temporary tools are not application source.
+/output/
+/outputs/
+/tmp/

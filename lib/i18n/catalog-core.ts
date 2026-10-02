@@ -17,7 +17,7 @@ D동 실시간 적재 현황판|D棟 積載状況ボード|Building D loading st
 경고음 켜기|警告音を有効にする|Enable warning sounds
 경고음 토글|警告音を切り替える|Toggle warning sounds
 경탄|軽質炭酸カルシウム|Precipitated calcium carbonate
-공정 시간 및 병목 분석|工程時間とボトルネック分析|Process time and bottleneck analysis
+공정 시간 및 병목 분석|工程時間・ボトルネック分析|Process time and bottleneck analysis
 내려받을 데이터가 없습니다.|ダウンロードするデータがありません。|No data to download.
 닫힘|閉じている|Closed
 데이터 수신 중|データ受信中|Receiving data
@@ -65,7 +65,23 @@ D동 실시간 적재 현황판|D棟 積載状況ボード|Building D loading st
 운행 지도|運行マップ|Transit map
 일반검사|一般検査|General inspection
 일부 센서는 상태를 판정할 수 없습니다|一部センサーの状態を判定できません|Some sensor states cannot be assessed
-입고 및 적재 효율화|入荷・積載の効率化|Receiving and loading efficiency
+입고 및 적재 효율화|入荷・作業の効率化|Receiving and loading efficiency
+입고 차량 정보|入庫車両情報|Inbound vehicle information
+입고 대기 리스트|入荷待ちリスト|Pending receiving list
+입고대기|入荷待ち|Awaiting receipt
+금일 입고 진행률|本日の入荷進捗率|Today's receiving progress
+R액 유량|R液流量|R-liquid flow rate
+P액 유량|P液流量|P-liquid flow rate
+금일 작업지시 수량|本日の作業指示数量|Today's work order quantity
+알림 로그|通知ログ|Alert log
+실시간 안전 감지 로그|リアルタイム安全検知ログ|Real-time safety detection log
+안전거리 유지|安全距離維持|Safe distance maintained
+자재 적재 상태 확인|資材積載状態確認|Material load status check
+전체 배차 내역|全体の配車履歴|All dispatch history
+주의 차량|注意車両|Caution vehicles
+생산계획 업로드|生産計画アップロード|Production plan upload
+현재 리비전|現在リビジョン|Current revision
+전체 운행|全運行|All trips
 입고일자|入荷日|Receiving date
 작업중|作業中|Working
 장입수량|投入数量|Input quantity
@@ -348,15 +364,15 @@ LG전자 행 평균 소요시간|LG電子行き平均所要時間|Average travel
 한일화학|ハニル化学|Hanil Chemical
 현대모비스|現代モービス|Hyundai Mobis
 화이튼전자|ファイトン電子|Whiten Electronics
-#4번 공정 텍타임 지연 (15.2초) 발생하여 조치 요망|工程#4のタクトタイム遅延（15.2秒）。対応してください。|Process #4 takt time delay (15.2 s). Action required.
-2호기 자재 공급 요청 (잔량 10% 미만)|2号機への資材供給要求（残量10%未満）|Machine #2 requests material supply (less than 10% remaining)
+#4번 공정 텍타임 지연 (15.2초) 발생하여 조치 요망|工程#4でタクトタイムの遅延（15.2秒）が発生しました。対応してください。|Process #4 takt time delay (15.2 s). Action required.
+2호기 자재 공급 요청 (잔량 10% 미만)|2号機への資材供給が必要です（残量10%未満）|Machine #2 requests material supply (less than 10% remaining)
 라인 2 가동 시작 (작업자 4명 투입 완료)|ライン2稼働開始（作業者4名配置済み）|Line 2 started (four operators assigned)
 #1번 공정 일시 정지 (센서 오류 감지됨)|工程#1一時停止（センサーエラー検知）|Process #1 paused (sensor error detected)
-오후 작업조 투입 완료 및 작업 인계 사항 전달|午後シフト配置完了・引継ぎ事項共有|Afternoon shift assigned and handover notes shared
-오전 작업조 작업 종료 및 현장 정리 정돈|午前シフト終了・現場整理整頓|Morning shift finished; workplace cleanup complete
-품질 검사 데이터 전송 완료 (서버 동기화 성공)|品質検査データ反映完了|Quality inspection data updated successfully
+오후 작업조 투입 완료 및 작업 인계 사항 전달|午後シフト配置完了・引き継ぎ事項共有|Afternoon shift assigned and handover notes shared
+오전 작업조 작업 종료 및 현장 정리 정돈|午前シフト終了・現場の整理整頓完了|Morning shift finished; workplace cleanup complete
+품질 검사 데이터 전송 완료 (서버 동기화 성공)|品質検査データ送信完了（サーバー同期成功）|Quality inspection data updated successfully
 3호기 유압 모터 온도 상승 주의 (임계치 근접)|3号機の油圧モーター温度上昇に注意（しきい値付近）|Machine #3 hydraulic motor temperature rising (near threshold)
-#2번 라인 자재 부족 알림 - 즉시 보충 필요|ライン#2の資材不足・至急補充が必要|Line #2 material shortage — Refill immediately
+#2번 라인 자재 부족 알림 - 즉시 보충 필요|ライン#2で資材不足を検知しました。至急補充が必要です。|Line #2 material shortage — Refill immediately
 설비 정기 점검 완료 및 재가동 승인|設備定期点検完了・再稼働承認|Routine equipment check completed; restart approved
 지도 표시 설정|マップ表示設定|Map display settings
 지도 정보창 선택|マップ情報パネルを選択|Select map information panel
