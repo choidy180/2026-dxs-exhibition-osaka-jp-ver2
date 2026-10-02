@@ -1,0 +1,136 @@
+{
+  "format": "A4 landscape / 297 x 210 mm",
+  "pages": 16,
+  "language": "ja-JP",
+  "edition": "Original sixteen-page narrative, independently redesigned / v4",
+  "design_reference": "Company reference informs palette, type weight, light surfaces and spacing only",
+  "content_mapping": [
+    {
+      "page": 1,
+      "section": "現場から、未来を動かす。",
+      "original_v2_page": 1
+    },
+    {
+      "page": 2,
+      "section": "会社活動・受賞",
+      "original_v2_page": 2
+    },
+    {
+      "page": 3,
+      "section": "特許・認証",
+      "original_v2_page": 3
+    },
+    {
+      "page": 4,
+      "section": "二つの製造AIプラットフォーム",
+      "original_v2_page": 4
+    },
+    {
+      "page": 5,
+      "section": "M.O.D.E. / プラットフォーム",
+      "original_v2_page": 5
+    },
+    {
+      "page": 6,
+      "section": "M.O.D.E. / 資材・出荷",
+      "original_v2_page": 6
+    },
+    {
+      "page": 7,
+      "section": "M.O.D.E. / 生産分析",
+      "original_v2_page": 7
+    },
+    {
+      "page": 8,
+      "section": "M.O.D.E. / 品質検査",
+      "original_v2_page": 8
+    },
+    {
+      "page": 9,
+      "section": "M.O.D.E. / 設備モニタリング",
+      "original_v2_page": 9
+    },
+    {
+      "page": 10,
+      "section": "A.V.I.S. / 現場支援",
+      "original_v2_page": 10
+    },
+    {
+      "page": 11,
+      "section": "A.V.I.S. / 点検",
+      "original_v2_page": 11
+    },
+    {
+      "page": 12,
+      "section": "A.V.I.S. / 対応ガイド",
+      "original_v2_page": 12
+    },
+    {
+      "page": 13,
+      "section": "Physical AI / 現場認識",
+      "original_v2_page": 13
+    },
+    {
+      "page": 14,
+      "section": "会社紹介 / 技術の歩み",
+      "original_v2_page": 14
+    },
+    {
+      "page": 15,
+      "section": "導入の進め方",
+      "original_v2_page": 15
+    },
+    {
+      "page": 16,
+      "section": "お問い合わせ",
+      "original_v2_page": 16
+    }
+  ],
+  "factory_replacement": {
+    "page": 5,
+    "source_dimensions": [
+      2558,
+      1438
+    ],
+    "original_bytes_preserved": true,
+    "sha256": "7f2adfd74287970cfa3c14e719a042f60c2aff9d3acbaa63f6d2cf26f7b3f87a",
+    "fit": "entire original frame"
+  },
+  "separate_equipment_screen": {
+    "page": 9,
+    "original_v2_asset_unchanged": true
+  },
+  "company_activity_photos": {
+    "page": 2,
+    "count": 6
+  },
+  "selected_patent_and_certification_documents": {
+    "page": 3,
+    "count": 6
+  },
+  "visual_asset_placements": 31,
+  "source_image_minimum_effective_ppi": 147.0,
+  "embedded_font_subsets": 6,
+  "text_box_overlaps": 0,
+  "QR_codes_decoded": [
+    "https://2026-dxs-osaka-exhibition-jp-mu.vercel.app/ja",
+    "https://www.dx-solutions.co.kr/"
+  ],
+  "links": [
+    "mailto:dx_sales@dx-solutions.co.kr",
+    "https://www.dx-solutions.co.kr/",
+    "https://2026-dxs-osaka-exhibition-jp-mu.vercel.app/ja",
+    "https://www.dx-solutions.co.kr/"
+  ],
+  "bookmarks": 16,
+  "print": "Exact A4 MediaBox / TrimBox, embedded fonts, RGB",
+  "image_sampling": "Up to 400 ppi at placed size; original resolution retained when lower",
+  "visual_QA": "All sixteen pages rendered with Poppler 26.09.0 at 140 dpi and visually reviewed; revised photos reviewed again",
+  "project_checks": {
+    "typescript": "passed",
+    "eslint": "0 errors, 12 existing warnings",
+    "application_UI_changes": false
+  },
+  "file_bytes": 30706429,
+  "sha256": "ab00818f7325d1971937daaa28d3eb15aaa7ca964b28f8c938a598110542a55b"
+}

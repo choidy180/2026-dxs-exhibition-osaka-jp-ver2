@@ -1,0 +1,332 @@
+[
+  {
+    "page": 1,
+    "file": "assets\\avis-inspection-40.jpg",
+    "ppi": 128.2,
+    "box": [
+      312,
+      267,
+      491,
+      257
+    ]
+  },
+  {
+    "page": 2,
+    "file": "assets\\company\\achievements\\commendation.webp",
+    "ppi": 126.6,
+    "box": [
+      38,
+      140,
+      376,
+      205
+    ]
+  },
+  {
+    "page": 2,
+    "file": "assets\\company\\achievements\\future-award.webp",
+    "ppi": 126.6,
+    "box": [
+      427,
+      140,
+      376,
+      205
+    ]
+  },
+  {
+    "page": 2,
+    "file": "assets\\company\\achievements\\manufacturing-program.webp",
+    "ppi": 285.1,
+    "box": [
+      38,
+      392,
+      183,
+      101
+    ]
+  },
+  {
+    "page": 2,
+    "file": "assets\\company\\achievements\\committee.webp",
+    "ppi": 258.1,
+    "box": [
+      232,
+      392,
+      183,
+      101
+    ]
+  },
+  {
+    "page": 2,
+    "file": "assets\\company\\achievements\\vision-command.webp",
+    "ppi": 255.2,
+    "box": [
+      426,
+      392,
+      183,
+      101
+    ]
+  },
+  {
+    "page": 2,
+    "file": "assets\\company\\achievements\\partnership.webp",
+    "ppi": 251.8,
+    "box": [
+      620,
+      392,
+      183,
+      101
+    ]
+  },
+  {
+    "page": 3,
+    "file": "assets\\company\\patents\\certificate-1.webp",
+    "ppi": 498.7,
+    "box": [
+      266,
+      77,
+      151,
+      204
+    ]
+  },
+  {
+    "page": 3,
+    "file": "assets\\company\\patents\\certificate-2.webp",
+    "ppi": 498.7,
+    "box": [
+      452,
+      77,
+      151,
+      204
+    ]
+  },
+  {
+    "page": 3,
+    "file": "assets\\company\\patents\\certificate-7.webp",
+    "ppi": 452.1,
+    "box": [
+      638,
+      77,
+      151,
+      204
+    ]
+  },
+  {
+    "page": 3,
+    "file": "assets\\company\\patents\\certificate-8.webp",
+    "ppi": 452.1,
+    "box": [
+      266,
+      312,
+      151,
+      204
+    ]
+  },
+  {
+    "page": 3,
+    "file": "assets\\company\\patents\\certificate-9.webp",
+    "ppi": 452.1,
+    "box": [
+      452,
+      312,
+      151,
+      204
+    ]
+  },
+  {
+    "page": 3,
+    "file": "assets\\company\\patents\\certificate-10.webp",
+    "ppi": 452.1,
+    "box": [
+      638,
+      312,
+      151,
+      204
+    ]
+  },
+  {
+    "page": 5,
+    "file": "assets\\company\\poc\\poc-1.webp",
+    "ppi": 209.6,
+    "box": [
+      266,
+      216,
+      537,
+      268
+    ]
+  },
+  {
+    "page": 6,
+    "file": "assets\\company\\platform\\materials.webp",
+    "ppi": 325.4,
+    "box": [
+      38,
+      227,
+      354,
+      198
+    ]
+  },
+  {
+    "page": 6,
+    "file": "assets\\company\\platform\\shipping.webp",
+    "ppi": 327.3,
+    "box": [
+      449,
+      291,
+      354,
+      198
+    ]
+  },
+  {
+    "page": 8,
+    "file": "assets\\ui-quality.png",
+    "ppi": 156.8,
+    "box": [
+      341,
+      85,
+      462,
+      262
+    ]
+  },
+  {
+    "page": 8,
+    "file": "assets\\ui-quality.png",
+    "ppi": 414.1,
+    "box": [
+      446,
+      367,
+      357,
+      169
+    ]
+  },
+  {
+    "page": 9,
+    "file": "assets\\ui-equipment.png",
+    "ppi": 261.1,
+    "box": [
+      38,
+      230,
+      565,
+      268
+    ]
+  },
+  {
+    "page": 10,
+    "file": "assets\\avis-defect-traceback-15.jpg",
+    "ppi": 170.8,
+    "box": [
+      39,
+      338,
+      398,
+      172
+    ]
+  },
+  {
+    "page": 10,
+    "file": "assets\\avis-inspection-15.jpg",
+    "ppi": 178.1,
+    "box": [
+      512,
+      338,
+      291,
+      172
+    ]
+  },
+  {
+    "page": 11,
+    "file": "assets\\avis-inspection-40.jpg",
+    "ppi": 194.4,
+    "box": [
+      38,
+      187,
+      474,
+      267
+    ]
+  },
+  {
+    "page": 12,
+    "file": "assets\\avis-defect-traceback-40.jpg",
+    "ppi": 282.1,
+    "box": [
+      38,
+      274,
+      245,
+      138
+    ]
+  },
+  {
+    "page": 12,
+    "file": "assets\\avis-defect-traceback-65.jpg",
+    "ppi": 282.1,
+    "box": [
+      298,
+      274,
+      245,
+      138
+    ]
+  },
+  {
+    "page": 12,
+    "file": "assets\\avis-idle-time-65.jpg",
+    "ppi": 282.1,
+    "box": [
+      558,
+      274,
+      245,
+      138
+    ]
+  },
+  {
+    "page": 13,
+    "file": "assets\\company\\poc\\poc-2.webp",
+    "ppi": 217.2,
+    "box": [
+      38,
+      239,
+      464,
+      234
+    ]
+  },
+  {
+    "page": 13,
+    "file": "assets\\company\\poc\\poc-3.webp",
+    "ppi": 365.2,
+    "box": [
+      527,
+      239,
+      276,
+      137
+    ]
+  },
+  {
+    "page": 13,
+    "file": "assets\\company\\poc\\poc-5.webp",
+    "ppi": 365.2,
+    "box": [
+      527,
+      399,
+      276,
+      137
+    ]
+  },
+  {
+    "page": 15,
+    "file": "assets\\avis-inspection-15.jpg",
+    "ppi": 162.5,
+    "box": [
+      38,
+      297,
+      319,
+      214
+    ]
+  },
+  {
+    "page": 16,
+    "file": "assets/company/brand/logo.png",
+    "ppi": 323.1,
+    "box": [
+      40,
+      442.2,
+      160,
+      38.8
+    ]
+  }
+]

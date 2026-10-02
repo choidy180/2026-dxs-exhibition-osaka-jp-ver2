@@ -1,0 +1,23 @@
+{
+  "format": "A4 landscape, 297 x 210 mm",
+  "pages": 16,
+  "language": "ja-JP",
+  "embedded_font_subsets": 7,
+  "placed_images": 28,
+  "minimum_placed_image_ppi": 158.5,
+  "QR_codes_verified": 2,
+  "bookmarks": 16,
+  "overlapping_text_boxes": 0,
+  "authoring": "ReportLab; vector text, diagrams, chart and QR",
+  "rendering": "Poppler 26.09.0; all 16 pages visually reviewed",
+  "project_checks": {
+    "tsc": "passed",
+    "eslint": "0 errors, 12 pre-existing warnings"
+  },
+  "source_web": "https://2026-dxs-osaka-exhibition-jp-mu.vercel.app/ja",
+  "design_reference": "https://www.behance.net/gallery/195434209/01-Kanazawa-city-branding-brochure",
+  "new_generated_asset": "output/imagegen/dxs-brochure-factory-cover.png",
+  "print_notes": "A4 MediaBox and TrimBox; RGB document; no imposed spreads or extra bleed. Fonts embedded. Actual-size printing.",
+  "file_bytes": 12273504,
+  "sha256": "20f2cfe5713b6470da4f8fd7d4c0013195e45aba7a9fbfcf6d69fe3354fe69a2"
+}

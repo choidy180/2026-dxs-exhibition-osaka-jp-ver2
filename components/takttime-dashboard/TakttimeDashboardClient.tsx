@@ -2,10 +2,9 @@
 
 
 import ConveyorVisionVideo from './ConveyorVisionVideo';
-import { TAKTTIME_PART_NAMES, TAKTTIME_PLAYBACK_RATE } from '@/constants/takttime-camera-videos';
-import { TAKTTIME_CHART_MAX_SECONDS, TAKTTIME_TARGET_SECONDS as TARGET_TAKT } from '@/constants/takttime-cycle';
-import { TAKTTIME_TRACKING } from '@/data/takttime-tracking';
-import type { TakttimeLine, VisionRecognition } from '@/types/takttime-vision';
+import { TAKTTIME_PART_NAMES } from '@/constants/takttime-camera-videos';
+import { TAKTTIME_CHART_MAX_SECONDS, TAKTTIME_DEMO_UPDATE_MS, TAKTTIME_TARGET_SECONDS as TARGET_TAKT } from '@/constants/takttime-cycle';
+import type { TakttimeLine } from '@/types/takttime-vision';
 import { getDemoCycleTime } from '@/utils/takttime-cycle';
 import React, { useState, useEffect, useMemo, memo, useCallback, useId } from "react";
 import styled, { createGlobalStyle } from "styled-components";
@@ -777,7 +776,7 @@ const generateInitialDummyData = (line: TakttimeLine): CycleData[] => {
   const baseTime = new Date();
   return Array.from({ length: 10 }).map((_, i) => {
       const ct = getDemoCycleTime(line, 50 + i);
-      const timeObj = new Date(baseTime.getTime() - (9 - i) * TAKTTIME_TRACKING[line].partIntervalSeconds / TAKTTIME_PLAYBACK_RATE * 1000);
+      const timeObj = new Date(baseTime.getTime() - (9 - i) * TAKTTIME_DEMO_UPDATE_MS);
       const timeLabel = timeObj.toTimeString().split(' ')[0]; 
       return {
           id: `${line}-${i}`,
@@ -853,25 +852,31 @@ export default function ProcessDashboard() {
       });
   }, [alertLogs, searchText, filterType]);
 
-  const handleRecognition = useCallback((line: TakttimeLine, event: VisionRecognition) => {
-    const timestamp = new Date();
-    // 영상 통과 시점에만 이어지는 생산 순번으로 값을 만들어 반복 재생 때도 추세가 끊기지 않게 한다.
-    setData(previous => {
-      const history = previous[line];
-      const production = (history.at(-1)?.production ?? 49) + 1;
-      const cycleTime = getDemoCycleTime(line, production);
-      const next: CycleData = {
-        id: `${line}-${timestamp.getTime()}-${event.sequence}`,
-        name: TAKTTIME_PART_NAMES[line][event.kind],
-        timeLabel: timestamp.toTimeString().split(' ')[0],
-        cycleTime,
-        visualCycleTime: cycleTime,
-        target: TARGET_TAKT,
-        isOver: cycleTime > TARGET_TAKT,
-        production,
-      };
-      return { ...previous, [line]: [...history.slice(-9), next] };
-    });
+  useEffect(() => {
+    // 영상과 독립적으로 세 라인의 추세를 갱신해 보기 전환 후에도 이력을 이어간다.
+    const timer = window.setInterval(() => {
+      const timestamp = new Date();
+      setData(previous => {
+        const next = { ...previous };
+        for (const line of ['A', 'B', 'C'] as const) {
+          const history = previous[line];
+          const production = (history.at(-1)?.production ?? 49) + 1;
+          const cycleTime = getDemoCycleTime(line, production);
+          next[line] = [...history.slice(-9), {
+            id: `${line}-${timestamp.getTime()}-${production}`,
+            name: TAKTTIME_PART_NAMES[line][production % 3],
+            timeLabel: timestamp.toTimeString().split(' ')[0],
+            cycleTime,
+            visualCycleTime: cycleTime,
+            target: TARGET_TAKT,
+            isOver: cycleTime > TARGET_TAKT,
+            production,
+          }];
+        }
+        return next;
+      });
+    }, TAKTTIME_DEMO_UPDATE_MS);
+    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -953,14 +958,14 @@ export default function ProcessDashboard() {
                   <ViewContainer key="view-1">
                       <MultiChartCard>
                         <VideoBox $isLarge={true}>
-                          <ConveyorVisionVideo line="A" onRecognition={handleRecognition} />
+                          <ConveyorVisionVideo line="A" />
                           <div className="label">발포라인</div>
                         </VideoBox>
                         <ProcessChart line="A" data={displayData.A} />
                       </MultiChartCard>
                       <MultiChartCard>
                         <VideoBox $isLarge={true}>
-                          <ConveyorVisionVideo line="C" onRecognition={handleRecognition} />
+                          <ConveyorVisionVideo line="C" />
                           <div className="label">총조립2라인</div>
                         </VideoBox>
                         <ProcessChart line="C" data={displayData.C} />
@@ -973,14 +978,14 @@ export default function ProcessDashboard() {
                   <ViewContainer key="view-2">
                       <MultiChartCard>
                         <VideoBox $isLarge={true}>
-                          <ConveyorVisionVideo line="A" onRecognition={handleRecognition} />
+                          <ConveyorVisionVideo line="A" />
                           <div className="label">발포라인2</div>
                         </VideoBox>
                         <ProcessChart line="A" data={displayData.A} />
                       </MultiChartCard>
                       <MultiChartCard>
                         <VideoBox $isLarge={true}>
-                          <ConveyorVisionVideo line="C" onRecognition={handleRecognition} />
+                          <ConveyorVisionVideo line="C" />
                           <div className="label">총조립2라인</div>
                         </VideoBox>
                         <ProcessChart line="C" data={displayData.C} />
@@ -993,21 +998,21 @@ export default function ProcessDashboard() {
                   <ViewContainer key="view-3">
                       <MultiChartCard>
                         <VideoBox $isLarge={false}>
-                          <ConveyorVisionVideo line="A" onRecognition={handleRecognition} />
+                          <ConveyorVisionVideo line="A" />
                           <div className="label">발포라인</div>
                         </VideoBox>
                         <ProcessChart line="A" data={displayData.A} />
                       </MultiChartCard>
                       <MultiChartCard>
                         <VideoBox $isLarge={false}>
-                          <ConveyorVisionVideo line="B" onRecognition={handleRecognition} />
+                          <ConveyorVisionVideo line="B" />
                           <div className="label">총조립1라인</div>
                         </VideoBox>
                         <ProcessChart line="B" data={displayData.B} />
                       </MultiChartCard>
                       <MultiChartCard>
                         <VideoBox $isLarge={false}>
-                          <ConveyorVisionVideo line="C" onRecognition={handleRecognition} />
+                          <ConveyorVisionVideo line="C" />
                           <div className="label">총조립2라인</div>
                         </VideoBox>
                         <ProcessChart line="C" data={displayData.C} />

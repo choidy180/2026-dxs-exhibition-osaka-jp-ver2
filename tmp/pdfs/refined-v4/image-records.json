@@ -1,0 +1,343 @@
+[
+  {
+    "page": 1,
+    "asset": "assets\\company\\brand\\logo.png",
+    "ppi": 305.9,
+    "box": [
+      36,
+      72,
+      205,
+      113
+    ]
+  },
+  {
+    "page": 1,
+    "asset": "assets\\onsite-wearable.png",
+    "ppi": 176.3,
+    "box": [
+      407,
+      72,
+      806,
+      513
+    ]
+  },
+  {
+    "page": 2,
+    "asset": "assets\\award-innovation.png",
+    "ppi": 400,
+    "box": [
+      36,
+      160,
+      411,
+      354
+    ]
+  },
+  {
+    "page": 2,
+    "asset": "assets\\award-mayor.png",
+    "ppi": 245.8,
+    "box": [
+      431,
+      160,
+      806,
+      354
+    ]
+  },
+  {
+    "page": 2,
+    "asset": "assets\\company\\achievements\\manufacturing-program.webp",
+    "ppi": 293.9,
+    "box": [
+      36.0,
+      407,
+      213.5,
+      505
+    ]
+  },
+  {
+    "page": 2,
+    "asset": "assets\\company-committee.png",
+    "ppi": 400,
+    "box": [
+      233.5,
+      407,
+      411.0,
+      505
+    ]
+  },
+  {
+    "page": 2,
+    "asset": "assets\\company-vision.png",
+    "ppi": 400,
+    "box": [
+      431.0,
+      407,
+      608.5,
+      505
+    ]
+  },
+  {
+    "page": 2,
+    "asset": "assets\\company\\achievements\\partnership.webp",
+    "ppi": 259.6,
+    "box": [
+      628.5,
+      407,
+      806.0,
+      505
+    ]
+  },
+  {
+    "page": 3,
+    "asset": "assets\\company\\patents\\certificate-1.webp",
+    "ppi": 400,
+    "box": [
+      262,
+      163,
+      390,
+      331
+    ]
+  },
+  {
+    "page": 3,
+    "asset": "assets\\company\\patents\\certificate-2.webp",
+    "ppi": 400,
+    "box": [
+      452,
+      163,
+      580,
+      331
+    ]
+  },
+  {
+    "page": 3,
+    "asset": "assets\\company\\patents\\certificate-7.webp",
+    "ppi": 400,
+    "box": [
+      642,
+      163,
+      770,
+      331
+    ]
+  },
+  {
+    "page": 3,
+    "asset": "assets\\company\\patents\\certificate-8.webp",
+    "ppi": 400,
+    "box": [
+      262,
+      360,
+      390,
+      528
+    ]
+  },
+  {
+    "page": 3,
+    "asset": "assets\\company\\patents\\certificate-9.webp",
+    "ppi": 400,
+    "box": [
+      452,
+      360,
+      580,
+      528
+    ]
+  },
+  {
+    "page": 3,
+    "asset": "assets\\company\\patents\\certificate-10.webp",
+    "ppi": 400,
+    "box": [
+      642,
+      360,
+      770,
+      528
+    ]
+  },
+  {
+    "page": 5,
+    "asset": "assets\\factory-model-user.png",
+    "ppi": 330.8,
+    "box": [
+      249,
+      196,
+      806,
+      509
+    ]
+  },
+  {
+    "page": 6,
+    "asset": "assets\\company\\platform\\materials.webp",
+    "ppi": 307.2,
+    "box": [
+      36,
+      224,
+      411,
+      434
+    ]
+  },
+  {
+    "page": 6,
+    "asset": "assets\\company\\platform\\shipping.webp",
+    "ppi": 308.6,
+    "box": [
+      431,
+      224,
+      806,
+      434
+    ]
+  },
+  {
+    "page": 8,
+    "asset": "assets\\ui-quality.png",
+    "ppi": 153.8,
+    "box": [
+      36,
+      182,
+      507,
+      495
+    ]
+  },
+  {
+    "page": 8,
+    "asset": "assets\\ui-quality.png",
+    "ppi": 400,
+    "box": [
+      531,
+      378,
+      806,
+      508
+    ]
+  },
+  {
+    "page": 9,
+    "asset": "assets\\ui-equipment.png",
+    "ppi": 270.1,
+    "box": [
+      45,
+      222,
+      591,
+      496
+    ]
+  },
+  {
+    "page": 10,
+    "asset": "assets\\onsite-glasses.png",
+    "ppi": 204.3,
+    "box": [
+      36,
+      206,
+      536,
+      488
+    ]
+  },
+  {
+    "page": 10,
+    "asset": "assets\\avis-inspection-15.jpg",
+    "ppi": 207.4,
+    "box": [
+      556,
+      206,
+      806,
+      373
+    ]
+  },
+  {
+    "page": 11,
+    "asset": "assets\\avis-inspection-40.jpg",
+    "ppi": 187.1,
+    "box": [
+      36,
+      185,
+      529,
+      462
+    ]
+  },
+  {
+    "page": 12,
+    "asset": "assets\\avis-defect-traceback-40.jpg",
+    "ppi": 307.2,
+    "box": [
+      46.0,
+      253,
+      271.0,
+      380
+    ]
+  },
+  {
+    "page": 12,
+    "asset": "assets\\avis-defect-traceback-65.jpg",
+    "ppi": 307.2,
+    "box": [
+      308.5,
+      253,
+      533.5,
+      380
+    ]
+  },
+  {
+    "page": 12,
+    "asset": "assets\\avis-idle-time-65.jpg",
+    "ppi": 307.2,
+    "box": [
+      571.0,
+      253,
+      796.0,
+      380
+    ]
+  },
+  {
+    "page": 13,
+    "asset": "assets\\company\\poc\\poc-2.webp",
+    "ppi": 206.1,
+    "box": [
+      36,
+      198,
+      525,
+      445
+    ]
+  },
+  {
+    "page": 13,
+    "asset": "assets\\company\\poc\\poc-3.webp",
+    "ppi": 389.2,
+    "box": [
+      547,
+      198,
+      806,
+      328
+    ]
+  },
+  {
+    "page": 13,
+    "asset": "assets\\company\\poc\\poc-5.webp",
+    "ppi": 389.2,
+    "box": [
+      547,
+      384,
+      806,
+      514
+    ]
+  },
+  {
+    "page": 15,
+    "asset": "assets\\avis-inspection-15.jpg",
+    "ppi": 147.0,
+    "box": [
+      36,
+      266,
+      358,
+      504
+    ]
+  },
+  {
+    "page": 16,
+    "asset": "assets\\company\\brand\\logo.png",
+    "ppi": 317.2,
+    "box": [
+      36,
+      65,
+      199,
+      105
+    ]
+  }
+]

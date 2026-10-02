@@ -282,7 +282,7 @@ export default function SideNavigation({ isLoading = false }: SideNavigationProp
     <Shell $disabled={isLoading} onMouseLeave={() => setHoveredKey(null)}>
       <Rail>
         <LogoButton onClick={() => go('/master-dashboard')} aria-label="메인 대시보드">
-          <Image src="/logo/gmt_logo.png" alt="GMT" fill style={{ objectFit: 'contain' }} priority />
+          <Image src="/logo/dxsolutions.png" alt="DXSolutions 나무 로고" fill style={{ objectFit: 'contain' }} priority />
         </LogoButton>
         <RailDivider />
 

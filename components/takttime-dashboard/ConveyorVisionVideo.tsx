@@ -6,13 +6,12 @@ import styled from 'styled-components';
 import { TAKTTIME_CAMERA_VIDEOS } from '@/constants/takttime-camera-videos';
 import { useConveyorVisionPlayback } from '@/hooks/use-conveyor-vision-playback';
 import { color, focusRing, font, fontSize, radius, space } from '@/styles/design-tokens';
-import type { TakttimeLine, VisionRecognition } from '@/types/takttime-vision';
+import type { TakttimeLine } from '@/types/takttime-vision';
 
-const ConveyorVisionVideo = memo(function ConveyorVisionVideo({ line, onRecognition }: {
-  line: TakttimeLine;
-  onRecognition: (line: TakttimeLine, event: VisionRecognition) => void;
-}) {
-  const playback = useConveyorVisionPlayback(line, onRecognition);
+const ignoreRecognition = () => {};
+
+const ConveyorVisionVideo = memo(function ConveyorVisionVideo({ line }: { line: TakttimeLine }) {
+  const playback = useConveyorVisionPlayback(line, ignoreRecognition);
   const { videoRef, attempt, state, recognition } = playback;
   const src = TAKTTIME_CAMERA_VIDEOS[line];
 
