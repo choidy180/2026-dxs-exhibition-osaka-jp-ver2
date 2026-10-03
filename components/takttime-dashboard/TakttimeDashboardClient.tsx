@@ -993,9 +993,16 @@ export default function ProcessDashboard() {
                   </ViewContainer>
                 )}
 
-                {/* View 3: 얼음정수기 전체 보기 (A, B, C) */}
+                {/* View 3: 얼음정수기 전체 보기 (C, A, B) */}
                 {viewMode === 3 && (
                   <ViewContainer key="view-3">
+                      <MultiChartCard>
+                        <VideoBox $isLarge={false}>
+                          <ConveyorVisionVideo line="C" />
+                          <div className="label">총조립2라인</div>
+                        </VideoBox>
+                        <ProcessChart line="C" data={displayData.C} />
+                      </MultiChartCard>
                       <MultiChartCard>
                         <VideoBox $isLarge={false}>
                           <ConveyorVisionVideo line="A" />
@@ -1009,13 +1016,6 @@ export default function ProcessDashboard() {
                           <div className="label">총조립1라인</div>
                         </VideoBox>
                         <ProcessChart line="B" data={displayData.B} />
-                      </MultiChartCard>
-                      <MultiChartCard>
-                        <VideoBox $isLarge={false}>
-                          <ConveyorVisionVideo line="C" />
-                          <div className="label">총조립2라인</div>
-                        </VideoBox>
-                        <ProcessChart line="C" data={displayData.C} />
                       </MultiChartCard>
                   </ViewContainer>
                 )}
@@ -1077,16 +1077,16 @@ export default function ProcessDashboard() {
                   {viewMode === 3 && (
                     <TaktGrid $rows={3}>
                       <TaktBox $isSingle={false}>
+                        <span className="line-name"><div style={{width:8,height:8,borderRadius:'50%',background:COLORS.borderGray}}/> 총조립2라인</span>
+                        <div className="val-group"><PredictionTime value={avgTakts.C} /></div>
+                      </TaktBox>
+                      <TaktBox $isSingle={false}>
                         <span className="line-name"><div style={{width:8,height:8,borderRadius:'50%',background:COLORS.primary}}/> 발포라인</span>
                         <div className="val-group"><PredictionTime value={avgTakts.A} /></div>
                       </TaktBox>
                       <TaktBox $isSingle={false}>
                         <span className="line-name"><div style={{width:8,height:8,borderRadius:'50%',background:COLORS.borderDark}}/> 총조립1라인</span>
                         <div className="val-group"><PredictionTime value={avgTakts.B} /></div>
-                      </TaktBox>
-                      <TaktBox $isSingle={false}>
-                        <span className="line-name"><div style={{width:8,height:8,borderRadius:'50%',background:COLORS.borderGray}}/> 총조립2라인</span>
-                        <div className="val-group"><PredictionTime value={avgTakts.C} /></div>
                       </TaktBox>
                     </TaktGrid>
                   )}

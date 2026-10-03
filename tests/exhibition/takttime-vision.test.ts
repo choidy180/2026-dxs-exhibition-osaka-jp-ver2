@@ -5,20 +5,20 @@ import { TAKTTIME_PLAYBACK_RATE } from '../../constants/takttime-camera-videos';
 import type { VisionClock } from '../../types/takttime-vision';
 import { advanceVisionClock, getTrackingFrame, projectCoverBox, projectCoverPoint } from '../../utils/takttime-vision';
 
-test('half-speed media produces exactly one graph event for each part crossing, including native loops', () => {
+test('accelerated media produces exactly one graph event for each part crossing, including native loops', () => {
   let clock: VisionClock | null = null;
   const events: { frame: number; kind: number; sequence: number }[] = [];
-  // 2회 전체 MP4 반복: 미디어 120초, 실제 재생 240초.
+  // 60초 타임라인을 2회 반복: 미디어 120초, 실제 재생 80초.
   for (let frame = 0; frame <= 120 * 24; frame++) {
     const next = advanceVisionClock(clock, (frame / 24) % 60, 60, 2);
     clock = next.clock;
     if (next.recognition) events.push({ frame, ...next.recognition });
   }
-  assert.equal(TAKTTIME_PLAYBACK_RATE, .5);
+  assert.equal(TAKTTIME_PLAYBACK_RATE, 1.5);
   assert.equal(events.length, 60);
   assert.deepEqual(events.slice(0, 3).map(event => event.kind), [2, 1, 0]);
   events.forEach((event, index) => {
-    assert.equal(event.frame / 24 / TAKTTIME_PLAYBACK_RATE, (index + 1) * 4);
+    assert.equal(event.frame / 24 / TAKTTIME_PLAYBACK_RATE, (index + 1) * 2 / TAKTTIME_PLAYBACK_RATE);
     assert.equal(event.sequence, index + 1);
   });
 });

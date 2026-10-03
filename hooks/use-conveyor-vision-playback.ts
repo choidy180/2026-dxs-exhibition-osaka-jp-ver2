@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { TAKTTIME_PLAYBACK_RATE } from '@/constants/takttime-camera-videos';
+import { TAKTTIME_PLAYBACK_RATES } from '@/constants/takttime-camera-videos';
 import { TAKTTIME_TRACKING } from '@/data/takttime-tracking';
 import type { TakttimeLine, VisionClock, VisionRecognition } from '@/types/takttime-vision';
 import { advanceVisionClock } from '@/utils/takttime-vision';
@@ -14,6 +14,7 @@ export function useConveyorVisionPlayback(line: TakttimeLine, onRecognition: (li
   const [clock, setClock] = useState<VisionClock | null>(null);
   const [recognition, setRecognition] = useState<VisionRecognition | null>(null);
   const timeline = TAKTTIME_TRACKING[line];
+  const playbackRate = TAKTTIME_PLAYBACK_RATES[line];
 
   useEffect(() => {
     const video = videoRef.current;
@@ -46,8 +47,8 @@ export function useConveyorVisionPlayback(line: TakttimeLine, onRecognition: (li
       frameId = requestAnimationFrame(animationFrame);
     };
     const enforceRate = () => {
-      video.defaultPlaybackRate = TAKTTIME_PLAYBACK_RATE;
-      if (video.playbackRate !== TAKTTIME_PLAYBACK_RATE) video.playbackRate = TAKTTIME_PLAYBACK_RATE;
+      video.defaultPlaybackRate = playbackRate;
+      if (video.playbackRate !== playbackRate) video.playbackRate = playbackRate;
     };
     // 명시적인 탐색은 인식 이력에 넣지 않고, loop의 자동 되감기는 연속 시간으로 처리한다.
     const seeking = () => {
@@ -83,7 +84,7 @@ export function useConveyorVisionPlayback(line: TakttimeLine, onRecognition: (li
       if (hasVideoFrames) video.cancelVideoFrameCallback(frameId);
       else cancelAnimationFrame(frameId);
     };
-  }, [attempt, line, onRecognition, timeline]);
+  }, [attempt, line, onRecognition, playbackRate, timeline]);
 
   const retry = () => {
     setState('loading');

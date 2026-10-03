@@ -5,7 +5,13 @@ export const TAKTTIME_CAMERA_VIDEOS = {
   C: '/videos/takttime/20261002/assembly-2.mp4',
 } as const;
 
-export const TAKTTIME_PLAYBACK_RATE = 0.5;
+export const TAKTTIME_PLAYBACK_RATE = 1.5;
+export const TAKTTIME_PLAYBACK_RATES = {
+  A: TAKTTIME_PLAYBACK_RATE,
+  B: TAKTTIME_PLAYBACK_RATE,
+  C: TAKTTIME_PLAYBACK_RATE * 2,
+} as const;
+
 export const TAKTTIME_PART_NAMES = {
   A: ['도어 라이너 A', '도어 라이너 B', '도어 라이너 C'],
   B: ['모터 하우징', '금속 브래킷', '베어링 부품'],
