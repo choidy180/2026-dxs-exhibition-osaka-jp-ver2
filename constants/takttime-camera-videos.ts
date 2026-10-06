@@ -1,8 +1,8 @@
-/** 2026-10-02 촬영한 라인별 30초 영상. 화면의 라인 이름에 맞춰 연결한다. */
+/** 첫 번째 카메라는 2026-10-06 제공 영상, 나머지는 기존 라인별 영상을 사용한다. */
 export const TAKTTIME_CAMERA_VIDEOS = {
   A: '/videos/takttime/20261002/foaming.mp4',
   B: '/videos/takttime/20261002/assembly-1.mp4',
-  C: '/videos/takttime/20261002/assembly-2.mp4',
+  C: '/videos/takttime/20261006/assembly-2.mp4',
 } as const;
 
 export const TAKTTIME_PLAYBACK_RATE = 1.5;

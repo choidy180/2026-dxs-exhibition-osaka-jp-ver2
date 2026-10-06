@@ -41,18 +41,18 @@ function inspectVideo(file: Buffer) {
   return { duration, width, height, frames, codecs, boxes, handlers };
 }
 
-test('takt cameras have three different 60-second, silent 720p videos with matching posters', () => {
+test('takt cameras have distinct silent videos with matching posters and the current clip lengths', () => {
   const sources = Object.values(TAKTTIME_CAMERA_VIDEOS);
   assert.equal(sources.length, 3);
   assert.equal(new Set(sources).size, 3);
   const hashes = new Set<string>();
-  for (const src of sources) {
+  for (const [line, src] of Object.entries(TAKTTIME_CAMERA_VIDEOS)) {
     const bytes = readFileSync(join('public', src));
     const info = inspectVideo(bytes);
-    assert.equal(info.duration, 60, `${src}: exactly one minute`);
-    assert.equal(info.width, 1280, src);
-    assert.equal(info.height, 720, src);
-    assert.equal(info.frames, 1440, `${src}: 24 fps for 60 seconds`);
+    assert.equal(info.duration, line === 'C' ? 240 : 30, `${src}: current clip duration`);
+    assert.equal(info.width, 640, src);
+    assert.equal(info.height, 480, src);
+    assert.equal(info.frames, line === 'C' ? 4800 : 900, `${src}: complete video frames`);
     assert.deepEqual(info.codecs, ['avc1'], `${src}: browser-compatible H.264`);
     assert.deepEqual(info.handlers, ['vide'], `${src}: no audio track`);
     assert.ok(info.boxes.indexOf('moov') < info.boxes.indexOf('mdat'), `${src}: fast-start MP4`);
