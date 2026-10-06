@@ -57,8 +57,8 @@ D동 실시간 적재 현황판|D棟 積載状況ボード|Building D loading st
 영상 준비 중...|映像を準備中...|Preparing video...
 영상을 불러오지 못했습니다.|映像を読み込めませんでした。|Unable to load the video.
 검사 데이터가 없습니다.|検査データがありません。|No inspection data available.
-전시 영상 재생 중|展示映像を再生中|Playing exhibition video
-전시용 영상과 예시 데이터로 공장 모니터링을 체험할 수 있습니다.|展示映像とサンプルデータで工場モニタリングを体験できます。|Explore factory monitoring with exhibition video and sample data.
+영상 재생 중|映像を再生中|Playing video
+영상과 예시 데이터로 공장 모니터링을 체험할 수 있습니다.|映像とサンプルデータで工場モニタリングを体験できます。|Explore factory monitoring with video and sample data.
 오늘로 이동|今日へ移動|Go to today
 오픈|オープン|Open
 완료율|完了率|Completion rate
@@ -388,8 +388,8 @@ LG전자 행 평균 소요시간|LG電子行き平均所要時間|Average travel
 현재 출하 차량의 운송 상태와 도착 예정 시간을 알려주세요.|出荷車両の輸送状況と到着予定時刻を教えてください。|Show shipping vehicle status and estimated arrival times.
 현재 생산 목표와 달성률을 요약해 주세요.|現在の生産目標と達成率を要約してください。|Summarize current production targets and attainment.
 자재 · 품질 · 출하 현황 안내|資材・品質・出荷状況のご案内|Materials, quality and shipping insights
-자재 재고, 검사 품질, 출하 현황을 질문해 보세요. 전시용 샘플 데이터로 답변과 표를 제공합니다.|資材在庫・検査品質・出荷状況について質問してください。展示用サンプルデータを使って回答と表を表示します。|Ask about inventory, inspection quality or shipping. Responses and tables use exhibition sample data.
-전시 샘플 데이터|展示サンプルデータ|Exhibition sample data
+자재 재고, 검사 품질, 출하 현황을 질문해 보세요. 샘플 데이터로 답변과 표를 제공합니다.|資材在庫・検査品質・出荷状況について質問してください。サンプルデータを使って回答と表を表示します。|Ask about inventory, inspection quality or shipping. Responses and tables use sample data.
+전시 샘플 데이터|展示サンプルデータ|Sample data
 공장 운영 현황을 확인해 보세요|工場の運用状況を確認しましょう|Explore factory operations
 아래 예시를 선택하거나 궁금한 내용을 입력하세요.|下の例を選ぶか、質問を入力してください。|Choose an example below or enter a question.
 생산 목표와 달성률|生産目標と達成率|Production targets and attainment

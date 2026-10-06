@@ -60,10 +60,10 @@ export function FullLogModal({
 
     return createPortal(
         <ModalBackdrop onClick={onClose}>
-            <ModalShell onClick={(event) => event.stopPropagation()}>
+            <ModalShell data-demo="inspection-log-panel" onClick={(event) => event.stopPropagation()}>
                 <ModalHeader>
                     <ModalTitle>전체 생산 및 적재 로그</ModalTitle>
-                    <IconButton type="button" onClick={onClose} aria-label="전체 로그 닫기">
+                    <IconButton type="button" onClick={onClose} data-demo="inspection-log-close" aria-label="전체 로그 닫기">
                         <X size={18} />
                     </IconButton>
                 </ModalHeader>

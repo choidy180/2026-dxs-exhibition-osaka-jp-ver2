@@ -9,6 +9,10 @@ import { useLocale } from '@/components/i18n/LocaleProvider';
 import { useExhibitionGuidePreference } from '@/hooks/use-exhibition-guide-preference';
 import { getPageGuide, type PageGuide } from '@/data/exhibition-page-guides';
 import { exhibitionGuide, motionDuration } from '@/styles/design-tokens';
+import { useExhibitionDemo } from '@/components/exhibition-demo/ExhibitionDemoProvider';
+import { DemoGuideScope } from '@/components/exhibition-demo/styles';
+import { usePageVisible } from '@/hooks/use-page-visible';
+import GuideLayer from './GuideLayer';
 import * as S from './styles';
 
 const copy = {
@@ -34,14 +38,21 @@ export default function ExhibitionGuide(props: GuideProps) {
   const pathname = usePathname();
   const { locale } = useLocale();
   const { enabled } = useExhibitionGuidePreference();
+  const demo = useExhibitionDemo();
+  if (demo?.enabled) {
+    if (!demo.guide) return null;
+    return <GuideLayer><DemoGuideScope><PageGuideEvent key={`demo:${demo.pageIndex}:${locale}`} guide={{ id: 'auto-demo', title: demo.guide.title, steps: [demo.guide.text] }}
+      labels={copy[locale]} {...props} automatic={{ step: demo.guide.step, total: demo.guide.total }} /></DemoGuideScope></GuideLayer>;
+  }
   if (!enabled) return null;
   const guide = getPageGuide(pathname ?? '/', locale);
-  return <PageGuideEvent key={`${pathname}:${locale}`} guide={guide} labels={copy[locale]} {...props} />;
+  return <GuideLayer><PageGuideEvent key={`${pathname}:${locale}`} guide={guide} labels={copy[locale]} {...props} /></GuideLayer>;
 }
 
-function PageGuideEvent({ guide, labels, fullWidth = false, mobileAllowed = false, mobileFullWidth = false }: GuideProps & { guide: PageGuide; labels: GuideCopy }) {
+function PageGuideEvent({ guide, labels, fullWidth = false, mobileAllowed = false, mobileFullWidth = false, automatic }: GuideProps & { guide: PageGuide; labels: GuideCopy; automatic?: { step: number; total: number } }) {
   // 페이지를 연 상태에서 접근성 설정을 변경해도 반복 모션을 즉시 멈춥니다.
   const reduceMotion = useSyncExternalStore(subscribeReducedMotion, getReducedMotion, getServerReducedMotion);
+  const pageVisible = usePageVisible();
   const [visible, setVisible] = useState(false);
   const [open, setOpen] = useState(true);
   const [step, setStep] = useState(0);
@@ -110,7 +121,7 @@ function PageGuideEvent({ guide, labels, fullWidth = false, mobileAllowed = fals
       transition={{ duration: motionDuration.enter }}
     >
       <AnimatePresence initial={false}>
-        {open && <S.FocusBackdrop
+        {open && !automatic && <S.FocusBackdrop
           as={motion.div}
           key="focus-backdrop"
           aria-hidden="true"
@@ -121,6 +132,7 @@ function PageGuideEvent({ guide, labels, fullWidth = false, mobileAllowed = fals
         />}
       </AnimatePresence>
       <S.MascotButton
+        data-demo-mascot={automatic ? true : undefined}
         ref={trigger}
         type="button"
         onClick={reopen}
@@ -130,14 +142,14 @@ function PageGuideEvent({ guide, labels, fullWidth = false, mobileAllowed = fals
       >
         <S.MascotArt
           as={motion.span}
-          animate={reduceMotion || imageState !== 'ready'
+          animate={reduceMotion || !pageVisible || imageState !== 'ready'
             ? { y: 0, rotate: 0, scaleY: 1 }
             : {
               y: [...exhibitionGuide.motion.float],
               rotate: [...exhibitionGuide.motion.sway],
               scaleY: [...exhibitionGuide.motion.breathe],
             }}
-          transition={reduceMotion || imageState !== 'ready' ? { duration: 0 } : {
+          transition={reduceMotion || !pageVisible || imageState !== 'ready' ? { duration: 0 } : {
             y: { duration: exhibitionGuide.motion.floatDuration, repeat: Infinity, ease: 'easeInOut' },
             rotate: { duration: exhibitionGuide.motion.swayDuration, repeat: Infinity, ease: 'easeInOut' },
             scaleY: { duration: exhibitionGuide.motion.breatheDuration, repeat: Infinity, ease: 'easeInOut' },
@@ -167,6 +179,7 @@ function PageGuideEvent({ guide, labels, fullWidth = false, mobileAllowed = fals
         {open && <S.Bubble
           as={motion.section}
           ref={bubble}
+          data-demo-speech={automatic ? true : undefined}
           key="speech"
           aria-label={guide.title}
           initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
@@ -176,19 +189,19 @@ function PageGuideEvent({ guide, labels, fullWidth = false, mobileAllowed = fals
         >
           <S.BubbleHeader>
             <S.Name><Sparkles size={19} />{labels.name}</S.Name>
-            <S.CloseButton type="button" onClick={dismiss} aria-label={labels.close} title={labels.close}><X size={22} /></S.CloseButton>
+            {!automatic && <S.CloseButton type="button" onClick={dismiss} aria-label={labels.close} title={labels.close}><X size={22} /></S.CloseButton>}
           </S.BubbleHeader>
           <S.Title>{guide.title}</S.Title>
-          <SpeechText key={`${step}:${currentText}`} text={currentText} instant={!!reduceMotion} />
+          <SpeechText key={`${step}:${currentText}`} text={currentText} instant={!!reduceMotion || !!automatic} />
           <S.BubbleFooter>
-            <S.StepCount aria-label={`${step + 1} / ${guide.steps.length}`}>
+            {automatic ? <S.StepCount><span>{automatic.step.toLocaleString('ko-KR')} / {automatic.total.toLocaleString('ko-KR')}</span></S.StepCount> : <S.StepCount aria-label={`${step + 1} / ${guide.steps.length}`}>
               {guide.steps.map((_, index) => <S.StepDot key={index} $active={index === step} />)}
               <span>{(step + 1).toLocaleString('ko-KR')} / {guide.steps.length.toLocaleString('ko-KR')}</span>
-            </S.StepCount>
-            <S.NextButton type="button" onClick={() => step + 1 < guide.steps.length ? setStep(value => value + 1) : dismiss()}>
+            </S.StepCount>}
+            {!automatic && <S.NextButton type="button" onClick={() => step + 1 < guide.steps.length ? setStep(value => value + 1) : dismiss()}>
               {step + 1 < guide.steps.length ? labels.next : labels.done}
               {step + 1 < guide.steps.length && <ArrowRight size={19} />}
-            </S.NextButton>
+            </S.NextButton>}
           </S.BubbleFooter>
         </S.Bubble>}
       </AnimatePresence>

@@ -418,7 +418,7 @@ const ShipmentManagementPage = () => {
       </Header>
 
       {/* Summary Cards */}
-      <Grid>
+      <Grid data-demo="shipment-metrics">
         {/* Card 1 */}
         <Card>
           <CardHeader>
@@ -474,14 +474,14 @@ const ShipmentManagementPage = () => {
               <ToggleBtn
                 $active={viewMode === 'weekly'}
                 $color={COLORS.mixed}
-                onClick={() => setViewMode('weekly')}
+                data-demo="shipment-weekly" onClick={() => setViewMode('weekly')}
               >
                 주간 보기
               </ToggleBtn>
               <ToggleBtn
                 $active={viewMode === 'daily'}
                 $color={COLORS.actual}
-                onClick={() => setViewMode('daily')}
+                data-demo="shipment-daily" onClick={() => setViewMode('daily')}
               >
                 일별 보기
               </ToggleBtn>
@@ -495,7 +495,7 @@ const ShipmentManagementPage = () => {
         </SectionHeader>
 
         {/* Chart Area */}
-        <ChartContainer>
+        <ChartContainer data-demo="shipment-chart">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={viewMode === 'daily' ? dailyData : weeklyData}

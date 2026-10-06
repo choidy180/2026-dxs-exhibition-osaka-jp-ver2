@@ -20,7 +20,7 @@ export default function VehicleInfoCard({ vehicleInfo, isLoaded, isLoading, dwel
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const retry = () => { setFailedImage(null); onRetry(); };
   return (
-    <Card>
+    <Card data-demo="inbound-vehicle">
       <Title>입고 차량 정보</Title>
       {error ? (
         <State role="alert"><AlertCircle size={28} /><strong>{error}</strong><Retry onClick={retry}>재시도</Retry></State>

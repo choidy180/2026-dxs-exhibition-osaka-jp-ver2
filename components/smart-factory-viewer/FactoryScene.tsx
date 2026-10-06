@@ -12,6 +12,8 @@ import {
 import { AlertOctagon, Wrench } from 'lucide-react';
 import * as THREE from 'three';
 import LocalEnvironment from '@/components/common/local-environment/LocalEnvironment';
+import { usePageVisible } from '@/hooks/use-page-visible';
+import { disposeSceneClone } from '@/utils/dispose-scene-clone';
 import { FLOOR_MODEL_PATH, JIG_MODEL_PATH, PROCESS_CONFIG } from '@/constants/smartFactoryViewer';
 import type {
   ApiDataItem,
@@ -375,6 +377,7 @@ function FloorModel({ highContrast }: { highContrast: boolean }) {
     return cloned;
   }, [highContrast, scene]);
 
+  useEffect(() => () => disposeSceneClone(clonedScene, scene), [clonedScene, scene]);
   return <primitive object={clonedScene} raycast={() => null} />;
 }
 
@@ -661,7 +664,7 @@ function InteractiveJigModel({
       meshes.push({ mesh, position: worldPosition });
     });
 
-    if (meshes.length === 0) return;
+    if (meshes.length === 0) return () => disposeSceneClone(modelScene, scene);
 
     const center = meshes.reduce(
       (acc, item) => ({
@@ -773,8 +776,9 @@ function InteractiveJigModel({
 
     return () => {
       cancelled = true;
+      disposeSceneClone(modelScene, scene);
     };
-  }, [contrastColor, highContrast, modelScene]);
+  }, [contrastColor, highContrast, modelScene, scene]);
 
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
@@ -983,6 +987,7 @@ export function FactoryScene({
   onInjectUnitChange,
 }: FactorySceneProps) {
   const sceneConfig = SCENE_VIEW_CONFIG[layout];
+  const visible = usePageVisible();
 
   const {
     cameraPosition,
@@ -991,6 +996,7 @@ export function FactoryScene({
 
   return (
     <Canvas
+      frameloop={visible ? 'always' : 'never'}
       dpr={[1, 1.25]}
       camera={{ position: cameraPosition, fov: cameraFov }}
       shadows="basic"

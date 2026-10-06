@@ -1,3 +1,4 @@
+import { startVisibleInterval } from '@/utils/visible-interval';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createExhibitionVehicle } from '@/data/exhibition-material';
 import type { VehicleSlotDetail } from '@/types/material-monitoring';
@@ -12,8 +13,8 @@ export function useVehicleData() {
   // 현재 시간 갱신
   useEffect(() => {
     setNow(new Date());
-    const timer = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(timer);
+    const timer = startVisibleInterval(() => setNow(new Date()), 60_000);
+    return () => timer();
   }, []);
 
   // 차량 API 조회

@@ -29,7 +29,7 @@ interface EmergencyAlertProps {
 
 export function EmergencyAlert({ unit, onClose }: EmergencyAlertProps) {
   return (
-    <AlertOverlay>
+    <AlertOverlay data-demo="equipment-alert">
       <AlertBox role="alert" aria-live="assertive">
         <AlertTitle>
           <Octagon size={22} strokeWidth={2.4} />
@@ -44,7 +44,7 @@ export function EmergencyAlert({ unit, onClose }: EmergencyAlertProps) {
           <span>라인 정지 후 설비 상태와 투입 조건을 확인하세요.</span>
         </AlertDescription>
 
-        <AlertConfirmButton type="button" onClick={onClose}>
+        <AlertConfirmButton data-demo="equipment-alert-confirm" type="button" onClick={onClose}>
           확인 완료
         </AlertConfirmButton>
       </AlertBox>

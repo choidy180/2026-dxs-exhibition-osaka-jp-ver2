@@ -1,5 +1,6 @@
 'use client';
 
+import { startVisibleInterval } from '@/utils/visible-interval';
 import CameraSnapshotCard from './CameraSnapshotCard';
 import { SMART_FACTORY_CAMERA_SNAPSHOTS } from '@/constants/smart-factory-camera-snapshots';
 import { space } from '@/styles/design-tokens';
@@ -834,12 +835,12 @@ const SmartFactoryDashboard: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
+    const timer = startVisibleInterval(() => {
       setCamData(previous => Object.fromEntries(Object.entries(previous).map(([key, camera]) => [key, {
         ...camera, occupied: camera.occupied >= camera.total ? Math.max(1, camera.total - 2) : camera.occupied + 1,
       }])));
     }, 10000);
-    return () => window.clearInterval(timer);
+    return () => timer();
   }, []);
 
   useEffect(() => {
@@ -895,7 +896,7 @@ const SmartFactoryDashboard: React.FC = () => {
         <MainGrid>
 
           {/* 첨부된 두 장면의 문구를 이미지와 분리해 프로젝트 언어에 맞게 표시한다. */}
-          <CameraColumn>
+          <CameraColumn data-demo="stock-cameras">
             {SMART_FACTORY_CAMERA_SNAPSHOTS.map(camera => (
               <CameraSnapshotCard key={camera.id} title={camera.title} src={camera.src}
                 occupied={camera.occupied} total={camera.total} />
@@ -906,7 +907,7 @@ const SmartFactoryDashboard: React.FC = () => {
           <MiddleColumn>
             <SectionTitle>실시간 생산 및 적재 데이터</SectionTitle>
 
-            <WorkInfoCard>
+            <WorkInfoCard data-demo="stock-production">
               <WorkInfoTopRow>
                 <WorkOrderBadge>{wkData.NoWkOrd}</WorkOrderBadge>
                 <WorkStatusPlay>
@@ -953,7 +954,7 @@ const SmartFactoryDashboard: React.FC = () => {
 
             <SectionHeader>
               <SectionTitle>대차 슬롯 상세</SectionTitle>
-              <ViewAllBtn onClick={() => setIsModalOpen(true)}>
+              <ViewAllBtn data-demo="stock-expand" onClick={() => setIsModalOpen(true)}>
                 전체보기
               </ViewAllBtn>
             </SectionHeader>
@@ -1030,10 +1031,10 @@ const SmartFactoryDashboard: React.FC = () => {
       {/* 모달 렌더링 영역 */}
       {isModalOpen && (
         <ModalBackdrop onClick={() => setIsModalOpen(false)}>
-          <ModalContainer onClick={(e) => e.stopPropagation()}>
+          <ModalContainer data-demo="stock-panel" onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>대차 슬롯 전체 상세</ModalTitle>
-              <CloseBtn onClick={() => setIsModalOpen(false)}>
+              <CloseBtn data-demo="stock-close" aria-label="대차 슬롯 상세 닫기" onClick={() => setIsModalOpen(false)}>
                 <FiX size={20} />
               </CloseBtn>
             </ModalHeader>

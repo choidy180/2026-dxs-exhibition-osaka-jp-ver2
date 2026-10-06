@@ -46,7 +46,7 @@ export function DashboardHeader({
 
     return (
         <HeaderGrid $height={height} $gap={gap}>
-            <ResultCard $tone={tone}>
+            <ResultCard data-demo="inspection-result" $tone={tone}>
                 <SoundButton type="button" onClick={onToggleSound} aria-label="경고음 토글">
                     {isSoundOn ? <Volume2 size={16} /> : <VolumeX size={16} />}
                 </SoundButton>

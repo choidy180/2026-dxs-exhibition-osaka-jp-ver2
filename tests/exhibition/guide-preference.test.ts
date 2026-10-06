@@ -59,6 +59,21 @@ test('guide defaults ON and only a stored false disables it', () => {
   }
 });
 
+test('autoplay defaults OFF, persists separately and returns OFF when preferences are cleared', () => {
+  const { browser, values, remoteChange } = createBrowser();
+  const key = 'dxs-exhibition-autoplay-v1';
+  const store = createExhibitionGuidePreferenceStore(() => browser, { storageKey: key, initialEnabled: false });
+  assert.equal(store.getSnapshot(), false);
+  assert.equal(store.getServerSnapshot(), false);
+  const unsubscribe = store.subscribe(() => {});
+  store.setEnabled(true);
+  assert.equal(values.get(key), 'true');
+  assert.equal(values.get(EXHIBITION_GUIDE_STORAGE_KEY), undefined);
+  remoteChange(null, null);
+  assert.equal(store.getSnapshot(), false);
+  unsubscribe();
+});
+
 test('same-tab consumers update immediately and persist true/false strings', () => {
   const { browser, values, listeners } = createBrowser();
   const store = createExhibitionGuidePreferenceStore(() => browser);

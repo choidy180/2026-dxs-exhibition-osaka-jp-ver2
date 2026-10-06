@@ -11,23 +11,23 @@ type LocalizedGuide = Record<GuideLocale, Omit<PageGuide, 'id'>>;
 const pageGuides: Record<string, LocalizedGuide> = {
   "/": {
     "ko": {
-      "title": "전시회에 오신 걸 환영해요",
+      "title": "관제센터에 오신 걸 환영해요",
       "steps": [
-        "인터넷 없이 둘러볼 수 있는 DXS 전시회 데모예요.",
+        "DXS의 자재·생산·출하 관리 기능을 함께 둘러보세요.",
         "곧 열리는 관제센터에서 관심 있는 분야를 골라보세요."
       ]
     },
     "en": {
-      "title": "Welcome to the exhibition",
+      "title": "Welcome to the control center",
       "steps": [
-        "Welcome to the DXS exhibition demo, which runs locally.",
+        "Explore DXS materials, production and shipping management.",
         "Choose an area of interest when the control center opens."
       ]
     },
     "ja": {
-      "title": "展示会へようこそ",
+      "title": "監視センターへようこそ",
       "steps": [
-        "DXSの展示会デモへようこそ、インターネットなしでご覧いただけます。",
+        "DXSの資材・生産・出荷管理の機能をご覧ください。",
         "まもなく開く監視センターで、気になる分野を選んでみてください。"
       ]
     }
@@ -36,21 +36,21 @@ const pageGuides: Record<string, LocalizedGuide> = {
     "ko": {
       "title": "공장 전체를 둘러볼까요",
       "steps": [
-        "자재부터 생산·출하까지 공장 운영을 전시용 지표로 한눈에 보여드려요.",
+        "자재부터 생산·출하까지 공장 운영 현황을 한눈에 확인하는 화면이에요.",
         "관심 있는 업무 카드를 누르면 해당 화면으로 이동해요."
       ]
     },
     "en": {
       "title": "Explore the whole factory",
       "steps": [
-        "See materials, production and shipping together through exhibition sample metrics.",
+        "See materials, production and shipping together in one overview.",
         "Select a work area card to explore its screen."
       ]
     },
     "ja": {
       "title": "工場全体を見てみましょう",
       "steps": [
-        "資材から生産・出荷まで、工場の運営を展示用の指標でご紹介します。",
+        "資材から生産・出荷まで、工場の運営状況をひと目で確認できます。",
         "気になる業務カードを押すと、その画面へ移動できます。"
       ]
     }
@@ -151,21 +151,21 @@ const pageGuides: Record<string, LocalizedGuide> = {
     "ko": {
       "title": "입고 검수 현황을 비교해요",
       "steps": [
-        "전시용 입고 기록을 기간별 지표와 자재 목록으로 확인하는 화면이에요.",
+        "입고 기록을 기간별 지표와 자재 목록으로 확인하는 화면이에요.",
         "일·주·월·연간과 날짜를 바꿔보고, 검색으로 필요한 자재를 찾아보세요."
       ]
     },
     "en": {
       "title": "Compare inbound inspection status",
       "steps": [
-        "Review exhibition receiving records as period summaries and material lists.",
+        "Review receiving records as period summaries and material lists.",
         "Switch the period and date, then search for the materials you want to inspect."
       ]
     },
     "ja": {
       "title": "入庫検収の状況を比べましょう",
       "steps": [
-        "展示用の入庫記録を、期間別の指標と資材一覧で確認できます。",
+        "入庫記録を、期間別の指標と資材一覧で確認できます。",
         "日・週・月・年や日付を切り替え、検索で気になる資材を探してみてください。"
       ]
     }
@@ -197,7 +197,7 @@ const pageGuides: Record<string, LocalizedGuide> = {
     "ko": {
       "title": "자재 보관 위치를 살펴봐요",
       "steps": [
-        "전시용 자재 재고와 구역별 사용 공간을 배치도로 보여드려요.",
+        "자재 재고와 구역별 사용 공간을 배치도로 보여드려요.",
         "제품명을 검색한 뒤 목록의 위치와 D101~D105 구역을 비교해 보세요."
       ]
     },
@@ -211,7 +211,7 @@ const pageGuides: Record<string, LocalizedGuide> = {
     "ja": {
       "title": "資材の保管場所を見てみましょう",
       "steps": [
-        "展示用の資材在庫と、エリアごとの使用状況を配置図で表示しています。",
+        "資材在庫と、エリアごとの使用状況を配置図で表示しています。",
         "製品名を検索して、一覧の保管場所とD101〜D105のエリアを照らし合わせてみてください。"
       ]
     }
@@ -243,21 +243,21 @@ const pageGuides: Record<string, LocalizedGuide> = {
     "ko": {
       "title": "유리 간격 검사를 살펴봐요",
       "steps": [
-        "유리 간격의 정상·불량 판정을 전시용 이미지와 기록으로 보여드려요.",
+        "유리 간격의 정상·불량 판정을 이미지와 기록으로 보여드려요.",
         "검사 이력을 고르고 확대 영역을 열어 어느 위치를 확인하는지 살펴보세요."
       ]
     },
     "en": {
       "title": "Explore glass gap inspection",
       "steps": [
-        "View sample pass/fail results using exhibition images and inspection records.",
+        "View sample pass/fail results using inspection images and inspection records.",
         "Select a record and open a zoomed area to see where the inspection focuses."
       ]
     },
     "ja": {
       "title": "ガラスの隙間検査を見てみましょう",
       "steps": [
-        "ガラスの隙間の正常・不良判定を、展示用画像と記録でご紹介します。",
+        "ガラスの隙間の正常・不良判定を、画像と記録でご紹介します。",
         "検査履歴を選び、拡大領域を開いて確認する場所を見てみてください。"
       ]
     }
@@ -266,7 +266,7 @@ const pageGuides: Record<string, LocalizedGuide> = {
     "ko": {
       "title": "발포 누수 검사 지점을 살펴봐요",
       "steps": [
-        "여섯 검사 지점의 판정과 불량 사례를 전시용 데이터로 보여드려요.",
+        "여섯 검사 지점의 판정과 불량 사례를 데이터로 보여드려요.",
         "이력을 선택하고 A1~A6 확대 영역을 비교해 검사 위치를 확인해 보세요."
       ]
     },
@@ -280,7 +280,7 @@ const pageGuides: Record<string, LocalizedGuide> = {
     "ja": {
       "title": "発泡漏れの検査箇所を見てみましょう",
       "steps": [
-        "6つの検査箇所の判定と不良例を、展示用データで表示しています。",
+        "6つの検査箇所の判定と不良例を、データで表示しています。",
         "履歴を選び、A1〜A6の拡大領域を比べて検査箇所を確認してみてください。"
       ]
     }
@@ -358,7 +358,7 @@ const pageGuides: Record<string, LocalizedGuide> = {
     "ko": {
       "title": "설비 상태를 비교해요",
       "steps": [
-        "발포 설비의 온도·압력과 이상 징후를 전시용 데이터로 보여드려요.",
+        "발포 설비의 온도·압력과 이상 징후를 데이터로 보여드려요.",
         "표시된 측정값과 정상 범위를 비교하며 주의가 필요한 항목을 찾아보세요."
       ]
     },
@@ -372,7 +372,7 @@ const pageGuides: Record<string, LocalizedGuide> = {
     "ja": {
       "title": "設備の状態を比べましょう",
       "steps": [
-        "発泡設備の温度・圧力や異常の兆候を、展示用データで表示しています。",
+        "発泡設備の温度・圧力や異常の兆候を、データで表示しています。",
         "表示された測定値と正常範囲を比べ、注意が必要な項目を探してみてください。"
       ]
     }
@@ -381,7 +381,7 @@ const pageGuides: Record<string, LocalizedGuide> = {
     "ko": {
       "title": "발포 대차를 골라보세요",
       "steps": [
-        "대차별 이미지와 정상·이상 판정을 전시용 사례로 확인하는 화면이에요.",
+        "대차별 이미지와 정상·이상 판정을 사례로 확인하는 화면이에요.",
         "왼쪽 대차 번호를 고른 뒤 정밀 보기를 눌러 표시된 검사 영역을 확대해 보세요."
       ]
     },
@@ -395,7 +395,7 @@ const pageGuides: Record<string, LocalizedGuide> = {
     "ja": {
       "title": "発泡台車を選んでみましょう",
       "steps": [
-        "台車ごとの画像と正常・異常判定を、展示用の事例で確認できます。",
+        "台車ごとの画像と正常・異常判定を、事例で確認できます。",
         "左の台車番号を選び、詳細表示を押して検査領域を拡大してみてください。"
       ]
     }
@@ -473,7 +473,7 @@ const pageGuides: Record<string, LocalizedGuide> = {
     "ko": {
       "title": "완제품 보관 현황을 살펴봐요",
       "steps": [
-        "제품창고의 구역별 적재 상태와 재고를 전시용 데이터로 보여드려요.",
+        "제품창고의 구역별 적재 상태와 재고를 데이터로 보여드려요.",
         "품목을 검색하거나 보관 슬롯을 선택해 제품 정보와 위치를 확인해 보세요."
       ]
     },
@@ -487,7 +487,7 @@ const pageGuides: Record<string, LocalizedGuide> = {
     "ja": {
       "title": "完成品の保管状況を見てみましょう",
       "steps": [
-        "製品倉庫のエリア別積載状況と在庫を、展示用データで表示しています。",
+        "製品倉庫のエリア別積載状況と在庫を、データで表示しています。",
         "品目を検索したり保管スロットを選んだりして、製品情報と位置を確認してみてください。"
       ]
     }
@@ -496,21 +496,21 @@ const pageGuides: Record<string, LocalizedGuide> = {
     "ko": {
       "title": "출하 흐름을 비교해요",
       "steps": [
-        "출하량과 예상 수량의 흐름을 고정된 전시용 사례로 보여드리는 화면이에요.",
+        "출하량과 예상 수량의 흐름을 고정된 사례로 보여드리는 화면이에요.",
         "일별 보기와 주간 보기를 바꾸고 막대 위에 마우스를 올려 수치를 확인해 보세요."
       ]
     },
     "en": {
       "title": "Compare shipment trends",
       "steps": [
-        "This screen illustrates shipments and projected quantities with a fixed exhibition dataset.",
+        "This screen illustrates shipments and projected quantities with a fixed dataset.",
         "Switch between daily and weekly views, then hover over bars to inspect their values."
       ]
     },
     "ja": {
       "title": "出荷の流れを比べましょう",
       "steps": [
-        "出荷量と予測数量の推移を、固定の展示用データでご紹介します。",
+        "出荷量と予測数量の推移を、固定のデータでご紹介します。",
         "日別・週別表示を切り替え、棒グラフにマウスを重ねて数値を確認してみてください。"
       ]
     }
@@ -519,21 +519,21 @@ const pageGuides: Record<string, LocalizedGuide> = {
     "ko": {
       "title": "생산계획을 직접 다뤄봐요",
       "steps": [
-        "전시용 생산계획을 비교하고 업로드·확정하는 과정을 체험할 수 있어요.",
+        "생산계획을 비교하고 업로드·확정하는 과정을 체험할 수 있어요.",
         "리비전을 고르거나 Excel 파일을 올린 뒤, 로컬 저장으로 이 브라우저에 보관해 보세요."
       ]
     },
     "en": {
       "title": "Try managing a production plan",
       "steps": [
-        "Explore comparing, uploading and confirming exhibition production plans.",
+        "Explore comparing, uploading and confirming production plans.",
         "Choose a revision or upload an Excel file, then save the plan locally in this browser."
       ]
     },
     "ja": {
       "title": "生産計画を操作してみましょう",
       "steps": [
-        "展示用の生産計画を比較し、アップロードや確定の流れを体験できます。",
+        "生産計画を比較し、アップロードや確定の流れを体験できます。",
         "リビジョンを選ぶかExcelをアップロードし、ローカル保存でこのブラウザに保管してみてください。"
       ]
     }
@@ -565,21 +565,21 @@ const pageGuides: Record<string, LocalizedGuide> = {
     "ko": {
       "title": "발주할 자재를 살펴봐요",
       "steps": [
-        "선택한 계획과 날짜에 맞춘 자재 소요량을 전시용 계산으로 보여드려요.",
+        "선택한 계획과 날짜를 기준으로 자재 소요량을 계산하는 화면이에요.",
         "재계산과 발주 전송 체험을 눌러보면 외부 전송 없이 목록 상태가 바뀌어요."
       ]
     },
     "en": {
       "title": "Explore material ordering",
       "steps": [
-        "Sample calculations show material needs for the selected plan and date.",
+        "Calculate material requirements for the selected plan and date.",
         "Try recalculation and simulated submission to update the list without sending an external order."
       ]
     },
     "ja": {
       "title": "発注する資材を見てみましょう",
       "steps": [
-        "選択した計画と日付に合わせた資材所要量を、展示用の計算で表示しています。",
+        "選択した計画と日付を基準に、資材所要量を計算する画面です。",
         "再計算や発注送信の体験を押すと、外部へ送信せずに一覧の状態が変わります。"
       ]
     }
@@ -657,21 +657,21 @@ const fallbackGuide: LocalizedGuide = {
   "ko": {
     "title": "함께 둘러볼까요?",
     "steps": [
-      "DXS 전시회 데모를 로컬에서 둘러보고 있어요.",
+      "DXS의 자재·생산·출하 관리 기능을 둘러보고 있어요.",
       "왼쪽 메뉴에서 관심 있는 화면을 골라보세요."
     ]
   },
   "en": {
     "title": "Let's take a look",
     "steps": [
-      "You're exploring the local DXS exhibition demo.",
+      "You're exploring DXS materials, production and shipping management.",
       "Choose a screen that interests you from the sidebar."
     ]
   },
   "ja": {
     "title": "一緒に見てみましょう",
     "steps": [
-      "ローカルで動くDXSの展示会デモをご覧いただいています。",
+      "DXSの資材・生産・出荷管理の機能をご覧いただいています。",
       "左のメニューから、気になる画面を選んでみてください。"
     ]
   }

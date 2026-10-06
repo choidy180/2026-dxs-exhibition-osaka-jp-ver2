@@ -130,7 +130,7 @@ export function ViewerToolbar({
             $mode={mode}
             $active={layout === option.id}
             $variant="primary"
-            onClick={() => onLayoutChange(option.id)}
+            data-demo={`equipment-layout-${option.id}`} onClick={() => onLayoutChange(option.id)}
           >
             {layout === option.id && (
               <motion.span

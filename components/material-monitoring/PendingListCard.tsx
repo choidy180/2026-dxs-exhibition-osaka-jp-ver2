@@ -29,7 +29,7 @@ PendingItem.displayName = 'PendingItem';
 
 export default function PendingListCard({ pendingList, stats, isLoading, error, onRetry, onOpenList }: Props) {
   return (
-    <Card>
+    <Card data-demo="inbound-pending">
       <Header>
         <Title>입고 대기 리스트</Title>
         <Count><span>총</span><strong>{pendingList.length.toLocaleString('ko-KR')}</strong><span>건</span></Count>

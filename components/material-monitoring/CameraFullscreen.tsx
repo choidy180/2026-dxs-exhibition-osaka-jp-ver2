@@ -21,7 +21,7 @@ export default function CameraFullscreen({ cameraNumber, host, camera, onVideoRe
 
   return (
     <CameraFullscreenOverlay
-      key="camera-fullscreen"
+      key="camera-fullscreen" data-demo="inbound-camera-panel"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -57,7 +57,7 @@ export default function CameraFullscreen({ cameraNumber, host, camera, onVideoRe
               <span className="stream-info">{host ? cameraLabel : '연결 대기'}</span>
             </div>
 
-            <button type="button" className="close-fullscreen" onClick={onClose} aria-label="확대 화면 닫기">
+            <button type="button" className="close-fullscreen" data-demo="inbound-camera-close" onClick={onClose} aria-label="확대 화면 닫기">
               <Minimize2 size={18} />
             </button>
           </div>

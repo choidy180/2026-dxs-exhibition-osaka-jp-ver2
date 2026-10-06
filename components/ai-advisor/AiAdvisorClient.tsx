@@ -124,7 +124,7 @@ export default function AiAdvisorClient({ launcherPlacement = 'rail' }: { launch
                     </section>
                     <section>
                       <h3><CalendarDays size={17} />질문 안내</h3>
-                      <p>자재 재고, 검사 품질, 출하 현황을 질문해 보세요. 전시용 샘플 데이터로 답변과 표를 제공합니다.</p>
+                      <p>자재 재고, 검사 품질, 출하 현황을 질문해 보세요. 샘플 데이터로 답변과 표를 제공합니다.</p>
                     </section>
                     <section><h3><Database size={17} />대화 보관</h3><p>이 화면을 사용하는 동안 대화가 유지됩니다. 새 대화를 시작하거나 페이지를 새로고침하면 초기화됩니다.</p></section>
                   </S.Sidebar>

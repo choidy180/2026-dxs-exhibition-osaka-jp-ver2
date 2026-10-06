@@ -33,7 +33,7 @@ function CameraFrame({ num, host, camera, onVideoEnded, onVideoRetry, isScanning
         </div>
       )}
 
-      <button className="fullscreen-btn" onClick={onExpand} title="전체화면 확대" aria-label={`CAM ${num} 전체화면 확대`}>
+      <button data-demo={num === 1 ? "inbound-expand" : undefined} className="fullscreen-btn" onClick={onExpand} title="전체화면 확대" aria-label={`CAM ${num} 전체화면 확대`}>
         <Maximize2 size={17} />
       </button>
     </CamBox>

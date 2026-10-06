@@ -1,5 +1,6 @@
 'use client';
 
+import { startVisibleInterval } from '@/utils/visible-interval';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   TRANSPORT_POLL_INTERVAL_MS,
@@ -76,16 +77,16 @@ export function useRealtimeTransportData() {
   useEffect(() => {
     void refreshData();
     // 샘플은 명시적으로 새로고침할 때만 재생성해 진행률이 주기적으로 되돌아가지 않게 한다.
-    const pollingTimer = isSampleMode ? null : window.setInterval(() => { void fetchData(false); }, TRANSPORT_POLL_INTERVAL_MS);
+    const pollingTimer = isSampleMode ? null : startVisibleInterval(() => { void fetchData(false); }, TRANSPORT_POLL_INTERVAL_MS);
     return () => {
-      if (pollingTimer !== null) window.clearInterval(pollingTimer);
+      if (pollingTimer !== null) pollingTimer();
       stopRequest();
     };
   }, [fetchData, isSampleMode, refreshData, stopRequest]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
+    const timer = startVisibleInterval(() => setNow(Date.now()), 1000);
+    return () => timer();
   }, []);
 
   // 모드 변경 직후 effect가 실행되기 전에도 이전 모드의 데이터를 표시하지 않는다.

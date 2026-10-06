@@ -103,7 +103,7 @@ export function MainInspectionView({
     const hasDisplayImage = !!visibleImageUrl;
 
     return (
-        <ImagePanel $tone={tone}>
+        <ImagePanel data-demo="inspection-image" $tone={tone}>
             <PanelHeader>
                 <PanelTitle>
                     <PanelEyebrow>Live Inspection Image</PanelEyebrow>

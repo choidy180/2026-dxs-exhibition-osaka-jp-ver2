@@ -89,7 +89,7 @@ export default function InspectionHeader({
 
   return (
     <HeaderRow>
-      <ResultCard $tone={resultTone}>
+      <ResultCard data-demo="inspection-result" $tone={resultTone}>
         <ResultIconBox $tone={resultTone}>
           <ResultIcon size={28} strokeWidth={2.4} />
         </ResultIconBox>
@@ -132,7 +132,7 @@ export default function InspectionHeader({
               type="button"
               $active={summaryFilter === 'ng'}
               $tone="ng"
-              onClick={() => onSummaryFilterChange('ng')}
+              data-demo="inspection-ng" onClick={() => onSummaryFilterChange('ng')}
             >
               <SummaryLabel>NG</SummaryLabel>
               <SummaryCount>{ngCount}</SummaryCount>
@@ -141,7 +141,7 @@ export default function InspectionHeader({
               type="button"
               $active={summaryFilter === 'ok'}
               $tone="ok"
-              onClick={() => onSummaryFilterChange('ok')}
+              data-demo="inspection-ok" onClick={() => onSummaryFilterChange('ok')}
             >
               <SummaryLabel>OK</SummaryLabel>
               <SummaryCount>{okCount}</SummaryCount>
@@ -149,7 +149,7 @@ export default function InspectionHeader({
             <SummaryChip
               type="button"
               $active={summaryFilter === 'all'}
-              onClick={() => onSummaryFilterChange('all')}
+              data-demo="inspection-all" onClick={() => onSummaryFilterChange('all')}
             >
               <SummaryLabel>ALL</SummaryLabel>
               <SummaryCount>{totalCorners}</SummaryCount>
@@ -163,7 +163,7 @@ export default function InspectionHeader({
           <ChevronDown size={15} strokeWidth={2.4} />
         </CompactTypeButton>
 
-        <HeaderHistoryButton type="button" onClick={onOpenHistory}>
+        <HeaderHistoryButton type="button" data-demo="inspection-history" onClick={onOpenHistory}>
           <Calendar size={18} strokeWidth={2.5} />
           이전 검사기록 조회
         </HeaderHistoryButton>

@@ -49,7 +49,7 @@ export default function CameraRpaStepList({ hosts, cameras, isScanning }: Props)
         const isResetting = camera.resetUntil !== null;
         const statusText = isResetting ? '초기화 중' : isConnected ? '연결됨' : isChecking ? '확인 중' : '연결 안 됨';
         const detailText = isResetting ? '카메라 초기화 중' : host
-          ? '전시 영상 재생 중'
+          ? '영상 재생 중'
           : isChecking
             ? '카메라 신호 확인 중'
             : '카메라 신호 없음';

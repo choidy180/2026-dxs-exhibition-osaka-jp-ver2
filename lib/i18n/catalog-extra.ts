@@ -595,21 +595,21 @@ export const extraCatalog: Record<string, { en: string; ja: string }> = {
     "en": "Could not load the exhibition data. Please try again.",
     "ja": "展示データを読み込めませんでした。再試行してください。"
   },
-  "전시 영상 재생 중": {
-    "en": "Playing exhibition video",
-    "ja": "展示映像を再生中"
+  "영상 재생 중": {
+    "en": "Playing video",
+    "ja": "映像を再生中"
   },
-  "전시용 영상과 예시 데이터로 공장 모니터링을 체험할 수 있습니다.": {
-    "en": "Explore factory monitoring with exhibition videos and sample data.",
-    "ja": "展示映像とサンプルデータで工場監視を体験できます。"
+  "영상과 예시 데이터로 공장 모니터링을 체험할 수 있습니다.": {
+    "en": "Explore factory monitoring with videos and sample data.",
+    "ja": "映像とサンプルデータで工場監視を体験できます。"
   },
-  "전시용 BOM 데이터입니다. 목록 적용일자:": {
-    "en": "Exhibition BOM data. Effective date:",
-    "ja": "展示用BOMデータです。一覧の適用日："
+  "BOM 데이터입니다. 목록 적용일자:": {
+    "en": "BOM data. Effective date:",
+    "ja": "BOMデータです。一覧の適用日："
   },
-  "전시회 데모 · BOM 정전개 전체 리스트": {
-    "en": "Exhibition demo · Complete BOM explosion",
-    "ja": "展示会デモ · BOM正展開全件一覧"
+  "BOM 정전개 전체 리스트": {
+    "en": "Complete BOM explosion",
+    "ja": "BOM正展開全件一覧"
   },
   "전시회 데모 · CCTV 검사 알림이 도착했습니다.": {
     "en": "Exhibition demo · A CCTV inspection alert has arrived.",
@@ -807,9 +807,9 @@ export const extraCatalog: Record<string, { en: string; ja: string }> = {
     "en": "Configure search filters",
     "ja": "検索条件を設定"
   },
-  "조회 조건과 관계없이 전시용 전체 목록을 저장합니다.": {
-    "en": "Save the full exhibition list regardless of filters.",
-    "ja": "検索条件に関係なく、展示用一覧を全件保存します。"
+  "조회 조건과 관계없이 전체 목록을 저장합니다.": {
+    "en": "Save the full list regardless of filters.",
+    "ja": "検索条件に関係なく、一覧を全件保存します。"
   },
   "조회 조건에 맞는 데이터가 없습니다. 날짜나 자재 조건을 바꿔보세요.": {
     "en": "No data matches the filters. Try another date or material.",
@@ -1475,9 +1475,9 @@ export const extraCatalog: Record<string, { en: string; ja: string }> = {
     "en": "Export current results to Excel",
     "ja": "現在の条件でExcelをダウンロード"
   },
-  "현재 조건은 화면 조회 결과를, 전체 리스트는 전시용 전체 데이터를 엑셀로 저장합니다.": {
-    "en": "Export current results or the complete exhibition dataset to Excel.",
-    "ja": "現在の条件では画面の検索結果を、全件一覧では展示用の全データをExcelに保存します。"
+  "현재 조건은 화면 조회 결과를, 전체 리스트는 전체 데이터를 엑셀로 저장합니다.": {
+    "en": "Export current results or the complete dataset to Excel.",
+    "ja": "現在の条件では画面の検索結果を、全件一覧では全データをExcelに保存します。"
   },
   "현재 총 생산량": {
     "en": "Current total production",
@@ -2043,9 +2043,9 @@ export const extraCatalog: Record<string, { en: string; ja: string }> = {
     "en": "Production plan saved for this exhibition session.",
     "ja": "生産計画を現在の展示セッションに保存しました。"
   },
-  "선택한 조건으로 전시용 BOM을 조회합니다.": {
-    "en": "Search the exhibition BOM with the selected filters.",
-    "ja": "選択した条件で展示用BOMを検索します。"
+  "선택한 조건으로 BOM을 조회합니다.": {
+    "en": "Search the BOM with the selected filters.",
+    "ja": "選択した条件でBOMを検索します。"
   }
 };
 

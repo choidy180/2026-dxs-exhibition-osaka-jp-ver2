@@ -1,3 +1,4 @@
+import { startVisibleInterval } from '@/utils/visible-interval';
 import { useEffect, useState } from 'react';
 import { createExhibitionInvoice } from '@/data/exhibition-material';
 import type { WearableApiEntry } from '@/types/types';
@@ -8,11 +9,11 @@ export function useVuzixLog({ onDetected }: Props) {
   const [scannedInvoiceData, setScannedInvoiceData] = useState<WearableApiEntry[]>([]);
   useEffect(() => {
     const initial = window.setTimeout(() => setScannedInvoiceData(createExhibitionInvoice()), 0);
-    const timer = window.setInterval(() => {
+    const timer = startVisibleInterval(() => {
       setScannedInvoiceData(createExhibitionInvoice());
       onDetected();
     }, 30_000);
-    return () => { window.clearTimeout(initial); window.clearInterval(timer); };
+    return () => { window.clearTimeout(initial); timer(); };
   }, [onDetected]);
   return scannedInvoiceData;
 }

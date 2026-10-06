@@ -1,5 +1,6 @@
 'use client';
 
+import { startVisibleInterval } from '@/utils/visible-interval';
 import { createRef, useCallback, useEffect, useState } from 'react';
 import type { MaterialCameraPlayback } from '@/types/material-camera-video';
 import { MAX_CAMERA_COUNT } from '@/constants/material-monitoring';
@@ -29,7 +30,7 @@ export function useMaterialCameraVideos() {
       });
     }), 0);
 
-    const timer = window.setInterval(() => setCameras(previous => {
+    const timer = startVisibleInterval(() => setCameras(previous => {
       const now = Date.now();
       const occupied = previous.map(camera => camera.src);
       let changed = false;
@@ -48,11 +49,11 @@ export function useMaterialCameraVideos() {
         return { ...camera, src, resetUntil: null, remainingSeconds: 0, revision: camera.revision + 1 };
       });
       return changed ? next : previous;
-    }), 250);
+    }), 1_000);
 
     return () => {
       window.clearTimeout(initialTimer);
-      window.clearInterval(timer);
+      timer();
     };
   }, []);
 

@@ -1,4 +1,5 @@
 "use client";
+import { usePageVisible } from '@/hooks/use-page-visible';
 
 import React, { useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -419,6 +420,7 @@ export default function Transport3DMap({
   onMarkerClick,
   onMapBlankClick,
 }: Transport3DMapProps) {
+  const visible = usePageVisible();
   const { texture, status, retry, surfaceRef, surfaceSize } = useTransportMapTexture({ zoom: TILE_ZOOM, tileSize: TILE_SIZE, ...TILE_RANGE });
   const { model: truckModel, status: truckStatus, retry: retryTruck } = useGmtTruckModel();
 
@@ -426,7 +428,8 @@ export default function Transport3DMap({
     <MapContainer className="transport-3d-map">
       <VectorMapTextureSurface targetRef={surfaceRef} {...surfaceSize} />
       <Canvas
-        dpr={[1, 2]}
+        frameloop={visible ? 'always' : 'never'}
+        dpr={[1, 1.25]}
         shadows
         camera={{ position: [2, 24, 31], fov: 36, near: 0.1, far: 120 }}
         gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}

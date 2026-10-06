@@ -1,5 +1,6 @@
 "use client";
 
+import { startVisibleInterval } from '@/utils/visible-interval';
 import DemoVideo from '@/components/common/demo-video/DemoVideo';
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import styled, { createGlobalStyle, css, keyframes } from 'styled-components';
@@ -195,13 +196,13 @@ const PanelBlock = styled.div`
   }
 `;
 
-const PanelTitle = styled.h2<{ flex?: boolean }>`
+const PanelTitle = styled.h2<{ $flex?: boolean }>`
   font-size: 16px;
   font-weight: 600;
   color: #0F172A;
   margin: 0 0 16px 0;
-  display: ${props => props.flex ? 'flex' : 'block'};
-  justify-content: ${props => props.flex ? 'space-between' : 'flex-start'};
+  display: ${props => props.$flex ? 'flex' : 'block'};
+  justify-content: ${props => props.$flex ? 'space-between' : 'flex-start'};
   align-items: center;
 `;
 
@@ -980,8 +981,8 @@ export default function FinalDashboard() {
       setMapData(next); tick += 1;
     };
     update();
-    const timer = window.setInterval(update, 15000);
-    return () => window.clearInterval(timer);
+    const timer = startVisibleInterval(update, 15000);
+    return () => timer();
   }, []);
 
   const stats = useMemo<ZoneStat[]>(() => {
@@ -1202,7 +1203,7 @@ export default function FinalDashboard() {
         <LeftColumn>
           <PanelBlock>
             <PanelTitle>전체 운영 요약</PanelTitle>
-            <SummaryGrid>
+            <SummaryGrid data-demo="product-stats">
               <SummaryItem>
                 <span className="lbl">전체 적재율</span>
                 <span className="val big">{totalPercent}<small>%</small></span>
@@ -1256,7 +1257,7 @@ export default function FinalDashboard() {
         </LeftColumn>
 
         {/* 🟢 중앙 패널: 스마트 맵 */}
-        <CenterColumn ref={centerPanelRef} $fullscreen={isMapFullscreen}>
+        <CenterColumn data-demo="product-map" ref={centerPanelRef} $fullscreen={isMapFullscreen}>
           {isMapFullscreen && productInfoOverlay}
           {isMapFullscreen && viewPickerOverlay}
           <CenterHeader>
@@ -1273,9 +1274,9 @@ export default function FinalDashboard() {
                 <div className="item"><div className="box full" /> 적재 완료</div>
               </Legend>
               <ZoomButtonGroup>
-                <button type="button" aria-label="지도 축소" onClick={() => setZoomLevel(prev => Math.max(0.4, prev - 0.1))}><ZoomOut size={16}/></button>
+                <button type="button" data-demo="product-zoom-out" aria-label="지도 축소" onClick={() => setZoomLevel(prev => Math.max(0.4, prev - 0.1))}><ZoomOut size={16}/></button>
                 <span className="zoom-value">{Math.round(zoomLevel * 100)}%</span>
-                <button type="button" aria-label="지도 확대" onClick={() => setZoomLevel(prev => Math.min(2.5, prev + 0.1))}><ZoomIn size={16}/></button>
+                <button type="button" data-demo="product-zoom-in" aria-label="지도 확대" onClick={() => setZoomLevel(prev => Math.min(2.5, prev + 0.1))}><ZoomIn size={16}/></button>
                 <button
                   type="button"
                   aria-label={isMapFullscreen ? '전체화면 종료' : '지도 전체화면'}
@@ -1306,7 +1307,7 @@ export default function FinalDashboard() {
         {/* 🟢 우측 패널: 실시간 재고 목록 */}
         <RightColumn>
           <RightHeader>
-            <PanelTitle flex style={{ margin: 0 }}>실시간 재고 목록 <LiveBadge>LIVE</LiveBadge></PanelTitle>
+            <PanelTitle $flex style={{ margin: 0 }}>실시간 재고 목록 <LiveBadge>LIVE</LiveBadge></PanelTitle>
             <SearchBox>
               <Search size={16} color="#94A3B8" />
               <input placeholder="차량번호 / 위치 검색" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />

@@ -1,4 +1,4 @@
-/** 검사·설비·운송 화면에 사용하는 전시용 번역. */
+/** 검사·설비·운송 화면에 사용하는 번역. */
 export const inspectionCatalog: Record<string, { en: string; ja: string }> = Object.fromEntries([
   ['동성정밀', 'Dongseong Precision', 'ドンソン精密'],
   ['동우정밀', 'Dongwoo Precision', 'ドンウ精密'],
@@ -140,7 +140,7 @@ export const inspectionCatalog: Record<string, { en: string; ja: string }> = Obj
   ['선택한 기간의 조회 결과가 0건입니다. 다른 기간을 선택해 주세요.', 'No results for this period. Select a different period.', '選択した期間の結果は0件です。別の期間を選択してください。'],
   ['선택한 리비전 데이터를 찾을 수 없습니다.', 'Data for the selected revision was not found.', '選択したリビジョンのデータが見つかりません。'],
   ['선택한 리비전의 생산계획을 불러오고 있습니다.', 'Loading the production plan for the selected revision.', '選択したリビジョンの生産計画を読み込んでいます。'],
-  ['선택한 조건으로 전시용 BOM을 조회합니다.', 'Load the demo BOM using the selected criteria.', '選択した条件で展示用BOMを参照します。'],
+  ['선택한 조건으로 BOM을 조회합니다.', 'Load the demo BOM using the selected criteria.', '選択した条件でBOMを参照します。'],
   ['선택한 차량의 경로를 확인하세요', 'View the selected vehicle route', '選択した車両のルートをご確認ください'],
   ['선택한 타입에 맞춰 메인 검사 화면 배치가 즉시 변경됩니다.', 'The inspection layout changes immediately to match the selected view.', '選択した表示タイプに合わせて、検査画面の配置がすぐに切り替わります。'],
   ['선택한 CCTV의 실시간 영상입니다. 창을 닫으면 영상 연결이 종료됩니다.', 'Live view of the selected camera. Closing this window stops playback.', '選択したカメラの映像です。ウィンドウを閉じると再生を終了します。'],

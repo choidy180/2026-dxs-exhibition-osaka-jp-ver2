@@ -59,7 +59,7 @@ export function ProductionLogPanel({
             </LogList>
 
             <LogFooter>
-                <SecondaryButton type="button" onClick={onOpenAllLogs}>
+                <SecondaryButton type="button" data-demo="inspection-logs" onClick={onOpenAllLogs}>
                     전체 로그 보기
                     <ChevronRight size={16} />
                 </SecondaryButton>

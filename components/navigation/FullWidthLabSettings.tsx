@@ -5,7 +5,7 @@ import { FlaskConical, X } from 'lucide-react';
 import { AnimatePresence, motion as animated, useReducedMotion } from 'framer-motion';
 import styled from 'styled-components';
 import { useLocale } from '@/components/i18n/LocaleProvider';
-import { color, controlHeight, focusRing, font, fontSize, motion, motionDuration, radius, shadow, space, zIndex } from '@/styles/design-tokens';
+import { color, controlHeight, exhibitionDemo, focusRing, font, fontSize, motion, motionDuration, radius, shadow, space, zIndex } from '@/styles/design-tokens';
 import ExhibitionSettings from './ExhibitionSettings';
 
 /** Lab settings remain reachable on screens that intentionally have no navigation rail. */
@@ -55,7 +55,7 @@ export default function FullWidthLabSettings() {
 const SettingsRoot = styled.div`
   position: fixed;
   top: ${space.xl}px;
-  right: ${space.xl}px;
+  right: ${exhibitionDemo.handleWidth + space.xl * 2}px;
   z-index: ${zIndex.navPopover};
   font-family: ${font.family};
   *, *::before, *::after { font-family: inherit; }

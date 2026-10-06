@@ -67,7 +67,7 @@ export default function PlanPreviewGrid({ dataset, isLoading, error, onRetry, no
   };
 
   return (
-    <PreviewPanel>
+    <PreviewPanel data-demo="plan-grid">
       <CardHead>
         <div className="title-group">
           <Table2 size={20} />

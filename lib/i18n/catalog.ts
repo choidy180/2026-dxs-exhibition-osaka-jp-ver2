@@ -181,7 +181,7 @@ LG1_선진화|LG1_先進化|LG1_Advanced
 전시 모드|展示モード|Exhibition mode
 로컬 전시 모드|ローカル展示モード|Local exhibition mode
 데모 데이터|デモデータ|Demo data
-전시용 샘플 데이터|展示用サンプルデータ|Exhibition sample data
+샘플 데이터|サンプルデータ|Sample data
 로컬 데모|ローカルデモ|Local demo
 선택된 데이터가 없습니다.|データが選択されていません。|No data selected.
 데이터가 없습니다.|データがありません。|No data available.
@@ -707,7 +707,6 @@ R액|R液|R-liquid
 샘플|サンプル|Sample
 데모|デモ|Demo
 전시회|展示会|Exhibition
-전시용|展示用|Exhibition
 전시|展示|Exhibition
 오사카|大阪|Osaka
 일본어|日本語|Japanese

@@ -1,5 +1,6 @@
 'use client';
 
+import { startVisibleInterval } from '@/utils/visible-interval';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /** 생성 함수만 실행하므로 실제 API나 설비에 접근하지 않는다. */
@@ -18,8 +19,8 @@ export function useDemoInspection<T>(createSnapshot: (sequence: number) => T) {
 
   useEffect(() => {
     const initial = window.setTimeout(refresh, 120);
-    const timer = window.setInterval(refresh, 5000);
-    return () => { window.clearTimeout(initial); window.clearInterval(timer); };
+    const timer = startVisibleInterval(refresh, 5000);
+    return () => { window.clearTimeout(initial); timer(); };
   }, [refresh]);
 
   return { data, isLoading: data === null && error === null, error, retry: refresh, refresh };

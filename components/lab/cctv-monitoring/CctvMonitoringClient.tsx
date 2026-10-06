@@ -359,7 +359,7 @@ function CameraCards({
                         key={camera.id}
                         type="button"
                         $selected={selectedCameraId === camera.id}
-                        onClick={() => onOpenCamera(camera)}
+                        data-demo="cctv-expand" onClick={() => onOpenCamera(camera)}
                         aria-label={`${camera.code} ${camera.name} 크게 보기`}
                         aria-pressed={selectedCameraId === camera.id}
                       >
@@ -407,7 +407,7 @@ function CameraModal({ camera, closeButtonRef, onClose }: CameraModalProps) {
             aria-hidden="true"
           />
           <ModalDialog
-            key="cctv-modal-dialog"
+            key="cctv-modal-dialog" data-demo="cctv-panel"
             role="dialog"
             aria-modal="true"
             aria-labelledby="cctv-modal-title"
@@ -423,7 +423,7 @@ function CameraModal({ camera, closeButtonRef, onClose }: CameraModalProps) {
               </ModalTitle>
               <ViewerActions>
                 <CameraStatusBadge status={camera.status} />
-                <CloseButton ref={closeButtonRef} type="button" onClick={onClose} aria-label="CCTV 확대 화면 닫기">
+                <CloseButton ref={closeButtonRef} type="button" onClick={onClose} data-demo="cctv-close" aria-label="CCTV 확대 화면 닫기">
                   <X size={18} aria-hidden="true" />
                 </CloseButton>
               </ViewerActions>
@@ -433,7 +433,7 @@ function CameraModal({ camera, closeButtonRef, onClose }: CameraModalProps) {
               <StageLabel><Camera size={13} aria-hidden="true" />{camera.code}</StageLabel>
               <StageHint>
                 <Wifi size={13} aria-hidden="true" />
-                전시 영상 재생 중
+                영상 재생 중
               </StageHint>
             </ModalStage>
             <ModalFooter>
@@ -579,7 +579,7 @@ export default function CctvMonitoringClient({ testPanel }: { testPanel?: ReactN
               <ViewModeButton
                 type="button"
                 $active={viewMode === 'list'}
-                onClick={() => setViewMode('list')}
+                data-demo="cctv-list" onClick={() => setViewMode('list')}
                 aria-pressed={viewMode === 'list'}
               >
                 <List size={15} aria-hidden="true" />
@@ -588,7 +588,7 @@ export default function CctvMonitoringClient({ testPanel }: { testPanel?: ReactN
               <ViewModeButton
                 type="button"
                 $active={viewMode === 'card'}
-                onClick={() => setViewMode('card')}
+                data-demo="cctv-card" onClick={() => setViewMode('card')}
                 aria-pressed={viewMode === 'card'}
               >
                 <LayoutGrid size={15} aria-hidden="true" />
@@ -602,7 +602,7 @@ export default function CctvMonitoringClient({ testPanel }: { testPanel?: ReactN
           <Info size={17} aria-hidden="true" />
           <p>
             {USE_MOCK_DATA
-              ? '전시용 영상과 예시 데이터로 공장 모니터링을 체험할 수 있습니다.'
+              ? '영상과 예시 데이터로 공장 모니터링을 체험할 수 있습니다.'
               : `사내 카메라 목록 API를 연결했습니다. 썸네일은 ${formatRefreshInterval(THUMBNAIL_REFRESH_MS)}마다 갱신하며, 응답하지 않는 카메라는 연결 안 됨으로 표시합니다.`}
           </p>
         </NoticeBar>

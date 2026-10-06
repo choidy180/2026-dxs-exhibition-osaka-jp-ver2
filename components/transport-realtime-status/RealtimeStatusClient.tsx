@@ -1,5 +1,7 @@
 "use client";
 
+import { startVisibleInterval } from '@/utils/visible-interval';
+import { usePageVisible } from '@/hooks/use-page-visible';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import styled from "styled-components";
 import {
@@ -346,6 +348,7 @@ const useDraggableDock = (viewport: Size2D) => {
 };
 
 const useVehicleSimulation = () => {
+  const visible = usePageVisible();
   const [vehicles, setVehicles] = useState<SimulationVehicle[]>([]);
   const [markers, setMarkers] = useState<VWorldMarker[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -379,14 +382,16 @@ const useVehicleSimulation = () => {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 180000);
-    return () => clearInterval(interval);
+    const interval = startVisibleInterval(fetchData, 180000);
+    return () => interval();
   }, [fetchData]);
 
   useEffect(() => {
+    if (!visible) return;
     let animationFrameId: number;
     let lastFrameTime = 0;
-    const targetFps = 30;
+    // 지도 위치는 10Hz로 갱신하고 3D의 보간·카메라 렌더링은 Canvas에 맡긴다.
+    const targetFps = 10;
     const frameInterval = 1000 / targetFps;
 
     const baseMarkers = [
@@ -434,7 +439,7 @@ const useVehicleSimulation = () => {
     };
     animationFrameId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [targetIds]);
+  }, [targetIds, visible]);
 
   return { vehicles, markers, targetIds, fetchData, isLoading, isSampleMode, setIsSampleMode };
 };
@@ -715,11 +720,11 @@ export default function RealtimeStatusClient() {
 
   useEffect(() => {
     const initialTimer = window.setTimeout(() => { setIsMounted(true); setCurrentTime(new Date()); fetchWeather(); }, 0);
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    const weatherTimer = setInterval(fetchWeather, 600000);
+    const timer = startVisibleInterval(() => setCurrentTime(new Date()), 1000);
+    const weatherTimer = startVisibleInterval(fetchWeather, 600000);
     return () => {
-      clearInterval(timer);
-      clearInterval(weatherTimer);
+      timer();
+      weatherTimer();
       window.clearTimeout(initialTimer);
     };
   }, []);
@@ -751,7 +756,7 @@ export default function RealtimeStatusClient() {
 
   return (
     <Container ref={containerRef}>
-      <MapScene inert={passivePanelsVisible && !isLoading && movingCount === 0}>
+      <MapScene data-demo="transport-map" inert={passivePanelsVisible && !isLoading && movingCount === 0}>
       <MapArea>
         {mapViewMode === "3d" ? (
           <Transport3DMap
@@ -776,11 +781,11 @@ export default function RealtimeStatusClient() {
 
       <MapModeFloating aria-label="지도 보기 방식" data-panel="mode-switch">
         <span className="view-label">지도 보기</span>
-        <button type="button" className={mapViewMode === "2d" ? "active" : ""} onClick={() => setMapViewMode("2d")} aria-pressed={mapViewMode === "2d"}>
+        <button type="button" className={mapViewMode === "2d" ? "active" : ""} data-demo="transport-2d" onClick={() => setMapViewMode("2d")} aria-pressed={mapViewMode === "2d"}>
           <MapIcon size={15} />
           <span><strong>기존 지도</strong><small>2D 실시간 관제</small></span>
         </button>
-        <button type="button" className={mapViewMode === "3d" ? "active" : ""} onClick={() => setMapViewMode("3d")} aria-pressed={mapViewMode === "3d"}>
+        <button type="button" className={mapViewMode === "3d" ? "active" : ""} data-demo="transport-3d" onClick={() => setMapViewMode("3d")} aria-pressed={mapViewMode === "3d"}>
           <Box size={15} />
           <span><strong>자연형 3D</strong><small>입체 디지털 트윈</small></span>
         </button>
@@ -866,7 +871,7 @@ export default function RealtimeStatusClient() {
 
       {isPanelVisible("right") && (
         <RightSideWrapper style={toRightAnchoredPanelStyle(panelRects.right, viewport.width || 1920)} data-panel="right-status">
-          <StatsPanel>
+          <StatsPanel data-demo="transport-stats">
             <StatsHeader>
               <div className="title-box">
                 <span className="icon-box"><PieChart size={15} /></span>

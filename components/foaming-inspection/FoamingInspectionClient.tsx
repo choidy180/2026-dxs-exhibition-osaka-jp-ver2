@@ -1,5 +1,6 @@
 "use client";
 
+import { startVisibleInterval } from '@/utils/visible-interval';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import styled, { createGlobalStyle, keyframes } from 'styled-components';
@@ -999,7 +1000,7 @@ export default function ProcessDashboard() {
 
   useEffect(() => {
     if (isLoading) return;
-    const timer = window.setInterval(() => {
+    const timer = startVisibleInterval(() => {
       const phase = Date.now() / 5000;
       const next = generateMockData().map((cart, cartIndex) => {
         const nextCart = { ...cart };
@@ -1013,7 +1014,7 @@ export default function ProcessDashboard() {
       const selected = next.find(cart => cart['대차번호'] === selectedCartNo);
       if (selected) updateMetricsForCart(selected, apiLimits);
     }, 3000);
-    return () => window.clearInterval(timer);
+    return () => timer();
   }, [isLoading, selectedCartNo, apiLimits, updateMetricsForCart]);
 
   useEffect(() => {
@@ -1069,10 +1070,10 @@ export default function ProcessDashboard() {
           <DashboardContent>
             {isModalOpen && createPortal(
               <ModalOverlay onClick={() => setIsModalOpen(false)}>
-                <ModalContainer onClick={e => e.stopPropagation()}>
+                <ModalContainer data-demo="foaming-panel" onClick={e => e.stopPropagation()}>
                   <ModalHeader>
                     <ModalTitle>설비 선택 (M-01 ~ M-24)</ModalTitle>
-                    <CloseButton onClick={() => setIsModalOpen(false)} aria-label="설비 선택 닫기">
+                    <CloseButton data-demo="foaming-close" onClick={() => setIsModalOpen(false)} aria-label="설비 선택 닫기">
                       <FiX />
                     </CloseButton>
                   </ModalHeader>
@@ -1117,7 +1118,7 @@ export default function ProcessDashboard() {
                 </Tab>
                 <Tab
                   $isAction={true}
-                  onClick={() => setIsModalOpen(true)}
+                  data-demo="foaming-expand" onClick={() => setIsModalOpen(true)}
                 >
                   <FiGrid />
                   설비 전체보기
@@ -1171,7 +1172,7 @@ export default function ProcessDashboard() {
                   <RightTitle>핵심 공정 지표 및 운영 범위</RightTitle>
                   <LiveBadge>LIVE</LiveBadge>
                 </RightHeader>
-                <MetricsGrid>
+                <MetricsGrid data-demo="foaming-metrics">
                   {metricsData.map((metric) => (
                     <MetricCard key={metric.id} data={metric} />
                   ))}

@@ -188,6 +188,7 @@ export const motion = {
 export const motionDuration = {
   fast: 0.16,
   enter: 0.22,
+  page: 0.8,
   spin: 0.9,
 } as const;
 
@@ -214,8 +215,8 @@ export const exhibitionGuide = {
 export const zIndex = {
   stickyHead: 1,
   popover: 100,
-  /** Page guide stays behind dialogs and navigation. */
-  exhibitionGuide: 900,
+  /** 고양이·말풍선 최상위 레이어와 Popover API 미지원 브라우저의 대체 순서. */
+  exhibitionGuide: 2147483647,
   modalBackdrop: 2000,
   modal: 2001,
   fullscreen: 5000,
@@ -228,6 +229,20 @@ export const zIndex = {
   advisorLauncher: 10030,
   advisorBackdrop: 10100,
   advisorPanel: 10101,
+  /** 전시 자동 재생은 전체화면·내비게이션 위에서도 중단할 수 있다. */
+  demoFocus: 10150,
+  pageTransition: 10200,
+  demoControls: 10210,
+} as const;
+
+/** 전시 시연 전용 배치. 페이지의 실제 데이터 영역과 독립적인 고정 오버레이. */
+export const exhibitionDemo = {
+  handleWidth: 96,
+  panelWidth: 312,
+  hiddenOffset: 350,
+  focusPadding: space.sm,
+  cursorSize: 28,
+  guideWidth: 760,
 } as const;
 
 /**
@@ -267,6 +282,7 @@ export const tokens = {
   motion,
   motionDuration,
   exhibitionGuide,
+  exhibitionDemo,
   zIndex,
   gridLayer,
   focusRing,

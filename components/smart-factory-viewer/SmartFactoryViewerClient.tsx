@@ -137,7 +137,7 @@ export default function SmartFactoryViewerClient() {
           onModeChange={setMode}
         />
 
-        <ViewerBody $layout={layout}>
+        <ViewerBody data-demo="equipment-viewer" $layout={layout}>
           <SceneSlot $layout={layout} $mode={mode}>
             <FactoryScene
               layout={layout}

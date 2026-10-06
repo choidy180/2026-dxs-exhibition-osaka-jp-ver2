@@ -1,12 +1,13 @@
 "use client";
 
 
+import { startVisibleInterval } from '@/utils/visible-interval';
 import ConveyorVisionVideo from './ConveyorVisionVideo';
 import { TAKTTIME_PART_NAMES } from '@/constants/takttime-camera-videos';
 import { TAKTTIME_CHART_MAX_SECONDS, TAKTTIME_DEMO_UPDATE_MS, TAKTTIME_TARGET_SECONDS as TARGET_TAKT } from '@/constants/takttime-cycle';
 import type { TakttimeLine } from '@/types/takttime-vision';
 import { getDemoCycleTime } from '@/utils/takttime-cycle';
-import React, { useState, useEffect, useMemo, memo, useCallback, useId } from "react";
+import React, { useState, useEffect, useMemo, memo, useCallback, useId, useRef } from "react";
 import styled, { createGlobalStyle } from "styled-components";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import {
@@ -794,6 +795,8 @@ const generateInitialDummyData = (line: TakttimeLine): CycleData[] => {
 // --- [Main Component] ---
 
 export default function ProcessDashboard() {
+  const viewTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => viewTimers.current.forEach(clearTimeout), []);
   const [viewMode, setViewMode] = useState<1 | 2 | 3>(3); 
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState("Initializing System...");
@@ -834,14 +837,17 @@ export default function ProcessDashboard() {
 
   const handleViewChange = useCallback((newMode: 1 | 2 | 3) => {
     if (newMode === viewMode) return;
+    viewTimers.current.forEach(clearTimeout);
+    viewTimers.current = [];
     setIsTransitioning(true);
     setLoadingMsg("Synchronizing Data Streams...");
-    setTimeout(() => {
+    viewTimers.current.push(setTimeout(() => {
         setViewMode(newMode);
-        setTimeout(() => {
+        viewTimers.current.push(setTimeout(() => {
           setIsTransitioning(false);
-        }, 800);
-    }, 50);
+          viewTimers.current = [];
+        }, 800));
+    }, 50));
   }, [viewMode]);
 
   const filteredLogs = useMemo(() => {
@@ -854,7 +860,7 @@ export default function ProcessDashboard() {
 
   useEffect(() => {
     // 라인별 주기로 갱신해 총조립2라인은 15초마다 새 데이터를 추가한다.
-    const timers = (['A', 'B', 'C'] as const).map(line => window.setInterval(() => {
+    const timers = (['A', 'B', 'C'] as const).map(line => startVisibleInterval(() => {
       const timestamp = new Date();
       setData(previous => {
         const history = previous[line];
@@ -875,7 +881,7 @@ export default function ProcessDashboard() {
         };
       });
     }, TAKTTIME_DEMO_UPDATE_MS[line]));
-    return () => timers.forEach(timer => window.clearInterval(timer));
+    return () => timers.forEach(timer => timer());
   }, []);
 
   useEffect(() => {
@@ -923,18 +929,18 @@ export default function ProcessDashboard() {
       <GlobalStyle />
       <LayoutContainer>
         <Sidebar>
-          <NavItem $active={viewMode === 1} onClick={() => handleViewChange(1)}>
+          <NavItem data-demo="takt-view-1" $active={viewMode === 1} onClick={() => handleViewChange(1)}>
             <Refrigerator size={24} strokeWidth={2} /><span>꼬모<br/>냉장고</span>
           </NavItem>
-          <NavItem $active={viewMode === 2} onClick={() => handleViewChange(2)}>
+          <NavItem data-demo="takt-view-2" $active={viewMode === 2} onClick={() => handleViewChange(2)}>
             <Wine size={24} strokeWidth={2} /><span>와인<br/>셀러</span>
           </NavItem>
-          <NavItem $active={viewMode === 3} onClick={() => handleViewChange(3)}>
+          <NavItem data-demo="takt-view-3" $active={viewMode === 3} onClick={() => handleViewChange(3)}>
             <GlassWater size={24} strokeWidth={2} /><span>얼음<br/>정수기</span>
           </NavItem>
         </Sidebar>
 
-        <MainContent>
+        <MainContent data-demo="takt-dashboard">
             <AnimatePresence>
                 {isTransitioning && (
                     <LoadingOverlay
@@ -1096,7 +1102,7 @@ export default function ProcessDashboard() {
                   <div style={{display:'flex', alignItems:'center', gap:8, fontSize: '0.9rem'}}>
                     <Bell color={COLORS.primary} size={16} /> 알림 로그
                   </div>
-                  <div className="view-all" onClick={() => setShowLogModal(true)}>
+                  <div className="view-all" data-demo="takt-logs" onClick={() => setShowLogModal(true)}>
                       전체 보기 <Maximize2 size={10} />
                   </div>
                 </div>
@@ -1121,7 +1127,7 @@ export default function ProcessDashboard() {
         <AnimatePresence>
           {showLogModal && (
             <ModalOverlay initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowLogModal(false)}>
-              <ModalContent 
+              <ModalContent data-demo="takt-log-panel"
                 variants={modalVariants} 
                 initial="initial" 
                 animate="animate" 
@@ -1130,7 +1136,7 @@ export default function ProcessDashboard() {
               >
                 <div className="modal-header">
                   <h2><FileText size={24} color={COLORS.primary} /> 전체 알림 및 로그 내역</h2>
-                  <button className="close-btn" onClick={() => setShowLogModal(false)}><X size={20} /></button>
+                  <button className="close-btn" data-demo="takt-log-close" aria-label="작업시간 로그 닫기" onClick={() => setShowLogModal(false)}><X size={20} /></button>
                 </div>
                 
                 <div className="modal-toolbar">

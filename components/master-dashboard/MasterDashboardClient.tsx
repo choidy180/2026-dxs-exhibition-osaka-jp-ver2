@@ -425,7 +425,7 @@ const MetricFormula = styled.div`
 const DashboardGrid = memo(() => (
   <GridWrapper>
     {DASHBOARD_ITEMS.map((item, index) => (
-      <CardLink href={item.href} key={item.id}>
+      <CardLink href={item.href} key={item.id} data-demo={`dashboard-${item.id}`}>
         <Card $color={item.color} $index={index}>
           <CardHeader>
             <IconBox $color={item.color}><item.icon /></IconBox>

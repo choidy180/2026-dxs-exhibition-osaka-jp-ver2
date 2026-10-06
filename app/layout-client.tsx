@@ -9,6 +9,8 @@ import { AnimatePresence } from "framer-motion";
 import TopNavigation from "@/components/navigation/top-navigation";
 import FullWidthLabSettings from '@/components/navigation/FullWidthLabSettings';
 import ExhibitionGuide from '@/components/exhibition-guide/ExhibitionGuide';
+import ExhibitionDemoProvider from '@/components/exhibition-demo/ExhibitionDemoProvider';
+import { PageEntrance, PageTransitionProvider } from '@/components/exhibition-demo/PageTransition';
 import { useViewContext } from "./view-context";
 import StartAnime from "@/components/start/start-anime";
 
@@ -201,7 +203,8 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
   }, [pathname, setIsLoading, isSkipLoading]);
 
   return (
-    <>
+    <PageTransitionProvider>
+    <ExhibitionDemoProvider>
       {isFullWidthPage && <FullWidthLabSettings />}
       {!isFullWidthPage && isWarehouseManagementPage && <MobileLabSettings><FullWidthLabSettings /></MobileLabSettings>}
       {/* 1. 모바일 접속 시 차단 화면 */}
@@ -245,12 +248,13 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
           $isFullWidth={isFullWidthPage}
           $mobileFullWidth={isWarehouseManagementPage || isPushTestPage}
         >
-            {children}
+            <PageEntrance>{children}</PageEntrance>
         </MainContent>
 
         <ExhibitionGuide fullWidth={isFullWidthPage} mobileAllowed={isMobileAllowedPage} mobileFullWidth={isWarehouseManagementPage} />
         
       </DesktopOnlyWrapper>
-    </>
+    </ExhibitionDemoProvider>
+    </PageTransitionProvider>
   );
 }

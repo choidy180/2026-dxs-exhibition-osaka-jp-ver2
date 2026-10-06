@@ -16,8 +16,9 @@ const getBrowser = (): GuidePreferenceBrowser | undefined =>
   typeof window === 'undefined' ? undefined : window;
 
 /** Shared outside React so language changes and component remounts retain the choice. */
-export function createExhibitionGuidePreferenceStore(browser = getBrowser) {
-  let enabled = true;
+export function createExhibitionGuidePreferenceStore(browser = getBrowser, options = { storageKey: EXHIBITION_GUIDE_STORAGE_KEY, initialEnabled: true }) {
+  const { storageKey, initialEnabled } = options;
+  let enabled = initialEnabled;
   let memoryOnly = false;
   let detachStorage: (() => void) | undefined;
   const listeners = new Set<() => void>();
@@ -27,7 +28,10 @@ export function createExhibitionGuidePreferenceStore(browser = getBrowser) {
     if (!memoryOnly) {
       try {
         const target = browser();
-        if (target) enabled = target.localStorage.getItem(EXHIBITION_GUIDE_STORAGE_KEY) !== 'false';
+        if (target) {
+          const stored = target.localStorage.getItem(storageKey);
+          enabled = stored === null ? initialEnabled : stored !== 'false';
+        }
       } catch {
         // Private browsing and storage policies can deny reads; retain the last choice.
       }
@@ -40,7 +44,7 @@ export function createExhibitionGuidePreferenceStore(browser = getBrowser) {
     try {
       const target = browser();
       memoryOnly = !target;
-      target?.localStorage.setItem(EXHIBITION_GUIDE_STORAGE_KEY, String(value));
+      target?.localStorage.setItem(storageKey, String(value));
     } catch {
       // Do not let a stale stored value overwrite a choice when a write is denied.
       memoryOnly = true;
@@ -53,13 +57,13 @@ export function createExhibitionGuidePreferenceStore(browser = getBrowser) {
     const target = browser();
     if (listeners.size === 1 && target) {
       const onStorage: StorageListener = event => {
-        if (event.key !== EXHIBITION_GUIDE_STORAGE_KEY && event.key !== null) return;
+        if (event.key !== storageKey && event.key !== null) return;
         try {
           if (event.storageArea && event.storageArea !== target.localStorage) return;
         } catch {
           return;
         }
-        enabled = event.newValue !== 'false';
+        enabled = event.newValue === null ? initialEnabled : event.newValue !== 'false';
         memoryOnly = false;
         notify();
       };
@@ -76,7 +80,7 @@ export function createExhibitionGuidePreferenceStore(browser = getBrowser) {
     };
   };
 
-  return { getSnapshot, getServerSnapshot: () => true, setEnabled, subscribe };
+  return { getSnapshot, getServerSnapshot: () => initialEnabled, setEnabled, subscribe };
 }
 
 const store = createExhibitionGuidePreferenceStore();

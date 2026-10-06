@@ -57,7 +57,7 @@ export default function PlanUploadCard({ isUploading, onUpload, onInvalidDrop }:
   }, [onUpload, openFileDialog, selectedFile]);
 
   return (
-    <Card>
+    <Card data-demo="plan-upload">
       <CardHead>
         <div className="title-group">
           <FileSpreadsheet size={20} />

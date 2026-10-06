@@ -54,5 +54,5 @@ export const transferToMes = async (revisionId: string, itemNos: string[]): Prom
   try {
     if (typeof window !== 'undefined') window.localStorage.setItem(`dxs-exhibition-orders-${revisionId}`, JSON.stringify([...sent]));
   } catch { /* 저장소 제한 시 현재 세션에서 계속 동작한다. */ }
-  return { ok: true, message: `전시용 발주 ${itemNos.length.toLocaleString('ko-KR')}건의 전송 시뮬레이션을 완료했습니다.` };
+  return { ok: true, message: `발주 ${itemNos.length.toLocaleString('ko-KR')}건의 전송 시뮬레이션을 완료했습니다.` };
 };

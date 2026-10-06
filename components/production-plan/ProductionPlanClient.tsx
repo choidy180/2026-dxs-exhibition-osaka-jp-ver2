@@ -150,14 +150,14 @@ export default function ProductionPlanClient({ labMode = false }: ProductionPlan
             <ActionButton
               type="button"
               $variant="soft"
-              onClick={loadDemoData}
+              data-demo="plan-demo" onClick={loadDemoData}
               disabled={isRevisionsLoading || isUploading}
             >
               {isRevisionsLoading ? <Loader2 size={16} className="spin" /> : <PlayCircle size={16} />}
               데모 데이터 보기
             </ActionButton>
 
-            <ActionButton type="button" $variant="success" onClick={handleDownload} disabled={!canDownload}>
+            <ActionButton type="button" data-demo="plan-download" $variant="success" onClick={handleDownload} disabled={!canDownload}>
               <FileDown size={16} />
               엑셀 다운로드
             </ActionButton>
@@ -165,7 +165,7 @@ export default function ProductionPlanClient({ labMode = false }: ProductionPlan
             <ActionButton
               type="button"
               $variant="dark"
-              onClick={saveToDatabase}
+              data-demo="plan-save" onClick={saveToDatabase}
               disabled={!activeRevision || isSaving}
               title={ENABLE_DB_SAVE ? '현재 브라우저에 생산계획을 저장합니다.' : undefined}
             >
@@ -182,7 +182,7 @@ export default function ProductionPlanClient({ labMode = false }: ProductionPlan
           </LabInfoBar>
         )}
 
-        <StatsGrid>
+        <StatsGrid data-demo="plan-metrics">
           <MetricCard $tone="danger">
             <div className="metric-top">
               <span>총 품목수</span>

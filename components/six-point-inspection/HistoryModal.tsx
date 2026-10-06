@@ -165,7 +165,7 @@ export default function HistoryModal({
 
   return createPortal(
     <ModalBackdrop onClick={onClose}>
-      <HistoryModalShell onClick={(event) => event.stopPropagation()}>
+      <HistoryModalShell data-demo="inspection-history-panel" onClick={(event) => event.stopPropagation()}>
         <HistoryHeader>
           <HistoryTitleGroup>
             <HistoryIconBox>
@@ -187,7 +187,7 @@ export default function HistoryModal({
             <HistoryStatPill $tone="ng">
               NG <strong>{stats.ng}</strong>
             </HistoryStatPill>
-            <ModalCloseButton type="button" aria-label="이전 검사기록 닫기" onClick={onClose}>
+            <ModalCloseButton type="button" data-demo="inspection-history-close" aria-label="이전 검사기록 닫기" onClick={onClose}>
               <X size={22} />
             </ModalCloseButton>
           </HistoryHeaderRight>

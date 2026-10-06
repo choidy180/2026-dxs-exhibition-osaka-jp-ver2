@@ -1,5 +1,6 @@
 'use client';
 
+import { startVisibleInterval } from '@/utils/visible-interval';
 import { useEffect, useState } from 'react';
 import { createMockApiData } from '@/data/smartFactoryViewer';
 import type { ApiDataItem, EquipmentPositionItem } from '@/types/smartFactoryViewer';
@@ -18,8 +19,8 @@ export const useSmartFactoryData = () => {
       tick += 1;
     };
     update();
-    const timer = window.setInterval(update, 2_000);
-    return () => window.clearInterval(timer);
+    const timer = startVisibleInterval(update, 2_000);
+    return () => timer();
   }, []);
   return { apiData, equipmentPositions, isFallback: false };
 };

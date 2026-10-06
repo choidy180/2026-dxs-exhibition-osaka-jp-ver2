@@ -201,7 +201,7 @@ export default function WarehouseDashboard() {
               </div>
             </SummaryCard>
 
-            <InventorySection>
+            <InventorySection data-demo="material-inventory">
               <div className="sec-head">
                 <h3>검수 리스트</h3>
                 <div className="search-box">
@@ -226,7 +226,7 @@ export default function WarehouseDashboard() {
           </Sidebar>
 
           {/* Main Map Area */}
-          <MapArea>
+          <MapArea data-demo="material-map">
             <MapHeader>
               <div className="title">구역별 상세 배치도 (D101 ~ D105)</div>
               <div className="legend-bar">

@@ -1,5 +1,6 @@
 "use client";
 
+import { startVisibleInterval } from '@/utils/visible-interval';
 import React, { useState, useEffect, useRef } from 'react';
 import styled, { keyframes, ThemeProvider, createGlobalStyle } from 'styled-components';
 import { 
@@ -104,24 +105,21 @@ export default function PhysicalAIDashboard() {
 
   // 시간 및 날씨 데이터 로직
   useEffect(() => {
-    // 1. 시간 업데이트 (1초마다)
+    // 표시 정밀도에 맞춰 분 단위로만 갱신한다.
     const updateTime = () => {
       const now = new Date();
       // 오후 02:30 형식
       setCurrentTime(now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })); 
     };
     updateTime();
-    const timeInterval = setInterval(updateTime, 1000);
+    const timeInterval = startVisibleInterval(updateTime, 60_000);
 
     // 2. 부산 날씨 가져오기 (Open-Meteo API 사용)
     const fetchWeather = () => setWeather({ temp: 24, humidity: 48 });
     fetchWeather();
-    // 날씨는 자주 바뀔 필요 없으므로 10분(600000ms)마다 갱신하거나 한 번만 호출
-    const weatherInterval = setInterval(fetchWeather, 600000);
 
     return () => {
-      clearInterval(timeInterval);
-      clearInterval(weatherInterval);
+      timeInterval();
     };
   }, []);
 
@@ -131,7 +129,7 @@ export default function PhysicalAIDashboard() {
       setLogs(Array.from({ length: 12 }).map(generateLog));
     }, 0);
     
-    const interval = setInterval(() => {
+    const interval = startVisibleInterval(() => {
       const newLog = generateLog();
       setLogs(prev => {
         const newLogs = [...prev, newLog];
@@ -147,7 +145,7 @@ export default function PhysicalAIDashboard() {
     }, 800);
     return () => {
       window.clearTimeout(initialLogsTimer);
-      clearInterval(interval);
+      interval();
     };
   }, []);
 
@@ -182,7 +180,7 @@ export default function PhysicalAIDashboard() {
         </Header>
 
         <Main>
-          <VideoCard>
+          <VideoCard data-demo="safety-video">
             <VideoWrapper>
               <LocalVideo 
                 ref={videoRef}
@@ -253,7 +251,7 @@ export default function PhysicalAIDashboard() {
             </VideoWrapper>
           </VideoCard>
 
-          <LogCard>
+          <LogCard data-demo="safety-logs">
             <LogHeader>
               <HeaderTitle>
                 <Layers size={18} color={theme.accent} /> 실시간 안전 감지 로그

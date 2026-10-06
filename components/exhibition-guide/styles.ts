@@ -1,6 +1,23 @@
 import styled from 'styled-components';
 import { color, controlHeight, exhibitionGuide, focusRing, font, fontSize, motion, radius, shadow, space, zIndex } from '@/styles/design-tokens';
 
+export const GuideLayerRoot = styled.div`
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+  pointer-events: none;
+  z-index: ${zIndex.exhibitionGuide};
+  &::backdrop { background: transparent; pointer-events: none; }
+`;
+
 export const Dock = styled.aside<{ $fullWidth: boolean; $mobileAllowed: boolean; $mobileFullWidth: boolean }>`
   position: fixed;
   left: ${({ $fullWidth }) => $fullWidth ? `${space.xl}px` : `calc(var(--app-guide-offset, 84px) + ${space.xl}px)`};

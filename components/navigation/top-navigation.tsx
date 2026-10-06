@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useSmoothNavigation } from '@/components/exhibition-demo/PageTransition';
 import styled from "styled-components";
 import {
   Activity,
@@ -243,7 +244,7 @@ interface TopNavigationProps {
 export default function TopNavigation({ isLoading = false }: TopNavigationProps) {
   const { t } = useLocale();
   const pathname = usePathname();
-  const router = useRouter();
+  const navigate = useSmoothNavigation();
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const activeKey = useMemo(() => getActiveKey(pathname), [pathname]);
   const [openPanel, setOpenPanel] = useState<PanelKey | null>(null);
@@ -313,7 +314,7 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
     setIsNotificationOpen(false);
 
     if (entry.href) {
-      router.push(entry.href);
+      void navigate(entry.href).catch(() => {});
       setOpenPanel(null);
       return;
     }
@@ -332,7 +333,7 @@ export default function TopNavigation({ isLoading = false }: TopNavigationProps)
 
   const handleChildClick = (child: NavChild) => {
     if (isLoading) return;
-    router.push(child.href);
+    void navigate(child.href).catch(() => {});
     setOpenPanel(null);
     setSearchValue("");
   };

@@ -312,7 +312,7 @@ export default function InboundInspectionStatusClient() {
                 key={item.id}
                 type="button"
                 $active={activePreset === item.id}
-                onClick={() => handlePreset(item.id)}
+                data-demo={`inbound-period-${item.id}`} onClick={() => handlePreset(item.id)}
                 disabled={!today}
               >
                 {item.label}
@@ -365,7 +365,7 @@ export default function InboundInspectionStatusClient() {
         </HeaderActions>
       </Header>
 
-      <StatsGrid aria-busy={isMaterialLoading}>
+      <StatsGrid data-demo="inbound-metrics" aria-busy={isMaterialLoading}>
         <MetricCard $tone="red">
           <MetricTop>
             <Truck size={22} />
@@ -461,7 +461,7 @@ export default function InboundInspectionStatusClient() {
             </DetailTools>
           </DetailHeader>
 
-          <DetailGrid>
+          <DetailGrid data-demo="inbound-grid">
             <GridHead>
               <span>송장번호</span>
               <span>품목번호</span>

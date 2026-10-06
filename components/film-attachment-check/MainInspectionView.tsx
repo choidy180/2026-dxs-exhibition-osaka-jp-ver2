@@ -34,7 +34,7 @@ export function MainInspectionView({
     const imageUrl = resolveDxResourceUrl(data?.FILEPATH1);
 
     return (
-        <ImagePanel $tone={tone}>
+        <ImagePanel data-demo="inspection-image" $tone={tone}>
             <PanelHeader>
                 <PanelTitle>
                     <PanelEyebrow>Live Inspection Image</PanelEyebrow>

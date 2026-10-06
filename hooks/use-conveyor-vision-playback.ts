@@ -21,9 +21,14 @@ export function useConveyorVisionPlayback(line: TakttimeLine, onRecognition: (li
     if (!video) return;
     let previous: VisionClock | null = null;
     let frameId = 0;
+    let lastSampleAt = -Infinity;
     let active = true;
     const hasVideoFrames = typeof video.requestVideoFrameCallback === 'function';
     const sample = (mediaTime: number) => {
+      // 인식은 구간 경계를 계산하므로 모든 영상 프레임마다 React를 갱신할 필요가 없다.
+      const now = performance.now();
+      if (now - lastSampleAt < 100 || document.hidden) return;
+      lastSampleAt = now;
       // 캐시된 영상의 초기 이벤트가 hydration보다 먼저 끝나도 실제 표시 프레임으로 상태를 복원한다.
       setState('ready');
       setPlaying(!video.paused);

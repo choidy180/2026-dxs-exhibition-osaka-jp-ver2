@@ -1,5 +1,6 @@
 'use client';
 
+import { startVisibleInterval } from '@/utils/visible-interval';
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, LayoutGroup } from 'framer-motion';
 import styled from 'styled-components';
@@ -103,8 +104,8 @@ export default function MaterialMonitoringClient() {
   useEffect(() => {
     refreshData();
 
-    const timer = window.setInterval(fetchVehicleEntryExitData, 30_000);
-    return () => window.clearInterval(timer);
+    const timer = startVisibleInterval(fetchVehicleEntryExitData, 30_000);
+    return () => timer();
   }, [fetchVehicleEntryExitData, refreshData]);
 
   // 전체화면 중 배경 스크롤 잠금

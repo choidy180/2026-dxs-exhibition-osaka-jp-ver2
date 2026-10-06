@@ -1,5 +1,6 @@
 'use client';
 
+import { startVisibleInterval } from '@/utils/visible-interval';
 import { useEffect, useMemo, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import type { MaterialListItem } from '@/types/material-monitoring';
@@ -97,14 +98,14 @@ export default function InspectionLogTicker({ baseLogs = [], intervalMs = 10000,
   useEffect(() => {
     let count = 0;
 
-    const timer = window.setInterval(() => {
+    const timer = startVisibleInterval(() => {
       const source = sourceLogs[count % sourceLogs.length];
 
       setLogs(prev => [createLog(source, prev.length + count), ...prev].slice(0, maxItems));
       count += 1;
     }, intervalMs);
 
-    return () => window.clearInterval(timer);
+    return () => timer();
   }, [sourceLogs, intervalMs, maxItems]);
 
   // 무한 슬라이드용 복제 데이터

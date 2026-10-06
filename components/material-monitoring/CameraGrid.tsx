@@ -15,7 +15,7 @@ type Props = {
 
 export default function CameraGrid({ hosts, cameras, onVideoEnded, onVideoRetry, isScanning, onExpand }: Props) {
   return (
-    <VideoGridViewport>
+    <VideoGridViewport data-demo="inbound-cameras">
       <VideoGrid>
         {Array.from({ length: MAX_CAMERA_COUNT }, (_, index) => index + 1).map(num => (
           <CameraFrame

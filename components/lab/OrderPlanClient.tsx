@@ -190,14 +190,14 @@ export default function OrderPlanClient() {
             <ActionButton
               type="button"
               $variant="soft"
-              onClick={recalculate}
+              data-demo="order-recalculate" onClick={recalculate}
               disabled={isCalculating || isLoading || !revisionId}
             >
               {isCalculating ? <Loader2 size={16} className="spin" /> : <Calculator size={16} />}
               발주 소요량 계산
             </ActionButton>
 
-            <ActionButton type="button" $variant="success" onClick={handleDownload} disabled={!hasRows}>
+            <ActionButton type="button" data-demo="order-download" $variant="success" onClick={handleDownload} disabled={!hasRows}>
               <FileDown size={16} />
               엑셀 다운로드
             </ActionButton>
@@ -228,7 +228,7 @@ export default function OrderPlanClient() {
           />
         </ConditionCard>
 
-        <StatsGrid $columns={3}>
+        <StatsGrid data-demo="order-metrics" $columns={3}>
           <MetricCard $tone="info">
             <div className="metric-top">
               <span>총 품목수</span>
@@ -285,7 +285,7 @@ export default function OrderPlanClient() {
           />
 
           <FilterActions>
-            <ActionButton type="button" $variant="dark" onClick={applyFilter}>
+            <ActionButton type="button" $variant="dark" data-demo="order-query" onClick={applyFilter}>
               <Search size={15} />
               조회
             </ActionButton>
@@ -296,7 +296,7 @@ export default function OrderPlanClient() {
           </FilterActions>
         </FilterCard>
 
-        <DataCard>
+        <DataCard data-demo="order-grid">
           <CardHead>
             <div className="title-group">
               <Table2 size={19} />
@@ -308,7 +308,7 @@ export default function OrderPlanClient() {
               type="button"
               $variant="success"
               $compact
-              onClick={sendToMes}
+              data-demo="order-send" onClick={sendToMes}
               disabled={!hasRows || isTransferring}
               title={ENABLE_MES_TRANSFER ? '발주 전송을 로컬에서 시뮬레이션합니다.' : undefined}
             >
