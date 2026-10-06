@@ -776,7 +776,7 @@ const generateInitialDummyData = (line: TakttimeLine): CycleData[] => {
   const baseTime = new Date();
   return Array.from({ length: 10 }).map((_, i) => {
       const ct = getDemoCycleTime(line, 50 + i);
-      const timeObj = new Date(baseTime.getTime() - (9 - i) * TAKTTIME_DEMO_UPDATE_MS);
+      const timeObj = new Date(baseTime.getTime() - (9 - i) * TAKTTIME_DEMO_UPDATE_MS[line]);
       const timeLabel = timeObj.toTimeString().split(' ')[0]; 
       return {
           id: `${line}-${i}`,
@@ -853,16 +853,16 @@ export default function ProcessDashboard() {
   }, [alertLogs, searchText, filterType]);
 
   useEffect(() => {
-    // 영상과 독립적으로 세 라인의 추세를 갱신해 보기 전환 후에도 이력을 이어간다.
-    const timer = window.setInterval(() => {
+    // 라인별 주기로 갱신해 총조립2라인은 15초마다 새 데이터를 추가한다.
+    const timers = (['A', 'B', 'C'] as const).map(line => window.setInterval(() => {
       const timestamp = new Date();
       setData(previous => {
-        const next = { ...previous };
-        for (const line of ['A', 'B', 'C'] as const) {
-          const history = previous[line];
-          const production = (history.at(-1)?.production ?? 49) + 1;
-          const cycleTime = getDemoCycleTime(line, production);
-          next[line] = [...history.slice(-9), {
+        const history = previous[line];
+        const production = (history.at(-1)?.production ?? 49) + 1;
+        const cycleTime = getDemoCycleTime(line, production);
+        return {
+          ...previous,
+          [line]: [...history.slice(-9), {
             id: `${line}-${timestamp.getTime()}-${production}`,
             name: TAKTTIME_PART_NAMES[line][production % 3],
             timeLabel: timestamp.toTimeString().split(' ')[0],
@@ -871,12 +871,11 @@ export default function ProcessDashboard() {
             target: TARGET_TAKT,
             isOver: cycleTime > TARGET_TAKT,
             production,
-          }];
-        }
-        return next;
+          }],
+        };
       });
-    }, TAKTTIME_DEMO_UPDATE_MS);
-    return () => window.clearInterval(timer);
+    }, TAKTTIME_DEMO_UPDATE_MS[line]));
+    return () => timers.forEach(timer => window.clearInterval(timer));
   }, []);
 
   useEffect(() => {
