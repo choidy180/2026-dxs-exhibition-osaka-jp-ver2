@@ -12,6 +12,7 @@ import { exhibitionGuide, motionDuration } from '@/styles/design-tokens';
 import { useExhibitionDemo } from '@/components/exhibition-demo/ExhibitionDemoProvider';
 import { DemoGuideScope } from '@/components/exhibition-demo/styles';
 import { usePageVisible } from '@/hooks/use-page-visible';
+import { ADVISOR_DEMO_PAGE_INDEX } from '@/constants/exhibition-demo';
 import GuideLayer from './GuideLayer';
 import * as S from './styles';
 
@@ -41,7 +42,8 @@ export default function ExhibitionGuide(props: GuideProps) {
   const demo = useExhibitionDemo();
   if (demo?.enabled) {
     if (!demo.guide) return null;
-    return <GuideLayer><DemoGuideScope><PageGuideEvent key={`demo:${demo.pageIndex}:${locale}`} guide={{ id: 'auto-demo', title: demo.guide.title, steps: [demo.guide.text] }}
+    const advisor = demo.pageIndex === ADVISOR_DEMO_PAGE_INDEX;
+    return <GuideLayer><DemoGuideScope $advisor={advisor} data-demo-advisor-guide={advisor ? true : undefined}><PageGuideEvent key={`demo:${demo.pageIndex}:${locale}`} guide={{ id: 'auto-demo', title: demo.guide.title, steps: [demo.guide.text] }}
       labels={copy[locale]} {...props} automatic={{ step: demo.guide.step, total: demo.guide.total }} /></DemoGuideScope></GuideLayer>;
   }
   if (!enabled) return null;

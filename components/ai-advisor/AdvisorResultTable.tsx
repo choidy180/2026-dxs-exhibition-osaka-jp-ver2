@@ -4,6 +4,7 @@ import { useId } from 'react';
 import { Search, TableProperties, TriangleAlert } from 'lucide-react';
 import styled from 'styled-components';
 import type { AdvisorTable } from '@/types/ai-advisor';
+import { useLocale } from '@/components/i18n/LocaleProvider';
 import { formatAdvisorTableCell, isAdvisorIdentifierColumn, isAdvisorNumericColumn } from '@/utils/ai-advisor-format';
 import { color, controlHeight, focusRing, font, fontSize, fontWeight, gridLayer, radius, scrollbar, space, tone } from '@/styles/design-tokens';
 
@@ -12,6 +13,12 @@ interface AdvisorResultTableProps {
 }
 
 export function AdvisorResultTable({ table }: AdvisorResultTableProps) {
+  const { locale } = useLocale();
+  const copy = locale === 'ja'
+    ? { result: '確認結果', count: '表示行数', scroll: '結果表のスクロール', truncated: '結果の一部を表示しています。表示行数は全件数ではありません。', empty: '表示できる結果がありません。', hint: '日付や条件を変えて、もう一度質問してください。', summary: '照会の概要' }
+    : locale === 'en'
+      ? { result: 'Confirmed results', count: 'Rows displayed', scroll: 'Result table scroll area', truncated: 'Only part of the result is displayed. The row count is not the total result count.', empty: 'No results to display.', hint: 'Try a different date or condition.', summary: 'Lookup summary' }
+      : { result: '확인 결과', count: '표시 행 수', scroll: '조회 결과 표 스크롤', truncated: '일부 결과만 표시됩니다. 표시 건수는 전체 조회 건수가 아닙니다.', empty: '표시할 결과가 없습니다.', hint: '조회 날짜나 조건을 바꿔 다시 질문해 주세요.', summary: '조회 요약' };
   const titleId = useId();
   const summaryEntries = Object.entries(table.summary);
   const hasRows = table.columns.length > 0 && table.rows.length > 0;
@@ -20,19 +27,19 @@ export function AdvisorResultTable({ table }: AdvisorResultTableProps) {
     <ResultSection aria-labelledby={titleId}>
       <ResultHeading id={titleId}>
         <TableProperties size={16} aria-hidden="true" />
-        조회 결과
-        <ResultCount>표시 {table.rows.length.toLocaleString('ko-KR')}건</ResultCount>
+        {copy.result}
+        <ResultCount>{copy.count} {table.rows.length.toLocaleString('ko-KR')}</ResultCount>
       </ResultHeading>
 
       {table.truncated && (
         <TruncatedNotice role="note">
           <TriangleAlert size={16} aria-hidden="true" />
-          <span>일부 결과만 표시됩니다. 표시 건수는 전체 조회 건수가 아닙니다.</span>
+          <span>{copy.truncated}</span>
         </TruncatedNotice>
       )}
 
       {hasRows ? (
-        <TableScroll role="region" aria-label="조회 결과 표 스크롤" tabIndex={0}>
+        <TableScroll role="region" aria-label={copy.scroll} tabIndex={0}>
           <GridTable role="table" aria-labelledby={titleId} aria-rowcount={table.truncated ? -1 : table.rows.length + 1} aria-colcount={table.columns.length} $columnCount={table.columns.length}>
             <HeaderGroup role="rowgroup">
               <GridRow role="row" aria-rowindex={1} $columnCount={table.columns.length}>
@@ -59,13 +66,13 @@ export function AdvisorResultTable({ table }: AdvisorResultTableProps) {
       ) : (
         <EmptyState role="status">
           <EmptyIcon><Search size={28} aria-hidden="true" /></EmptyIcon>
-          <strong>표시할 결과가 없습니다.</strong>
-          <span>조회 날짜나 조건을 바꿔 다시 질문해 주세요.</span>
+          <strong>{copy.empty}</strong>
+          <span>{copy.hint}</span>
         </EmptyState>
       )}
 
       {summaryEntries.length > 0 && (
-        <Summary aria-label="조회 요약">
+        <Summary aria-label={copy.summary}>
           {summaryEntries.map(([label, value]) => (
             <SummaryEntry key={label}>
               <dt>{label.trim() || '-'}</dt>

@@ -1,6 +1,6 @@
-const IDENTIFIER_HEADER = /코드|번호|식별|아이디|우편|전화|(?:^|[^a-z])(?:code|id|identifier|sku|serial|number|no|phone|zip)(?:$|[^a-z])/;
+const IDENTIFIER_HEADER = /코드|번호|식별|아이디|우편|전화|コード|品番|番号|(?:^|[^a-z])(?:code|id|identifier|sku|serial|number|no|phone|zip)(?:$|[^a-z])/;
 const TEXT_HEADER = /단위|일자|날짜|일시|년월|기준일|품명|품목명|자재명|설비명|제품명|이름|(?:^|[^a-z])(?:date|datetime|timestamp|year|month|day|name|uom)(?:$|[^a-z])/;
-const NUMERIC_HEADER = /수량|소요(?:계획)?량|계획량|실적량|재고량|금액|단가|가격|비용|원가|합계|총계|건수|개수|횟수|비율|율|률|무게|중량|길이|면적|체적|온도|습도|압력|전력|(?:^|[^a-z])(?:qty|quantity|amount|count|sum|total|price|cost|rate|ratio|percent|percentage|weight|mass|length|area|volume|temperature|humidity|pressure|power|energy|stock|inventory|demand|requirement|balance|capacity|duration|hours|minutes|seconds)(?:$|[^a-z])/;
+const NUMERIC_HEADER = /수량|소요(?:계획)?량|계획량|실적량|재고량|금액|단가|가격|비용|원가|합계|총계|건수|개수|횟수|비율|율|률|무게|중량|길이|면적|체적|온도|습도|압력|전력|数量|件数|金額|単価|値|^값$|(?:^|[^a-z])(?:value|qty|quantity|amount|count|sum|total|price|cost|rate|ratio|percent|percentage|weight|mass|length|area|volume|temperature|humidity|pressure|power|energy|stock|inventory|demand|requirement|balance|capacity|duration|hours|minutes|seconds)(?:$|[^a-z])/;
 const DECIMAL_VALUE = /^([+-]?)(\d+|\d{1,3}(?:,\d{3})+)(?:\.(\d+))?$/;
 const FRACTION_DIGITS = 6;
 

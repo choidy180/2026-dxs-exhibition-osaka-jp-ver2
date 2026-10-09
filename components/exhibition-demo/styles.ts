@@ -62,7 +62,20 @@ export const Cursor = styled.span`
   width: ${exhibitionDemo.cursorSize}px; height: ${exhibitionDemo.cursorSize}px; color: ${color.brand};
   border: 1px solid ${color.brandBorder}; border-radius: ${radius.control}px; background: ${color.surface}; box-shadow: ${shadow.card};
 `;
-export const DemoGuideScope = styled.div`
+export const DemoGuideScope = styled.div<{ $advisor: boolean }>`
   [data-demo-speech] { width: min(${exhibitionDemo.guideWidth}px, 100%); }
   [data-demo-mascot] { width: ${controlHeight.lg * 4}px; flex-basis: ${controlHeight.lg * 4}px; }
+  ${({ $advisor }) => $advisor && `
+    [data-exhibition-guide] {
+      left: ${space.xl}px; right: auto; width: ${exhibitionDemo.advisorGuideWidth}px;
+      max-width: calc(100vw - ${space.xl * 2}px); flex-direction: column; align-items: flex-start; gap: ${space.md}px;
+    }
+    [data-demo-mascot] { width: ${exhibitionDemo.advisorMascotWidth}px; flex-basis: auto; padding: 0; }
+    [data-demo-speech] { width: 100%; padding: ${space.xxxl}px; }
+    [data-demo-speech]::before { display: none; }
+    [data-demo-speech] h2 { font-size: ${fontSize.pageTitle}; }
+    [data-demo-speech] p { font-size: ${fontSize.body}; }
+    [data-demo-speech] > div { margin-top: ${space.md}px; margin-bottom: ${space.md}px; }
+    [data-demo-speech] span { font-size: inherit; }
+  `}
 `;

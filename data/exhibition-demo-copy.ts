@@ -1,9 +1,31 @@
-type DemoLocale = 'ko' | 'ja' | 'en';
+import type { DemoLocale, DemoPage } from '@/constants/exhibition-demo';
+import { getPageGuide, type PageGuide } from './exhibition-page-guides';
+
 type FeatureCopy = Record<DemoLocale, string>;
 const text = (ko: string, ja: string, en: string): FeatureCopy => ({ ko, ja, en });
 
 /** 영역마다 무엇을 확인하는지 설명한다. 숫자·로그 전체를 말풍선에 복사하지 않는다. */
 const features: Record<string, FeatureCopy> = {
+  'advisor-open': text('AI Advisor에서 질문 목록과 실제 대화를 함께 살펴볼게요.', 'AI Advisorで質問一覧と実際の会話をご紹介します。', 'Explore question menus and a real conversation in AI Advisor.'),
+  'advisor-reset': text('새 대화에서 시작해 필요한 조건을 차례로 입력해 볼게요.', '新しい会話から必要な条件を順番に入力します。', 'Start a fresh conversation and supply the conditions one at a time.'),
+  'advisor-topic-delivery': text('“납품처”처럼 짧게 입력하면 관련 질문이 펼쳐져요. 버튼이나 번호로 이어갈 수 있어요.', '「納品先」と短く入力すると関連質問が並びます。ボタンや番号で続けられます。', 'A short keyword such as “delivery” opens related questions. Continue with a button or number.'),
+  'advisor-choice-delivery-vehicles': text('차량별 포장 건수와 납품수량을 표로 확인해요. 합계와 포장 진행률도 함께 보여줘요.', '車両別の梱包件数と納品数量を表で確認します。合計と梱包進捗率も表示します。', 'Review packing and delivery quantities by vehicle, with totals and packing progress.'),
+  'advisor-date-followup': text('“내일은?”만 물어도 앞서 본 납품 조건을 기억하고 날짜를 바꿔 확인해요.', '「明日なら？」だけで、先ほどの納品条件を引き継ぎ、日付を変えて確認できます。', '“What about tomorrow?” keeps the delivery context and changes the date.'),
+  'advisor-topic-inventory': text('재고로 주제를 바꾸면 재고 조회·부족 시점·안전재고 질문을 골라볼 수 있어요.', '在庫に切り替えると、在庫確認・不足時期・安全在庫の質問を選べます。', 'Switch to inventory to explore stock, shortage forecasts and safety stock.'),
+  'advisor-choice-material-stock': text('자재를 아직 고르지 않았다면 코드와 명칭 목록을 먼저 안내해요.', '資材が未選択なら、まずコードと名称の一覧をご案内します。', 'When a material is missing, the advisor first offers codes and names to choose from.'),
+  'advisor-material-name': text('코드를 외우지 않아도 “가스켓”처럼 자재 이름으로 재고를 찾을 수 있어요.', 'コードを覚えていなくても、「ガスケット」のように名称で在庫を探せます。', 'Look up stock by a name such as “gasket” without memorizing its code.'),
+  'advisor-choice-supplier': text('같은 자재의 권장 발주수량과 공급처로 이어서 확인해요.', '同じ資材の推奨発注数量と仕入先を続けて確認します。', 'Continue to the same material’s recommended order quantity and supplier.'),
+  'advisor-topic-purchasing': text('발주 질문 목록에서는 부족 자재·권장 수량·다음 주 계획·단가를 확인할 수 있어요.', '発注メニューから不足資材・推奨数量・来週の計画・単価を確認できます。', 'The purchasing menu covers shortages, recommended quantities, next week’s plan and prices.'),
+  'advisor-choice-purchase-detail': text('자재별 권장 발주수량·발주일·공급처·금액을 상세 표로 비교해요. 추가 자료는 데모로 표시해요.', '資材別の推奨数量・発注日・仕入先・金額を比較します。追加資料はデモとして表示します。', 'Compare recommended quantities, order dates, suppliers and costs. Added data is labeled as demo data.'),
+  'advisor-topic-production': text('생산 시간 계산을 골라 제품·수량·인원을 하나씩 정해 볼게요.', '生産時間の計算を選び、製品・数量・人数を一つずつ指定します。', 'Choose production time and set the product, quantity and worker count one at a time.'),
+  'advisor-choice-production-duration': text('한 문장에 조건을 모두 넣지 않아도 필요한 내용을 차례로 물어봐요.', '一文にすべての条件を入れなくても、必要な内容を順番にお聞きします。', 'You can supply conditions separately; the advisor asks for each missing value.'),
+  'advisor-choice-ADC30068402': text('제품을 선택하면 이어서 생산할 수량을 확인해요.', '製品を選ぶと、次に生産数量を確認します。', 'After choosing a product, specify how many units to produce.'),
+  'advisor-choice-quantity-300': text('300개를 선택하고 작업 인원을 정해요. 수량을 직접 입력해도 돼요.', '300個を選び、作業人数を指定します。数量は直接入力もできます。', 'Choose 300 units, then a worker count. Quantities can also be typed directly.'),
+  'advisor-choice-workers-7': text('7명이 생산할 때의 소요 시간은 571.97분이에요. 제품과 수량을 기억한 채 이어갈 수 있어요.', '7人での所要時間は571.97分です。製品と数量を引き継いで会話を続けられます。', 'With 7 workers, production takes 571.97 minutes. The product and quantity remain in context.'),
+  'advisor-worker-followup': text('“그럼 10명이면?”이라고 물으면 제품과 300개 조건은 유지하고 400.38분으로 다시 계산해요.', '「では10人なら？」で製品と300個の条件を保ち、400.38分に再計算します。', '“What about 10 workers?” keeps the product and 300 units and recalculates the time to 400.38 minutes.'),
+  'advisor-natural-guidance': text('다른 내용이 궁금해도 관련 업무와 선택 가능한 질문을 안내하며 자연스럽게 이어가요.', '別の内容でも関連業務と選択できる質問をご案内し、自然に会話を続けます。', 'Other requests lead naturally to related work and questions you can explore next.'),
+  'advisor-choice-delivery-destinations': text('안내된 질문을 선택해 제품별 납품처 목록으로 이어가요.', '案内された質問を選び、製品別の納品先一覧を確認します。', 'Choose a suggested question to continue to delivery destinations by product.'),
+  'advisor-guide': text('4개 업무의 21개 질문을 한곳에서 둘러볼 수 있어요. 한국어·일본어·영어에서도 같은 흐름을 제공해요.', '4業務・21の質問を一覧で確認できます。韓国語・日本語・英語で同じ流れをご利用いただけます。', 'Browse all 21 questions across four work areas, with the same flow in Korean, Japanese and English.'),
   'dashboard-01': text('자재관리에서는 입고 검수와 창고 재고를 연결해 자재 흐름을 확인해요.', '資材管理では入荷検査と倉庫在庫をつなぎ、資材の流れを確認します。', 'Materials management connects inbound inspection with warehouse inventory.'),
   'dashboard-02': text('공정품질에서는 AI 비전으로 유리 간격, 누수, 가스켓과 필름 상태를 검사해요.', '工程品質ではAIビジョンでガラス間隔、漏れ、ガスケットとフィルムを検査します。', 'AI vision checks glass gaps, leaks, gaskets and film attachment.'),
   'dashboard-03': text('공정설비에서는 3D 설비와 센서 지표로 이상 징후를 살펴봐요.', '工程設備では3D設備とセンサー指標で異常の兆候を確認します。', 'Equipment monitoring combines 3D views with sensor readings to reveal anomalies.'),
@@ -79,4 +101,12 @@ const features: Record<string, FeatureCopy> = {
 
 export function getDemoFeatureText(target: string, locale: DemoLocale): string | undefined {
   return features[target]?.[locale];
+}
+
+export function getDemoPageGuide(page: DemoPage, locale: DemoLocale): PageGuide {
+  if (page.section !== 'advisor') return getPageGuide(page.path, locale);
+  return {
+    id: 'advisor', title: 'AI Advisor',
+    steps: [text('짧은 키워드로 시작해 질문 선택, 재고·발주 조회, 생산 조건 입력과 후속 질문까지 함께 체험해요.', '短いキーワードから質問選択、在庫・発注確認、生産条件の入力と追加質問まで体験します。', 'Start with a short keyword, then explore questions, stock and orders, production conditions and follow-ups.')[locale]],
+  };
 }

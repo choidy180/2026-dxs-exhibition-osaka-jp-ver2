@@ -4,6 +4,8 @@
 const ts = require('typescript');
 
 function translateSource(source, filename) {
+  // 챗봇은 질문 언어별 문안을 직접 선택하므로 사용자 입력과 답변을 재번역하지 않는다.
+  if (/[\\/](?:components|constants)[\\/]ai-advisor(?:[\\/]|\.ts$)/.test(filename)) return source;
   if (!/\.(tsx|jsx)$/.test(filename) || /[\\/](i18n|node_modules)[\\/]/.test(filename)) return source;
   const file = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const clientDirective = file.statements.find(statement => ts.isExpressionStatement(statement)

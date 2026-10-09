@@ -1,40 +1,72 @@
-import type { AdvisorChatResponse, AdvisorMetadata } from '@/types/ai-advisor';
-import { getLocale } from '@/lib/i18n/translate';
+import type { AdvisorChatResponse, AdvisorConversationContext, AdvisorMetadata, AdvisorSuggestion } from '@/types/ai-advisor';
+import { getLocale, type Locale } from '@/lib/i18n/translate';
+import { ADVISOR_SCENARIOS, ADVISOR_SOURCE_DATE, ADVISOR_SOURCE_TITLE, type AdvisorScenario } from './advisor-knowledge';
+import { getAdvisorReplyLocale, matchAdvisorScenario } from '@/utils/ai-advisor-match';
+import { createAdvisorConversationReply } from '@/utils/ai-advisor-conversation';
+import { ADVISOR_DEMO_DATE, ADVISOR_DEMO_END_DATE } from './advisor-demo-dataset';
 
 export function createDemoAdvisorMetadata(): AdvisorMetadata {
-  const today = new Date().toLocaleDateString('sv-SE');
-  const end = new Date();
-  end.setDate(end.getDate() + 30);
-  return { as_of_date: today, snapshot_date: today, forecast_end_date: end.toLocaleDateString('sv-SE') };
+  return { as_of_date: ADVISOR_SOURCE_DATE, snapshot_date: ADVISOR_DEMO_DATE, forecast_end_date: ADVISOR_DEMO_END_DATE };
 }
 
-/** 전시회 상담은 외부 모델 없이 시나리오별 데이터와 설명을 제공한다. */
-export function createDemoAdvisorReply(query: string): AdvisorChatResponse {
-  const inventory = /재고|자재|부족|소요|inventory|stock|material|requirement|在庫|資材|不足|所要|必要/i.test(query);
-  const quality = /품질|불량|검사|quality|defect|inspection|品質|不良|検査/i.test(query);
-  const transport = /출하|운송|배송|shipment|transport|delivery|出荷|輸送|配送/i.test(query);
-  const rows = inventory
-    ? [['FRAME-A', '2,450', '1,800', '650'], ['GASKET-B', '3,120', '2,400', '720'], ['GLASS-C', '1,680', '1,250', '430']]
-    : quality ? [['GLASS', '480', '477', '99.4%'], ['GASKET', '520', '517', '99.4%'], ['FILM', '460', '459', '99.8%']]
-    : transport ? [['GMT-101', '부산 → 창원', '운행중', '12분'], ['GMT-102', '창원 → 부산', '운행중', '24분'], ['GMT-103', '부산', '출하완료', '-']]
-    : [['A', '750', '684', '91.2%'], ['B', '680', '632', '92.9%'], ['C', '720', '658', '91.4%']];
-  const columns = inventory ? ['품목', '현재고', '예정 소요량', '가용 재고']
-    : quality ? ['검사', '검사수', '양품수', '합격률']
-    : transport ? ['차량', '경로', '상태', '도착예정'] : ['라인', '목표', '생산수량', '달성률'];
-  const koreanAnswer = inventory
-    ? '전시회 데모 데이터 기준, 주요 자재의 가용 재고는 충분합니다. GASKET-B의 다음 입고 일정을 확인하면 안정적인 생산을 유지할 수 있습니다.'
-    : quality ? '전시회 데모 데이터 기준, 검사 합격률은 99% 이상입니다. 유리 틈새와 가스켓 검사 이력을 확인하고 불량 제품을 재검사하는 것을 권장합니다.'
-    : transport ? '전시회 데모 데이터 기준, 차량 2대가 운행 중이며 1대가 출하를 완료했습니다. 운송관리 화면에서 위치와 도착 예정 시간을 확인할 수 있습니다.'
-    : '전시회 데모 데이터 기준, 전체 생산 달성률은 91.8%입니다. A라인의 작업시간과 자재 공급을 확인하면 계획 달성에 도움이 됩니다.';
-  const locale = getLocale();
-  const answer = locale === 'ko' ? koreanAnswer : locale === 'ja'
-    ? inventory ? '展示会デモのデータでは、主要資材の在庫は十分です。GASKET-Bの次回入荷予定を確認すると、安定した生産を維持できます。'
-      : quality ? '展示会デモの検査合格率は99%以上です。ガラス隙間とガスケットの検査履歴を確認し、不良品の再検査をお勧めします。'
-      : transport ? '展示会デモでは、車両2台が運行中で、1台が出荷済みです。輸送管理画面で位置と到着予定時刻を確認できます。'
-      : '展示会デモの全体生産達成率は91.8%です。Aラインの作業時間と資材供給を確認すると、計画達成に役立ちます。'
-    : inventory ? 'In this exhibition demo, key materials have sufficient available stock. Check the next GASKET-B delivery to maintain stable production.'
-      : quality ? 'The exhibition demo shows an inspection pass rate above 99%. Review glass-gap and gasket inspection history and reinspect rejected products.'
-      : transport ? 'In this exhibition demo, two vehicles are in transit and one shipment is complete. The transport screen shows vehicle positions and estimated arrivals.'
-      : 'The exhibition demo shows overall production attainment of 91.8%. Review line A cycle times and material supply to support the production target.';
-  return { answer, session_id: null, status: 'success', table: { columns, rows, truncated: false, summary: {} } };
+export function getAdvisorSuggestion(scenario: AdvisorScenario, locale: Locale): AdvisorSuggestion {
+  return { id: scenario.id, label: scenario.label[locale], query: scenario.question[locale] };
+}
+
+export function createDemoAdvisorReply(query: string, fallbackLocale: Locale = getLocale(), context?: AdvisorConversationContext): AdvisorChatResponse {
+  return createAdvisorConversationReply(query, fallbackLocale, context, createReviewedAdvisorReply);
+}
+
+export function createReviewedAdvisorReply(query: string, fallbackLocale: Locale = getLocale()): AdvisorChatResponse {
+  const locale = getAdvisorReplyLocale(query, fallbackLocale);
+  const { scenario, candidates, reason } = matchAdvisorScenario(query);
+  const normalizedQuery = query.normalize('NFKC');
+  // 짧은 질문도 같은 업무의 구체적인 질문으로 이어지도록 주제를 보완한다.
+  const topic = /발주|구매|공급|発注|購買|仕入|purchas|order|supplier/i.test(normalizedQuery) ? 'purchasing'
+    : /납품|배송|출하|納品|配送|出荷|delivery|shipment/i.test(normalizedQuery) ? 'delivery'
+      : /생산|작업|生産|作業|production|workers/i.test(normalizedQuery) ? 'production'
+        : /자재|재고|資材|在庫|material|stock/i.test(normalizedQuery) ? 'inventory' : undefined;
+  const related = ADVISOR_SCENARIOS.filter(item => item.id !== scenario?.id && item.coverage === 'complete' && (
+    scenario ? item.category === scenario.category : candidates.length
+      ? candidates.some(candidate => candidate.category === item.category) : item.category === topic
+  ));
+  const suggestions = [...new Map([
+    ...(!scenario ? candidates.filter(item => item.coverage === 'complete') : []),
+    ...related,
+    ...ADVISOR_SCENARIOS.filter(item => item.coverage === 'complete' && item.id !== scenario?.id),
+  ].map(item => [item.id, item])).values()].slice(0, 3).map(item => getAdvisorSuggestion(item, locale));
+
+  if (Array.from(query.trim()).length === 0 || Array.from(query).length > 2_000) {
+    return {
+      answer: locale === 'ja' ? '質問は空白を除いて1〜2,000文字で入力してください。下の質問を選んで試すこともできます。'
+        : locale === 'ko' ? '질문을 공백 제외 1~2,000자로 입력해 주세요. 아래 질문을 선택해서 체험할 수도 있습니다.'
+        : 'Please enter a question of 1–2,000 characters, or select a suggested question below.',
+      session_id: null, table: null, status: 'clarification', suggestions,
+    };
+  }
+
+  if (!scenario) {
+    const nextQuestion = suggestions[0].query;
+    const isGreeting = /^(안녕(?:하세요)?|こんにちは|こんばんは|おはよう(?:ございます)?|hello|hi)[\s!！.。?？]*$/i.test(query.trim());
+    const answer = reason === 'conditions'
+      ? { ko: `제품·자재 코드와 작업 조건을 함께 살펴보면 계획을 세우는 데 도움이 됩니다. 먼저 아래 예시로 시작해 볼까요?\n“${nextQuestion}”\n질문을 선택하시면 바로 안내해 드릴게요.`, ja: `製品・資材コードと作業条件を合わせて確認すると、計画を立てやすくなります。まずは次の例から見てみませんか。\n「${nextQuestion}」\n下の質問を選ぶと、すぐにご案内します。`, en: `Reviewing the product or material code together with the working conditions helps with planning. Shall we start with this example?\n“${nextQuestion}”\nSelect a question below to continue.` }
+      : reason === 'ambiguous'
+        ? { ko: `말씀하신 내용을 하나씩 살펴볼게요. 먼저 다음 질문부터 확인해 볼까요?\n“${nextQuestion}”\n아래에서 궁금한 항목을 선택해 주세요.`, ja: `ご質問の内容を一つずつ見ていきましょう。まずは次の質問から確認してみませんか。\n「${nextQuestion}」\n下から気になる項目をお選びください。`, en: `Let’s look at your questions one at a time. Shall we start here?\n“${nextQuestion}”\nChoose the topic you would like to explore below.` }
+        : isGreeting
+          ? { ko: `안녕하세요! 납품처, 자재 재고, 생산 시간, 발주 계획을 함께 살펴볼 수 있어요. 먼저 이런 질문으로 시작해 볼까요?\n“${nextQuestion}”\n아래에서 궁금한 질문을 선택해 주세요.`, ja: `こんにちは！納品先、資材在庫、生産所要時間、発注計画をご案内します。まずは、こんな質問から始めてみませんか。\n「${nextQuestion}」\n下から気になる質問をお選びください。`, en: `Hello! We can explore delivery destinations, material stock, production time and order planning together. Shall we start with this question?\n“${nextQuestion}”\nChoose a question below.` }
+          : { ko: `제조 업무에서는 납품처, 자재 재고, 생산 시간, 발주 계획을 함께 살펴보면 도움이 됩니다. 먼저 이런 질문은 어떠세요?\n“${nextQuestion}”\n아래 질문을 선택하시면 바로 이어서 안내해 드릴게요.`, ja: `製造業務では、納品先、資材在庫、生産所要時間、発注計画を合わせて確認すると役立ちます。まずは、こんな質問はいかがですか。\n「${nextQuestion}」\n下の質問を選ぶと、続けてご案内します。`, en: `Delivery destinations, material stock, production time and order planning are useful starting points for manufacturing operations. How about this question?\n“${nextQuestion}”\nSelect a question below and we’ll continue from there.` };
+    return { answer: answer[locale], session_id: null, table: null, status: reason === 'ambiguous' ? 'clarification' : 'unsupported', suggestions };
+  }
+
+  return {
+    answer: scenario.answer[locale], session_id: null,
+    status: scenario.coverage === 'missing' ? 'unavailable' : scenario.coverage === 'summary' ? 'partial' : 'success',
+    source: { title: locale === 'ja' ? '製造AIチャットボット 日本語翻訳 検収版' : locale === 'en' ? 'Manufacturing AI chatbot reviewed translation' : ADVISOR_SOURCE_TITLE, slide: scenario.slide },
+    suggestions,
+    table: scenario.facts ? {
+      columns: locale === 'ja' ? ['概要項目', '値'] : locale === 'en' ? ['Summary item', 'Value'] : ['요약 항목', '값'],
+      rows: scenario.facts.map(fact => [fact.label[locale], fact.value[locale]]),
+      truncated: false, summary: {},
+    } : null,
+  };
 }

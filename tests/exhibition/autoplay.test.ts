@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import test from 'node:test';
 import { BoxGeometry, Group, LineBasicMaterial, LineSegments, Mesh, MeshBasicMaterial } from 'three';
-import { DEMO_TIMING, EXHIBITION_DEMO_PAGES, getNextDemoPage } from '../../constants/exhibition-demo';
+import { ADVISOR_DEMO_PAGE, DEMO_TIMING, EXHIBITION_DEMO_PAGES, getNextDemoPage } from '../../constants/exhibition-demo';
 import { getPageGuide } from '../../data/exhibition-page-guides';
-import { getDemoFeatureText } from '../../data/exhibition-demo-copy';
+import { getDemoFeatureText, getDemoPageGuide } from '../../data/exhibition-demo-copy';
 import { demoDelay, demoVisibleDelay, withDemoCleanup } from '../../utils/exhibition-playback';
 import { startVisibleInterval } from '../../utils/visible-interval';
 import { disposeSceneClone } from '../../utils/dispose-scene-clone';
@@ -15,19 +15,27 @@ test('PC tour has existing localized screens, slow authored focus steps and a co
   let index = 0;
   for (let count = 0; count < EXHIBITION_DEMO_PAGES.length; count++) {
     const page = EXHIBITION_DEMO_PAGES[index];
-    assert.ok(!visited.has(page.path)); visited.add(page.path);
+    const stop = `${page.path}:${page.section ?? 'page'}`;
+    assert.ok(!visited.has(stop)); visited.add(stop);
     assert.ok(existsSync(`app${page.path}/page.tsx`));
     for (const locale of ['ko', 'ja', 'en'] as const) {
       assert.notEqual(getPageGuide(page.path, locale).id, 'fallback');
+      assert.ok(getDemoPageGuide(page, locale).steps[0]);
       for (const step of page.steps) {
         if (step.action === 'focus') assert.equal(step.duration, 5_000);
-        assert.ok(getDemoFeatureText(step.target, locale), `${step.target}: ${locale}`);
+        assert.ok(getDemoFeatureText(step.feature ?? step.target, locale), `${step.target}: ${locale}`);
       }
     }
     for (const step of page.steps) {
       if (step.action === 'click') {
-        assert.equal(step.duration, step.close ? 5_000 : 3_000);
-        assert.doesNotMatch(step.target, /upload|download|save|send|plan-demo|camera-permission/);
+        if (page === ADVISOR_DEMO_PAGE) {
+          assert.ok(step.duration >= DEMO_TIMING.button);
+          assert.match(step.target, /^advisor-/);
+          if (step.target === 'advisor-submit') assert.equal(step.freshResult, true);
+        } else {
+          assert.equal(step.duration, step.close ? 5_000 : 3_000);
+          assert.doesNotMatch(step.target, /upload|download|save|send|plan-demo|camera-permission/);
+        }
       }
     }
     index = getNextDemoPage(index);

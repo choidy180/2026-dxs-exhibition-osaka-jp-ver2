@@ -7,20 +7,26 @@ export const DEMO_TIMING = {
   settle: 500,
 } as const;
 
+export type DemoLocale = 'ko' | 'ja' | 'en';
 export type DemoStep = {
   target: string;
-  action: 'focus' | 'click';
   duration: number;
   /** 모달은 관람 후, 중단 또는 오류 시에도 반드시 닫는다. */
   close?: string;
   /** 클릭 후 포커스를 실제 결과 영역으로 옮긴다. */
   result?: string;
-};
+  /** 답변을 요청할 때 이전 답변을 새 결과로 오인하지 않는다. */
+  freshResult?: boolean;
+  feature?: string;
+} & ({ action: 'focus' | 'click' } | { action: 'input'; value: Record<DemoLocale, string> });
 export type DemoPage = {
   path: string;
+  section?: 'advisor';
   steps: readonly DemoStep[];
   /** 안내를 가리는 확인 창이 있을 때만 먼저 닫는다. */
   dismissBeforeIntro?: readonly string[];
+  /** 여러 조작에 걸쳐 열린 패널도 정상 종료·OFF·오류 때 정리한다. */
+  cleanup?: readonly string[];
 };
 
 const focus = (target: string): DemoStep => ({ target, action: 'focus', duration: DEMO_TIMING.focus });
@@ -35,10 +41,48 @@ const visualInspection = (): DemoStep[] => [
   focus('inspection-result'), focus('inspection-image'),
   click('inspection-logs', 'inspection-log-panel', 'inspection-log-close'),
 ];
+const advisorChoice = (id: string): DemoStep => ({
+  target: `advisor-choice-${id}`, action: 'click', duration: DEMO_TIMING.focus,
+  result: 'advisor-reply', freshResult: true,
+});
+const advisorQuery = (feature: string, ko: string, ja: string, en: string): DemoStep[] => [
+  { target: 'advisor-input', action: 'input', value: { ko, ja, en }, feature, duration: DEMO_TIMING.button },
+  { target: 'advisor-submit', action: 'click', feature, duration: DEMO_TIMING.focus,
+    result: 'advisor-reply', freshResult: true },
+];
+
+/** 실제 입력창과 질문 버튼으로 주제 탐색부터 조건 변경까지 이어간다. */
+export const ADVISOR_DEMO_PAGE: DemoPage = {
+  path: '/master-dashboard', section: 'advisor',
+  cleanup: ['advisor-cancel', 'advisor-close'],
+  steps: [
+    click('advisor-open', 'advisor-panel'),
+    click('advisor-reset', 'advisor-welcome'),
+    ...advisorQuery('advisor-topic-delivery', '납품처', '納品先', 'delivery'),
+    advisorChoice('delivery-vehicles'),
+    ...advisorQuery('advisor-date-followup', '내일은?', '明日なら？', 'What about tomorrow?'),
+    ...advisorQuery('advisor-topic-inventory', '재고', '在庫', 'inventory'),
+    advisorChoice('material-stock'),
+    ...advisorQuery('advisor-material-name', '가스켓', 'ガスケット', 'gasket'),
+    advisorChoice('supplier'),
+    ...advisorQuery('advisor-topic-purchasing', '발주', '発注', 'purchasing'),
+    advisorChoice('purchase-detail'),
+    ...advisorQuery('advisor-topic-production', '생산', '生産', 'production'),
+    advisorChoice('production-duration'),
+    advisorChoice('ADC30068402'),
+    advisorChoice('quantity-300'),
+    advisorChoice('workers-7'),
+    ...advisorQuery('advisor-worker-followup', '그럼 10명이면?', 'では10人なら？', 'What about 10 workers?'),
+    ...advisorQuery('advisor-natural-guidance', '납품처 주소 알려줘', '納品先の住所を教えて', 'Show the delivery destination address'),
+    advisorChoice('delivery-destinations'),
+    { ...click('advisor-guide', 'advisor-catalog'), duration: DEMO_TIMING.focus },
+  ],
+};
 
 /** 자동 시연 대상. CCTV·모바일 카메라 전용·백업·개발 별칭은 제외한다. */
 export const EXHIBITION_DEMO_PAGES: readonly DemoPage[] = [
   { path: '/master-dashboard', steps: ['01', '02', '03', '04', '05', '06'].map(id => focus(`dashboard-${id}`)) },
+  ADVISOR_DEMO_PAGE,
   { path: '/material/inbound-inspection', steps: [focus('inbound-vehicle'), focus('inbound-pending'), focus('inbound-cameras'), click('inbound-expand', 'inbound-camera-panel', 'inbound-camera-close')] },
   { path: '/material/inbound-inspection/status', steps: [focus('inbound-metrics'), click('inbound-period-week'), click('inbound-period-month'), click('inbound-period-day'), focus('inbound-grid')] },
   { path: '/material/warehouse', steps: [focus('material-inventory'), focus('material-map')] },
@@ -58,6 +102,8 @@ export const EXHIBITION_DEMO_PAGES: readonly DemoPage[] = [
   { path: '/lab/mes-bom-list', steps: [click('bom-query', 'bom-grid'), focus('bom-metrics'), focus('bom-grid'), focus('bom-download')] },
   { path: '/lab/order-plan', steps: [click('order-recalculate', 'order-grid'), focus('order-metrics'), click('order-query'), focus('order-grid'), focus('order-download'), focus('order-send')] },
 ];
+
+export const ADVISOR_DEMO_PAGE_INDEX = EXHIBITION_DEMO_PAGES.indexOf(ADVISOR_DEMO_PAGE);
 
 export function getNextDemoPage(index: number): number {
   return (index + 1) % EXHIBITION_DEMO_PAGES.length;

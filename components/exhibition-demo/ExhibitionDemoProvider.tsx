@@ -6,10 +6,9 @@ import { useReducedMotion } from 'framer-motion';
 import { useLocale } from '@/components/i18n/LocaleProvider';
 import { createExhibitionGuidePreferenceStore } from '@/hooks/use-exhibition-guide-preference';
 import { usePageVisible } from '@/hooks/use-page-visible';
-import { DEMO_TIMING, EXHIBITION_DEMO_PAGES, getNextDemoPage } from '@/constants/exhibition-demo';
-import { getPageGuide } from '@/data/exhibition-page-guides';
-import { getDemoFeatureText } from '@/data/exhibition-demo-copy';
-import { demoVisibleDelay, dismissDemoTargets, findDemoTarget, waitForDemoTarget, withDemoCleanup } from '@/utils/exhibition-playback';
+import { ADVISOR_DEMO_PAGE_INDEX, DEMO_TIMING, EXHIBITION_DEMO_PAGES, getNextDemoPage } from '@/constants/exhibition-demo';
+import { getDemoFeatureText, getDemoPageGuide } from '@/data/exhibition-demo-copy';
+import { demoVisibleDelay, dismissDemoTargets, findDemoTarget, typeDemoInput, waitForDemoTarget, withDemoCleanup } from '@/utils/exhibition-playback';
 import { useSmoothNavigation } from './PageTransition';
 import DemoFocus from './DemoFocus';
 import DemoControls from './DemoControls';
@@ -20,7 +19,7 @@ type Phase = 'idle' | 'loading' | 'intro' | 'playing' | 'error';
 type DemoState = {
   enabled: boolean; phase: Phase; pageIndex: number; stepIndex: number; visible: boolean;
   guide: { title: string; text: string; step: number; total: number } | null;
-  setEnabled: (enabled: boolean) => void; retry: () => void; nextPage: () => void;
+  setEnabled: (enabled: boolean) => void; retry: () => void; nextPage: () => void; startAdvisor: () => void;
 };
 const DemoContext = createContext<DemoState | null>(null);
 
@@ -54,15 +53,18 @@ export default function ExhibitionDemoProvider({ children }: { children: ReactNo
   }, []);
   const retry = useCallback(() => setRun(value => value + 1), []);
   const nextPage = useCallback(() => setPageIndex(getNextDemoPage), []);
+  const startAdvisor = useCallback(() => {
+    setPageIndex(ADVISOR_DEMO_PAGE_INDEX); setRun(value => value + 1); preference.setEnabled(true);
+  }, []);
 
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
     const signal = controller.signal;
     const page = EXHIBITION_DEMO_PAGES[pageIndex];
-    const pageGuide = getPageGuide(page.path, locale);
+    const pageGuide = getDemoPageGuide(page, locale);
     const labels = actionCopy[locale];
-    const play = async () => {
+    const play = async () => withDemoCleanup(async () => {
       setPhase('loading'); setTarget(null); setStepIndex(-1); setGuide(null);
       await navigate(page.path, signal);
       await waitForDemoTarget(page.steps[0].target, signal, DEMO_TIMING.readyTimeout, page.steps[0].action === 'click');
@@ -78,17 +80,21 @@ export default function ExhibitionDemoProvider({ children }: { children: ReactNo
         element.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'nearest', inline: 'nearest' });
         setTarget(element); setClicking(step.action === 'click');
         const name = element.getAttribute('aria-label') || element.textContent?.replace(/\s+/g, ' ').trim() || pageGuide.title;
-        const explanation = getDemoFeatureText(step.target, locale);
-        setGuide({ title: pageGuide.title, text: step.action === 'click'
+        const explanation = getDemoFeatureText(step.feature ?? step.target, locale);
+        setGuide({ title: pageGuide.title, text: page.section === 'advisor' && explanation ? explanation : step.action === 'click'
           ? `${labels.click(name)}${explanation ? ` ${explanation}` : ''}`
           : explanation ?? `${labels.focus} ${pageGuide.steps[1]}`,
           step: index + 2, total: page.steps.length + 1 });
         await withDemoCleanup(async () => {
           // 커서가 먼저 도착한 뒤 실제 버튼의 React 이벤트를 실행한다.
           await demoVisibleDelay(DEMO_TIMING.settle, signal);
+          const previousResult = step.freshResult && step.result ? findDemoTarget(step.result) : undefined;
+          if (step.action === 'input') await typeDemoInput(element, step.value[locale], signal);
           if (step.action === 'click') element.click();
           if (step.result) {
-            setTarget(await waitForDemoTarget(step.result, signal, DEMO_TIMING.readyTimeout));
+            const result = await waitForDemoTarget(step.result, signal, DEMO_TIMING.readyTimeout, false, previousResult);
+            result.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'nearest', inline: 'nearest' });
+            setTarget(result);
             setClicking(false);
           }
           setPhase('playing');
@@ -97,7 +103,7 @@ export default function ExhibitionDemoProvider({ children }: { children: ReactNo
       }
       setTarget(null); setGuide(null);
       setPageIndex(getNextDemoPage);
-    };
+    }, () => { for (const id of page.cleanup ?? []) findDemoTarget(id)?.click(); });
     void play().catch(async () => {
       if (signal.aborted) return;
       setPhase('error'); setTarget(null);
@@ -117,8 +123,8 @@ export default function ExhibitionDemoProvider({ children }: { children: ReactNo
     return () => { disposed = true; void lock?.release(); };
   }, [enabled, visible]);
 
-  const state = useMemo<DemoState>(() => ({ enabled, phase, pageIndex, stepIndex, visible, guide, setEnabled, retry, nextPage }),
-    [enabled, phase, pageIndex, stepIndex, visible, guide, setEnabled, retry, nextPage]);
+  const state = useMemo<DemoState>(() => ({ enabled, phase, pageIndex, stepIndex, visible, guide, setEnabled, retry, nextPage, startAdvisor }),
+    [enabled, phase, pageIndex, stepIndex, visible, guide, setEnabled, retry, nextPage, startAdvisor]);
   return <DemoContext.Provider value={state}>
     {children}
     <ExhibitionResourceGuard />

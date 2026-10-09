@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { ChevronDown, Play, RotateCcw, SkipForward, X } from 'lucide-react';
+import { Bot, ChevronDown, Play, RotateCcw, SkipForward, X } from 'lucide-react';
 import { useLocale } from '@/components/i18n/LocaleProvider';
-import { getPageGuide } from '@/data/exhibition-page-guides';
+import { getDemoPageGuide } from '@/data/exhibition-demo-copy';
 import { EXHIBITION_DEMO_PAGES } from '@/constants/exhibition-demo';
 import { exhibitionDemo, motionDuration } from '@/styles/design-tokens';
 import { useExhibitionDemo } from './ExhibitionDemoProvider';
@@ -15,11 +15,17 @@ const copy = {
   ja: { title: 'デモ再生', open: 'デモ再生設定を開く', close: 'デモ設定を閉じる', toggle: '自動デモ', detail: 'メインから各画面の機能を自動で紹介します。通常操作3秒・主要機能5秒・最後の画面から繰り返します。', idle: 'ONにするとメイン画面から開始します。', loading: '画面と機能を準備しています。', playing: '自動デモ再生中', paused: '別のタブを表示中は一時停止します。', error: '機能を準備できませんでした。再試行するか次の画面へ進んでください。', retry: '再試行', next: '次の画面' },
   en: { title: 'Demo playback', open: 'Open demo controls', close: 'Close demo controls', toggle: 'Automatic demo', detail: 'Tours each page from the main dashboard. Controls: 3 seconds · Key features: 5 seconds · Repeats after the last page.', idle: 'Turn ON to start from the main dashboard.', loading: 'Preparing this screen and its controls.', playing: 'Demo playing', paused: 'Paused while this tab is hidden.', error: 'This feature could not be prepared. Retry or move to the next page.', retry: 'Retry page', next: 'Next page' },
 };
+const advisorCopy = {
+  ko: { start: 'AI Advisor부터 시연', detail: '메인 관제센터 다음에 AI Advisor를 집중 소개합니다. 질문 목록 · 재고·발주 조회 · 생산 조건 입력 · 후속 질문을 실제 대화로 보여줍니다.' },
+  ja: { start: 'AI Advisorから再生', detail: 'メイン画面の次にAI Advisorを詳しく紹介します。質問一覧・在庫と発注の確認・生産条件の入力・追加質問を実際の会話でご覧いただけます。' },
+  en: { start: 'Start with AI Advisor', detail: 'AI Advisor follows the main dashboard, featuring question menus, stock and orders, production conditions and follow-ups in a live conversation.' },
+};
 
 export default function DemoControls() {
   const demo = useExhibitionDemo();
   const { locale } = useLocale();
   const labels = copy[locale];
+  const advisor = advisorCopy[locale];
   const reducedMotion = useReducedMotion();
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -48,12 +54,14 @@ export default function DemoControls() {
         exit={{ y: reducedMotion ? 0 : -exhibitionDemo.hiddenOffset, opacity: 0 }} transition={{ duration: reducedMotion ? 0 : motionDuration.enter }}>
         <S.PanelHead><h2>{labels.title}</h2><S.Button type="button" aria-label={labels.close} onClick={() => { setOpen(false); trigger.current?.focus(); }}><X size={16} /></S.Button></S.PanelHead>
         <p>{labels.detail}</p>
+        <p>{advisor.detail}</p>
         <S.Switch type="button" role="switch" aria-label={labels.toggle} aria-checked={demo.enabled} $active={demo.enabled}
           onClick={() => demo.setEnabled(!demo.enabled)}><span>{labels.toggle}</span><strong>{demo.enabled ? 'ON' : 'OFF'}</strong></S.Switch>
         <S.Status role="status" $error={demo.phase === 'error'}>
           {status}
-          {demo.enabled && <span>{getPageGuide(page.path, locale).title} · {(demo.pageIndex + 1).toLocaleString('ko-KR')} / {EXHIBITION_DEMO_PAGES.length.toLocaleString('ko-KR')}</span>}
+          {demo.enabled && <span>{getDemoPageGuide(page, locale).title} · {(demo.pageIndex + 1).toLocaleString('ko-KR')} / {EXHIBITION_DEMO_PAGES.length.toLocaleString('ko-KR')}</span>}
         </S.Status>
+        <S.Button type="button" onClick={() => { demo.startAdvisor(); setOpen(false); }}><Bot size={16} />{advisor.start}</S.Button>
         {demo.enabled && <S.Actions>
           <S.Button type="button" onClick={demo.retry}><RotateCcw size={15} />{labels.retry}</S.Button>
           <S.Button type="button" onClick={demo.nextPage}><SkipForward size={15} />{labels.next}</S.Button>

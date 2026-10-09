@@ -6,6 +6,8 @@ import {
 	isAdvisorRecord,
 	isAdvisorSessionId,
 	parseAdvisorTable,
+	parseAdvisorChatResponse,
+	parseAdvisorConversationContext,
 } from '@/utils/ai-advisor-contract';
 
 import { createDemoAdvisorReply, createDemoAdvisorMetadata } from '@/data/demo-advisor';
@@ -43,7 +45,9 @@ export function advisorErrorResponse(error: unknown) {
 export async function fetchAdvisorJson(_request: Request, path: '/api/chat' | '/api/data-meta', body?: unknown): Promise<unknown> {
   if (path === '/api/data-meta') return createDemoAdvisorMetadata();
   const query = typeof body === 'object' && body !== null && 'query' in body ? String(body.query) : '';
-  return createDemoAdvisorReply(query);
+  const locale = isAdvisorRecord(body) && (body.locale === 'ko' || body.locale === 'ja' || body.locale === 'en') ? body.locale : undefined;
+  const context = isAdvisorRecord(body) && body.context !== undefined ? parseAdvisorConversationContext(body.context) ?? undefined : undefined;
+  return createDemoAdvisorReply(query, locale, context);
 }
 
 function hasKnownBusinessFailure(answer: string): boolean {
@@ -68,6 +72,8 @@ export function normalizeAdvisorChatResponse(value: unknown): AdvisorChatRespons
 			sessionId,
 		);
 	}
+	const reviewedResponse = parseAdvisorChatResponse(value);
+	if (reviewedResponse) return reviewedResponse;
 	let table = null;
 	if (value.table !== null && value.table !== undefined) {
 		if (!isAdvisorRecord(value.table)) throw invalidResponse();

@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 import { motion as animate } from 'framer-motion';
-import { color, tone, font, fontSize, fontWeight, space, radius, shadow, controlHeight, motion, zIndex, focusRing, scrollbar } from '@/styles/design-tokens';
+import { color, tone, font, fontSize, fontWeight, space, radius, shadow, controlHeight, motion, zIndex, focusRing, scrollbar, exhibitionDemo } from '@/styles/design-tokens';
 
 export const LauncherMark = styled.span`
   width: ${controlHeight.lg}px;
@@ -104,10 +104,12 @@ export const Overlay = styled(animate.div)`
   }
 `;
 
-export const Panel = styled(animate.section)`
+export const Panel = styled(animate.section)<{ $demo: boolean }>`
   position: relative;
   z-index: ${zIndex.advisorPanel};
-  width: min(1040px, 100%);
+  width: ${({ $demo }) => $demo
+    ? `min(${exhibitionDemo.advisorPanelWidth}px, calc(100vw - ${exhibitionDemo.advisorGuideWidth + space.xl * 3}px))`
+    : `min(${exhibitionDemo.advisorPanelWidth}px, 100%)`};
   height: 100%;
   min-width: 0;
   min-height: 0;
@@ -212,6 +214,95 @@ export const ExampleList = styled.div`
   flex-direction: column;
   gap: ${space.md}px;
   ${Button} { justify-content: flex-start; text-align: left; line-height: 1.5; }
+`;
+
+export const GuideToggle = styled(Button)`
+  width: 100%;
+  justify-content: flex-start;
+  margin: ${space.xl}px 0;
+  > svg:last-child { margin-left: auto; flex-shrink: 0; }
+  &[aria-expanded='true'] { background: ${color.brandSoft}; border-color: ${color.brandBorder}; }
+`;
+
+export const QuestionGuide = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${space.xxxl}px;
+  margin-bottom: ${space.xxxl}px;
+  padding: ${space.xxxl}px;
+  border: 1px solid ${color.border};
+  border-radius: ${radius.card}px;
+  background: ${color.surfaceSubtle};
+  h3 { margin: 0 0 ${space.md}px; font-size: ${fontSize.body}; font-weight: ${fontWeight.semibold}; }
+  p { margin: 0; font-size: ${fontSize.meta}; line-height: 1.6; color: ${color.ink3}; }
+`;
+
+export const ReplyBadge = styled.span<{ $warning?: boolean }>`
+  display: inline-flex;
+  align-self: flex-start;
+  margin-bottom: ${space.md}px;
+  padding: ${space.xs}px ${space.md}px;
+  border: 1px solid ${({ $warning }) => $warning ? tone.warning.border : tone.success.border};
+  border-radius: ${radius.bar}px;
+  background: ${({ $warning }) => $warning ? tone.warning.bg : tone.success.bg};
+  color: ${({ $warning }) => $warning ? tone.warning.fg : tone.success.fg};
+  font-size: ${fontSize.caption};
+  font-weight: ${fontWeight.medium};
+  white-space: nowrap;
+`;
+
+export const QuestionButton = styled(Button)`
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  overflow-wrap: anywhere;
+  ${ReplyBadge} { margin-bottom: 0; }
+  small { color: ${color.ink3}; font-size: ${fontSize.caption}; font-weight: ${fontWeight.regular}; }
+`;
+
+export const DemoBadge = styled(ReplyBadge)`
+  border-color: ${tone.neutral.border};
+  background: ${tone.neutral.bg};
+  color: ${tone.neutral.fg};
+`;
+
+export const Suggestions = styled.section`
+  margin-top: ${space.xl}px;
+  > span { display: block; margin-bottom: ${space.md}px; font-size: ${fontSize.meta}; color: ${color.ink3}; }
+  > small { display: block; margin-top: ${space.md}px; font-size: ${fontSize.caption}; color: ${color.ink3}; line-height: 1.5; }
+`;
+
+export const OptionNumber = styled.span`
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  min-width: ${controlHeight.sm}px;
+  min-height: ${controlHeight.sm}px;
+  border: 1px solid ${tone.info.border};
+  border-radius: ${radius.row}px;
+  background: ${tone.info.bg};
+  color: ${tone.info.fg};
+  font-size: ${fontSize.caption};
+`;
+
+export const SuggestionButton = styled(Button)`
+  width: 100%;
+  padding: ${space.md}px ${space.lg}px;
+  > span:nth-child(2) { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  > svg { flex-shrink: 0; }
+`;
+
+export const ContextBar = styled.div`
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  gap: ${space.sm}px;
+  margin: 0 ${space.xxxl}px ${space.md}px;
+  font-size: ${fontSize.caption};
+  color: ${color.ink3};
+  > span { padding: ${space.xs}px ${space.md}px; border: 1px solid ${color.border}; border-radius: ${radius.row}px; background: ${color.surfaceSubtle}; }
+  > button { margin-left: auto; }
 `;
 
 export const HistoryButton = styled(Button)`

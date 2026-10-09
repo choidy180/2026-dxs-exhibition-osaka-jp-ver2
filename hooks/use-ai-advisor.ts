@@ -1,10 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { AdvisorMetadata, AdvisorTable } from '@/types/ai-advisor';
+import type { AdvisorChatResponse, AdvisorConversationContext, AdvisorMetadata } from '@/types/ai-advisor';
+import { ADVISOR_COPY } from '@/constants/ai-advisor';
+import { getLocale } from '@/lib/i18n/translate';
 import {
   parseAdvisorChatResponse,
   parseAdvisorMetadata,
+  ADVISOR_QUERY_MAX_LENGTH,
 } from '@/utils/ai-advisor-contract';
 
 import { createDemoAdvisorReply, createDemoAdvisorMetadata } from '@/data/demo-advisor';
@@ -17,8 +20,13 @@ export type ChatMessage = {
   id: string;
   role: 'user' | 'assistant';
   text: string;
-  table?: AdvisorTable | null;
-  status?: 'success' | 'empty';
+  table?: AdvisorChatResponse['table'];
+  status?: AdvisorChatResponse['status'];
+  suggestions?: AdvisorChatResponse['suggestions'];
+  source?: AdvisorChatResponse['source'];
+  context?: AdvisorConversationContext;
+  dataKind?: AdvisorChatResponse['data_kind'];
+  suggestionsTitle?: string;
 };
 
 type ActiveRequest = {
@@ -32,18 +40,10 @@ const stopRequest = (request: ActiveRequest | null) => {
   request.controller.abort();
 };
 
-const newSessionId = (): string | null => {
-  try {
-    return globalThis.crypto?.randomUUID?.() ?? null;
-  } catch {
-    // 내부망의 비보안 HTTP 환경에서는 서버가 세션 ID를 생성한다.
-    return null;
-  }
-};
-
-/** 같은 탭에서 패널을 닫았다 열어도 대화와 서버 세션을 유지한다. */
+/** 같은 화면에서 패널을 닫았다 열어도 대화를 유지한다. */
 export function useAiAdvisor(enabled: boolean) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [context, setContext] = useState<AdvisorConversationContext>({});
   const [isLoading, setIsLoading] = useState(false);
   const [requestStartedAt, setRequestStartedAt] = useState<number | null>(null);
   const [lastResponseDurationMs, setLastResponseDurationMs] = useState<number | null>(null);
@@ -54,23 +54,23 @@ export function useAiAdvisor(enabled: boolean) {
   const [metadataError, setMetadataError] = useState<string | null>(null);
 
   const mountedRef = useRef(false);
-  const sessionIdRef = useRef<string | null>(null);
   const messageSequenceRef = useRef(0);
   const pendingQueryRef = useRef<string | null>(null);
+  const contextRef = useRef<AdvisorConversationContext>({});
+  const pendingContextRef = useRef<AdvisorConversationContext>({});
   const chatRequestRef = useRef<ActiveRequest | null>(null);
   const metadataRequestRef = useRef<ActiveRequest | null>(null);
   const metadataAttemptedRef = useRef(false);
 
-  const loadChat = useCallback(async (query: string, isRetry = false) => {
+  const loadChat = useCallback(async (query: string, isRetry = false, requestContext: AdvisorConversationContext = {}) => {
     if (!mountedRef.current || chatRequestRef.current) return;
 
     const startedAt = performance.now();
+    const locale = getLocale();
     const controller = new AbortController();
-    let timedOut = false;
     const request: ActiveRequest = {
       controller,
       timeout: setTimeout(() => {
-        timedOut = true;
         controller.abort();
       }, CHAT_TIMEOUT_MS),
     };
@@ -78,6 +78,7 @@ export function useAiAdvisor(enabled: boolean) {
     // React가 다시 렌더링하기 전의 연속 클릭도 즉시 차단한다.
     chatRequestRef.current = request;
     pendingQueryRef.current = query;
+    pendingContextRef.current = requestContext;
     setError(null);
     setIsLoading(true);
     setRequestStartedAt(startedAt);
@@ -89,8 +90,8 @@ export function useAiAdvisor(enabled: boolean) {
 
     try {
       await new Promise<void>(resolve => setTimeout(resolve, 650));
-      const body = createDemoAdvisorReply(query);
       if (!mountedRef.current || chatRequestRef.current !== request) return;
+      const body = createDemoAdvisorReply(query, locale, requestContext);
 
       const result = parseAdvisorChatResponse(body);
       if (!result) throw new Error('답변 형식을 확인할 수 없습니다. 다시 시도해 주세요.');
@@ -101,8 +102,9 @@ export function useAiAdvisor(enabled: boolean) {
       setResponseDurationSamplesMs(previous => (
         [...previous, durationMs].slice(-RESPONSE_TIMING_SAMPLE_LIMIT)
       ));
-      if (result.session_id) sessionIdRef.current = result.session_id;
       pendingQueryRef.current = null;
+      contextRef.current = result.context ?? {};
+      setContext(contextRef.current);
       const id = `advisor-${++messageSequenceRef.current}`;
       setMessages(previous => [
         ...previous,
@@ -112,18 +114,17 @@ export function useAiAdvisor(enabled: boolean) {
           text: result.answer,
           table: result.table,
           status: result.status,
+          suggestions: result.suggestions,
+          source: result.source,
+          context: result.context,
+          dataKind: result.data_kind,
+          suggestionsTitle: result.suggestions_title,
         },
       ]);
-    } catch (caught) {
+    } catch {
       if (!mountedRef.current || chatRequestRef.current !== request) return;
 
-      setError(
-        timedOut
-          ? '응답 대기 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.'
-          : caught instanceof Error && /[가-힣]/.test(caught.message)
-            ? caught.message
-            : '서버에 연결하지 못했습니다. 연결 상태를 확인한 후 다시 시도해 주세요.',
-      );
+      setError(ADVISOR_COPY[locale].failure);
     } finally {
       clearTimeout(request.timeout);
       // 이전 요청의 finally가 새 요청의 잠금이나 로딩 상태를 해제하지 않는다.
@@ -137,18 +138,18 @@ export function useAiAdvisor(enabled: boolean) {
     }
   }, []);
 
-  const send = useCallback(async (input: string): Promise<boolean> => {
+  const send = useCallback(async (input: string, fromContext?: AdvisorConversationContext): Promise<boolean> => {
     const query = input.trim();
-    if (!enabled || !mountedRef.current || !query || chatRequestRef.current) return false;
+    if (!enabled || !mountedRef.current || !query || Array.from(query).length > ADVISOR_QUERY_MAX_LENGTH || chatRequestRef.current) return false;
 
     // 입력은 접수 즉시 비우며, 응답 실패 시에는 명시적인 재시도로만 재전송한다.
-    void loadChat(query);
+    void loadChat(query, false, fromContext ?? contextRef.current);
     return true;
   }, [enabled, loadChat]);
 
   const retry = useCallback(() => {
     if (!enabled || !pendingQueryRef.current || chatRequestRef.current) return;
-    void loadChat(pendingQueryRef.current, true);
+    void loadChat(pendingQueryRef.current, true, pendingContextRef.current);
   }, [enabled, loadChat]);
 
   const cancel = useCallback(() => {
@@ -159,7 +160,7 @@ export function useAiAdvisor(enabled: boolean) {
     if (mountedRef.current) {
       setIsLoading(false);
       setRequestStartedAt(null);
-      setError('응답 대기를 취소했습니다. 다시 시도할 수 있습니다.');
+      setError(ADVISOR_COPY[getLocale()].cancelled);
     }
   }, []);
 
@@ -167,10 +168,12 @@ export function useAiAdvisor(enabled: boolean) {
     const request = chatRequestRef.current;
     chatRequestRef.current = null;
     stopRequest(request);
-    sessionIdRef.current = newSessionId();
     pendingQueryRef.current = null;
+    contextRef.current = {};
+    pendingContextRef.current = {};
     if (mountedRef.current) {
       setMessages([]);
+      setContext({});
       setError(null);
       setIsLoading(false);
       setRequestStartedAt(null);
@@ -247,6 +250,7 @@ export function useAiAdvisor(enabled: boolean) {
 
   return {
     messages,
+    context,
     isLoading,
     requestStartedAt,
     lastResponseDurationMs,

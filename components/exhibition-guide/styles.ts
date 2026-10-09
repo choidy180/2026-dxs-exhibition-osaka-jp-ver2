@@ -15,6 +15,8 @@ export const GuideLayerRoot = styled.div`
   overflow: visible;
   pointer-events: none;
   z-index: ${zIndex.exhibitionGuide};
+  /* 챗봇 이용 중에는 최상위 캐릭터 안내가 대화와 입력을 가리지 않게 한다. */
+  body:has([data-ai-advisor-panel]) &:not(:has([data-demo-advisor-guide])) { visibility: hidden; }
   &::backdrop { background: transparent; pointer-events: none; }
 `;
 

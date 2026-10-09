@@ -243,6 +243,9 @@ export const exhibitionDemo = {
   focusPadding: space.sm,
   cursorSize: 28,
   guideWidth: 760,
+  advisorPanelWidth: 1040,
+  advisorGuideWidth: 340,
+  advisorMascotWidth: 96,
 } as const;
 
 /**

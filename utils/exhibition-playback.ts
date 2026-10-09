@@ -42,15 +42,34 @@ export function findDemoTarget(id: string): HTMLElement | null {
     }) ?? null;
 }
 
-export async function waitForDemoTarget(id: string, signal: AbortSignal, timeout: number, interactive = true): Promise<HTMLElement> {
+export async function waitForDemoTarget(id: string, signal: AbortSignal, timeout: number, interactive = true, previous?: HTMLElement | null): Promise<HTMLElement> {
   let elapsed = 0;
   while (elapsed < timeout) {
     await demoVisibleDelay(100, signal);
     const target = findDemoTarget(id);
-    if (target && (!interactive || !target.matches(':disabled, [aria-busy="true"]'))) return target;
+    if (target && target !== previous && (!interactive || !target.matches(':disabled, [aria-busy="true"]'))) return target;
     elapsed += 100;
   }
   throw new Error(`Demo target unavailable: ${id}`);
+}
+
+/** 제어된 입력창에도 실제 입력 이벤트를 보내고, OFF·숨긴 탭에서는 타이핑을 멈춘다. */
+export async function typeDemoInput(element: HTMLElement, value: string, signal: AbortSignal): Promise<void> {
+  if (!(element instanceof HTMLTextAreaElement)) throw new Error('Demo input unavailable');
+  const setValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+  if (!setValue) throw new Error('Demo input setter unavailable');
+  if (signal.aborted) throw signal.reason;
+  element.focus();
+  setValue.call(element, '');
+  element.dispatchEvent(new Event('input', { bubbles: true }));
+  let typed = '';
+  for (const character of Array.from(value)) {
+    await demoVisibleDelay(90, signal);
+    if (signal.aborted || !element.isConnected) throw signal.reason ?? new Error('Demo input disconnected');
+    typed += character;
+    setValue.call(element, typed);
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  }
 }
 
 /** 확인 창이 없는 경우 바로 진행하고, 있을 때는 React가 닫은 뒤에만 안내를 시작한다. */
