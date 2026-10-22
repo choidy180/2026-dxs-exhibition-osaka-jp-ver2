@@ -1,3 +1,5 @@
+import type { Locale } from '@/lib/i18n/translate';
+
 export const MATERIAL_CAMERA_RESET_MS = 3_000;
 
 export const MATERIAL_CAMERA_VIDEOS = [
@@ -13,3 +15,12 @@ export const MATERIAL_CAMERA_VIDEOS = [
   '10_JP-FR-1057_44_JP.mp4',
   '11_JP-FR-2069_56_JP.mp4',
 ].map(filename => `/videos/material-inbound/web-v1/${filename}`);
+
+export const MATERIAL_CAMERA_KOREAN_VIDEOS = MATERIAL_CAMERA_VIDEOS.map(src =>
+  src.replace('/web-v1/', '/web-ko-v1/').replace('_JP.mp4', '_KO.mp4'),
+);
+
+export function getMaterialCameraVideos(locale: Locale): readonly string[] {
+  // 영어 전용 영상 대신 한국어 영상을 함께 사용한다.
+  return locale === 'ja' ? MATERIAL_CAMERA_VIDEOS : MATERIAL_CAMERA_KOREAN_VIDEOS;
+}

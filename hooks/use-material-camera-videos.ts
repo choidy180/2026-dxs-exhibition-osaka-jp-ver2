@@ -3,15 +3,18 @@
 import { startVisibleInterval } from '@/utils/visible-interval';
 import { createRef, useCallback, useEffect, useState } from 'react';
 import type { MaterialCameraPlayback } from '@/types/material-camera-video';
+import { useLocale } from '@/components/i18n/LocaleProvider';
 import { MAX_CAMERA_COUNT } from '@/constants/material-monitoring';
-import { MATERIAL_CAMERA_RESET_MS, MATERIAL_CAMERA_VIDEOS } from '@/constants/material-camera-videos';
+import { MATERIAL_CAMERA_RESET_MS, getMaterialCameraVideos } from '@/constants/material-camera-videos';
 
-function pickVideo(occupied: (string | null)[]) {
-  const candidates = MATERIAL_CAMERA_VIDEOS.filter(src => !occupied.includes(src));
+function pickVideo(videos: readonly string[], occupied: (string | null)[]) {
+  const candidates = videos.filter(src => !occupied.includes(src));
   return candidates[Math.floor(Math.random() * candidates.length)] ?? null;
 }
 
 export function useMaterialCameraVideos() {
+  const { locale } = useLocale();
+  const videos = getMaterialCameraVideos(locale);
   const [cameras, setCameras] = useState<MaterialCameraPlayback[]>(() =>
     Array.from({ length: MAX_CAMERA_COUNT }, () => ({
       src: null, resetUntil: null, remainingSeconds: 0, revision: 0,
@@ -24,9 +27,9 @@ export function useMaterialCameraVideos() {
     const initialTimer = window.setTimeout(() => setCameras(previous => {
       const occupied: (string | null)[] = [];
       return previous.map(camera => {
-        const src = pickVideo(occupied);
+        const src = pickVideo(videos, occupied);
         occupied.push(src);
-        return { ...camera, src, revision: camera.revision + 1 };
+        return { ...camera, src, resetUntil: null, remainingSeconds: 0, revision: camera.revision + 1 };
       });
     }), 0);
 
@@ -44,7 +47,7 @@ export function useMaterialCameraVideos() {
         }
         changed = true;
         // 직전 영상과 다른 카메라의 현재 영상을 제외해 여섯 화면이 겹치지 않게 한다.
-        const src = pickVideo(occupied);
+        const src = pickVideo(videos, occupied);
         occupied[index] = src;
         return { ...camera, src, resetUntil: null, remainingSeconds: 0, revision: camera.revision + 1 };
       });
@@ -55,7 +58,7 @@ export function useMaterialCameraVideos() {
       window.clearTimeout(initialTimer);
       timer();
     };
-  }, []);
+  }, [videos]);
 
   const finishVideo = useCallback((index: number, revision: number) => {
     setCameras(previous => previous.map((camera, position) => {
